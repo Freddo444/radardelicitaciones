@@ -94,6 +94,7 @@ class PollCommand extends Command
             if (! $this->option('dry-run')) {
                 Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
                 Setting::set('poll_status', 'idle');
+                $this->cleanup($api);
             }
 
             return self::SUCCESS;
@@ -184,7 +185,7 @@ class PollCommand extends Command
         if (! $this->option('dry-run')) {
             Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
             Setting::set('poll_status', 'idle');
-            $this->cleanup();
+            $this->cleanup($api);
         }
 
         $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Notificados: {$notified}";
@@ -208,7 +209,7 @@ class PollCommand extends Command
         Setting::set('poll_log', json_encode($log));
     }
 
-    private function cleanup(): void
+    private function cleanup(DgcpApiClient $api): void
     {
         $closedStatuses = [
             'Cancelado',
@@ -218,6 +219,18 @@ class PollCommand extends Command
             'Sobres abiertos o aperturados',
             'Sobres estan abriendose',
         ];
+
+        // Refresh status for all stored bids — DGCP may have changed them since we saved
+        foreach (Bid::all() as $bid) {
+            try {
+                $process = $api->fetchProcessByCode($bid->process_code);
+                if ($process && isset($process['estado_proceso'])) {
+                    $bid->update(['status' => $process['estado_proceso']]);
+                }
+            } catch (\Throwable) {
+                // Keep existing status if API call fails
+            }
+        }
 
         $deleted = Bid::where(function ($q) {
             $q->whereNotNull('tender_deadline')

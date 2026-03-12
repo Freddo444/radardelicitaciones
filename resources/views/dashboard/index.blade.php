@@ -9,7 +9,7 @@
 
         <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
             <dt class="flex items-center gap-x-3">
-                <div class="rounded-md bg-indigo-500 p-2">
+                <div class="rounded-md bg-blue-500 p-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-5 text-white">
                         <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -21,7 +21,7 @@
 
         <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
             <dt class="flex items-center gap-x-3">
-                <div class="rounded-md bg-indigo-500 p-2">
+                <div class="rounded-md bg-blue-500 p-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-5 text-white">
                         <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -33,7 +33,7 @@
 
         <div class="overflow-hidden rounded-lg bg-white px-4 py-5 shadow-sm sm:p-6">
             <dt class="flex items-center gap-x-3">
-                <div class="rounded-md bg-indigo-500 p-2">
+                <div class="rounded-md bg-blue-500 p-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-5 text-white">
                         <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
@@ -60,7 +60,7 @@
                     <form method="POST" action="{{ route('poll.manual') }}" class="inline">
                         @csrf
                         <button type="submit"
-                                class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                                class="inline-flex items-center gap-x-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                             <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="-ml-0.5 size-5">
                                 <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clip-rule="evenodd"/>
                             </svg>
@@ -114,7 +114,7 @@
                             @foreach($bid->matched_rubros as $rubro)
                             @php $code = is_array($rubro) ? ($rubro['code'] ?? $rubro) : $rubro; $name = is_array($rubro) ? ($rubro['name'] ?? '') : ''; @endphp
                             <span title="{{ $name }}"
-                                  class="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 font-mono text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                                  class="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 font-mono text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
                                 {{ $code }}
                             </span>
                             @endforeach
@@ -139,11 +139,9 @@
             </ul>
 
             {{-- Pagination --}}
-            @if($bids->hasPages())
-            <div class="mt-6 border-t border-gray-100 pt-4">
-                {{ $bids->links() }}
+            <div class="mt-6">
+                {{ $bids->links('components.pagination') }}
             </div>
-            @endif
         @endif
 
     </div>

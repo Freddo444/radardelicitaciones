@@ -37,7 +37,7 @@
         </a>
         <div id="done-actions" class="hidden gap-x-3 flex">
             <a href="{{ route('dashboard') }}"
-               class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500">
+               class="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
                 Ver convocatorias
             </a>
         </div>
@@ -61,7 +61,7 @@
         info:    'text-gray-300',
         warn:    'text-yellow-400',
         match:   'text-green-400',
-        success: 'text-indigo-400',
+        success: 'text-blue-400',
     };
 
     function setRunning() {

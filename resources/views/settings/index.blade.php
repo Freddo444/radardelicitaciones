@@ -9,40 +9,40 @@
         <nav class="flex-none px-0 sm:px-0">
             <ul role="list" class="flex gap-x-3 gap-y-1 whitespace-nowrap lg:flex-col">
                 <li>
-                    <a href="#api" class="group flex gap-x-3 rounded-md bg-gray-50 py-2 pr-3 pl-2 text-sm/6 font-semibold text-indigo-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-indigo-600">
+                    <a href="#api" class="group flex gap-x-3 rounded-md bg-gray-50 py-2 pr-3 pl-2 text-sm/6 font-semibold text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-blue-600">
                             <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         API DGCP
                     </a>
                 </li>
                 <li>
-                    <a href="#sondeo" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-indigo-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-indigo-600">
+                    <a href="#sondeo" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
                             <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Sondeo
                     </a>
                 </li>
                 <li>
-                    <a href="#email" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-indigo-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-indigo-600">
+                    <a href="#email" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
                             <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Email
                     </a>
                 </li>
                 <li>
-                    <a href="#telegram" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-indigo-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-indigo-600">
+                    <a href="#telegram" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
                             <path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Telegram
                     </a>
                 </li>
                 <li>
-                    <a href="#filtros" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-indigo-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-indigo-600">
+                    <a href="#filtros" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
                             <path d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Filtros
@@ -109,7 +109,7 @@
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">
                                 <input type="number" name="poll_interval_minutes" id="poll_interval_minutes"
                                        value="{{ $settings['poll_interval_minutes'] }}" min="10" max="1440"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
@@ -133,7 +133,7 @@
                                 <input type="email" name="notification_email" id="notification_email"
                                        value="{{ $settings['notification_email'] }}"
                                        placeholder="tu@correo.com"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
@@ -159,7 +159,7 @@
                                 <input type="text" name="telegram_bot_token" id="telegram_bot_token"
                                        value="{{ $settings['telegram_bot_token'] }}"
                                        placeholder="123456789:ABC-..."
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
@@ -168,7 +168,7 @@
                                 <input type="text" name="telegram_chat_id" id="telegram_chat_id"
                                        value="{{ $settings['telegram_chat_id'] }}"
                                        placeholder="123456789"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
@@ -196,7 +196,7 @@
                                 <p class="mt-1 text-xs font-normal text-gray-500">Solo notificar si el monto estimado supera el umbral.</p>
                             </dt>
                             <dd class="mt-2 sm:mt-1 sm:flex-auto">
-                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
                                     <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
                                     <input type="checkbox" name="min_amount_filter" aria-label="Filtro por monto mínimo"
                                            {{ $settings['min_amount_filter'] === '1' ? 'checked' : '' }}
@@ -211,9 +211,9 @@
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
                                 <input type="number" name="min_amount_value" id="min_amount_value"
                                        value="{{ $settings['min_amount_value'] }}" min="0" step="1000"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                                 <select name="min_amount_currency"
-                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600">
+                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
                                     <option value="DOP" {{ $settings['min_amount_currency'] === 'DOP' ? 'selected' : '' }}>DOP</option>
                                     <option value="USD" {{ $settings['min_amount_currency'] === 'USD' ? 'selected' : '' }}>USD</option>
                                 </select>
@@ -227,7 +227,7 @@
                                 <p class="mt-1 text-xs font-normal text-gray-500">Solo notificar si el monto estimado no supera el umbral.</p>
                             </dt>
                             <dd class="mt-2 sm:mt-1 sm:flex-auto">
-                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
                                     <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
                                     <input type="checkbox" name="max_amount_filter" aria-label="Filtro por monto máximo"
                                            {{ $settings['max_amount_filter'] === '1' ? 'checked' : '' }}
@@ -242,9 +242,9 @@
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
                                 <input type="number" name="max_amount_value" id="max_amount_value"
                                        value="{{ $settings['max_amount_value'] }}" min="0" step="1000"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                                 <select name="max_amount_currency"
-                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600">
+                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
                                     <option value="DOP" {{ $settings['max_amount_currency'] === 'DOP' ? 'selected' : '' }}>DOP</option>
                                     <option value="USD" {{ $settings['max_amount_currency'] === 'USD' ? 'selected' : '' }}>USD</option>
                                 </select>
@@ -258,7 +258,7 @@
                                 <p class="mt-1 text-xs font-normal text-gray-500">Ignorar procesos cuya fecha límite de presentación de ofertas ya haya vencido.</p>
                             </dt>
                             <dd class="mt-2 sm:mt-1 sm:flex-auto">
-                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-indigo-600 transition-colors duration-200 ease-in-out has-checked:bg-indigo-600 has-focus-visible:outline-2">
+                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
                                     <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
                                     <input type="checkbox" name="open_deadline_filter" aria-label="Solo procesos con plazo vigente"
                                            {{ $settings['open_deadline_filter'] === '1' ? 'checked' : '' }}
@@ -291,7 +291,7 @@
                                     <label class="flex cursor-pointer items-center gap-x-3 text-sm text-gray-700">
                                         <input type="checkbox" name="excluded_modalities[]" value="{{ $modality }}"
                                                {{ in_array($modality, $settings['excluded_modalities']) ? 'checked' : '' }}
-                                               class="size-4 rounded border-gray-300 accent-indigo-600"/>
+                                               class="size-4 rounded border-gray-300 accent-blue-600"/>
                                         <span class="text-gray-700">{{ $modality }}</span>
                                     </label>
                                     @endforeach
@@ -308,7 +308,7 @@
             <div class="mt-10 flex items-center justify-end gap-x-4 border-t border-gray-900/10 pt-8">
                 <a href="{{ route('dashboard') }}" class="py-2 text-sm font-semibold text-gray-900">Cancelar</a>
                 <button type="submit"
-                        class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                        class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                     Guardar configuración
                 </button>
             </div>

@@ -10,7 +10,7 @@ class RubrosController extends Controller
 {
     public function index()
     {
-        $rubros = Rubro::orderByDesc('active')->orderBy('name')->get();
+        $rubros = Rubro::orderByDesc('active')->orderBy('name')->paginate(25);
 
         return view('rubros.index', compact('rubros'));
     }

@@ -9,13 +9,12 @@
         <div>
             <h1 class="text-base font-semibold text-gray-900">Rubros vigilados</h1>
             <p class="mt-1 text-sm text-gray-500">
-                {{ $rubros->count() }} rubro{{ $rubros->count() !== 1 ? 's' : '' }} registrado{{ $rubros->count() !== 1 ? 's' : '' }},
-                {{ $rubros->where('active', true)->count() }} activo{{ $rubros->where('active', true)->count() !== 1 ? 's' : '' }}.
+                {{ $rubros->total() }} rubro{{ $rubros->total() !== 1 ? 's' : '' }} registrado{{ $rubros->total() !== 1 ? 's' : '' }}.
             </p>
         </div>
         <div class="mt-4 sm:mt-0">
             <button command="show-modal" commandfor="rubros-drawer"
-                    class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                    class="inline-flex items-center gap-x-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="-ml-0.5 size-5">
                     <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
                 </svg>
@@ -36,7 +35,7 @@
                 <p class="mt-1 text-sm text-gray-500">Agrega los códigos UNSPSC que deseas monitorear.</p>
                 <div class="mt-6">
                     <button command="show-modal" commandfor="rubros-drawer"
-                            class="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">
+                            class="inline-flex items-center gap-x-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="-ml-0.5 size-5">
                             <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
                         </svg>
@@ -50,7 +49,7 @@
                 <li class="flex items-center justify-between gap-x-6 px-6 py-4">
                     {{-- Left: code + name --}}
                     <div class="flex min-w-0 items-center gap-x-4">
-                        <span class="inline-flex shrink-0 items-center rounded-md bg-indigo-50 px-2 py-1 font-mono text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
+                        <span class="inline-flex shrink-0 items-center rounded-md bg-blue-50 px-2 py-1 font-mono text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/10">
                             {{ $rubro->code }}
                         </span>
                         <div class="min-w-0">
@@ -65,7 +64,7 @@
                             @csrf @method('PATCH')
                             <button type="submit"
                                     title="{{ $rubro->active ? 'Desactivar' : 'Activar' }}"
-                                    class="group relative inline-flex w-8 shrink-0 cursor-pointer rounded-full p-px transition-colors duration-200 ease-in-out focus:outline-none {{ $rubro->active ? 'bg-indigo-600' : 'bg-gray-200' }}">
+                                    class="group relative inline-flex w-8 shrink-0 cursor-pointer rounded-full p-px transition-colors duration-200 ease-in-out focus:outline-none {{ $rubro->active ? 'bg-blue-600' : 'bg-gray-200' }}">
                                 <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out {{ $rubro->active ? 'translate-x-3.5' : 'translate-x-0' }}"></span>
                             </button>
                         </form>
@@ -87,6 +86,11 @@
                 @endforeach
             </ul>
         @endif
+
+        {{-- Pagination --}}
+        <div class="mt-6">
+            {{ $rubros->links('components.pagination') }}
+        </div>
     </div>
 
 </div>
@@ -103,7 +107,7 @@
                     <div class="flex items-start justify-between px-4 py-6 sm:px-6">
                         <h2 id="drawer-title" class="text-base font-semibold text-gray-900">Agregar rubro</h2>
                         <button type="button" command="close" commandfor="rubros-drawer"
-                                class="relative ml-3 rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-indigo-600">
+                                class="relative ml-3 rounded-md text-gray-400 hover:text-gray-500 focus-visible:outline-2 focus-visible:outline-blue-600">
                             <span class="sr-only">Cerrar</span>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
                                 <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
@@ -119,9 +123,9 @@
                         <div class="relative mt-2">
                             <input type="text" id="rubro-search" autocomplete="off" maxlength="8"
                                    placeholder="ej. 72101500"
-                                   class="w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                                   class="w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             <div id="search-spinner" class="absolute inset-y-0 right-3 hidden items-center">
-                                <svg class="size-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                                <svg class="size-4 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                                 </svg>
@@ -130,11 +134,11 @@
                         <ul id="rubro-results" role="list" class="mt-2 divide-y divide-gray-100 rounded-md border border-gray-100 empty:hidden"></ul>
 
                         {{-- Selected rubro display --}}
-                        <div id="selected-rubro" class="mt-4 hidden rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
-                            <p class="text-xs font-medium text-indigo-600">Rubro seleccionado</p>
-                            <p id="selected-label" class="mt-0.5 text-sm font-semibold text-indigo-900"></p>
+                        <div id="selected-rubro" class="mt-4 hidden rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                            <p class="text-xs font-medium text-blue-600">Rubro seleccionado</p>
+                            <p id="selected-label" class="mt-0.5 text-sm font-semibold text-blue-900"></p>
                             <button type="button" id="clear-selection"
-                                    class="mt-1 text-xs text-indigo-500 underline hover:text-indigo-700">
+                                    class="mt-1 text-xs text-blue-500 underline hover:text-blue-700">
                                 Cambiar selección
                             </button>
                         </div>
@@ -148,7 +152,7 @@
                             Cancelar
                         </button>
                         <button type="button" id="rubro-save"
-                                class="inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                class="inline-flex justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-40 disabled:cursor-not-allowed"
                                 disabled>
                             Guardar
                         </button>
@@ -210,9 +214,9 @@
                 }
 
                 resultsList.innerHTML = data.map(item =>
-                    `<li class="flex cursor-pointer items-center gap-x-3 px-3 py-2.5 text-sm hover:bg-indigo-50"
+                    `<li class="flex cursor-pointer items-center gap-x-3 px-3 py-2.5 text-sm hover:bg-blue-50"
                          data-code="${item.code}" data-name="${item.name}" data-level="${item.level}">
-                        <span class="shrink-0 font-mono text-xs font-semibold text-indigo-600">${item.code}</span>
+                        <span class="shrink-0 font-mono text-xs font-semibold text-blue-600">${item.code}</span>
                         <span class="min-w-0 truncate text-gray-700">${item.name}</span>
                      </li>`
                 ).join('');

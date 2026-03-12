@@ -56,7 +56,7 @@
                                 <td class="px-3 py-4 text-sm text-gray-900">
                                     @if($log->bid)
                                         <a href="{{ $log->bid->secp_url }}" target="_blank" rel="noopener"
-                                           class="max-w-xs truncate font-medium hover:text-indigo-600"
+                                           class="max-w-xs truncate font-medium hover:text-blue-600"
                                            title="{{ $log->bid->title }}">
                                             {{ Str::limit($log->bid->title, 60) }}
                                         </a>
@@ -76,7 +76,7 @@
                                             Email
                                         </span>
                                     @else
-                                        <span class="inline-flex items-center gap-x-1.5 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
+                                        <span class="inline-flex items-center gap-x-1.5 rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-3">
                                                 <path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"/>
                                             </svg>
