@@ -16,7 +16,8 @@ class SendBidNotification implements ShouldQueue
 {
     use Queueable;
 
-    public int $tries  = 3;
+    public int $tries = 3;
+
     public int $backoff = 60;
 
     public function __construct(public Bid $bid) {}
@@ -35,6 +36,7 @@ class SendBidNotification implements ShouldQueue
 
         if (empty($recipient)) {
             Log::warning("[SECP] Email notification skipped — no recipient configured for bid {$this->bid->process_code}");
+
             return;
         }
 
@@ -42,20 +44,20 @@ class SendBidNotification implements ShouldQueue
             Mail::to($recipient)->send(new BidNotificationMail($this->bid));
 
             NotificationLog::create([
-                'bid_id'     => $this->bid->id,
-                'channel'    => 'email',
-                'status'     => 'sent',
+                'bid_id' => $this->bid->id,
+                'channel' => 'email',
+                'status' => 'sent',
                 'created_at' => now(),
             ]);
 
             Log::info("[SECP] Email sent for bid {$this->bid->process_code} to {$recipient}");
         } catch (\Throwable $e) {
             NotificationLog::create([
-                'bid_id'        => $this->bid->id,
-                'channel'       => 'email',
-                'status'        => 'failed',
+                'bid_id' => $this->bid->id,
+                'channel' => 'email',
+                'status' => 'failed',
                 'error_message' => $e->getMessage(),
-                'created_at'    => now(),
+                'created_at' => now(),
             ]);
 
             Log::error("[SECP] Email failed for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
@@ -69,11 +71,11 @@ class SendBidNotification implements ShouldQueue
         }
 
         $rubros = collect($this->bid->matched_rubros ?? [])
-            ->map(fn($r) => "<code>{$r['code']}</code> {$r['name']}")
+            ->map(fn ($r) => "<code>{$r['code']}</code> {$r['name']}")
             ->join("\n");
 
         $amount = $this->bid->amount_estimated
-            ? ($this->bid->currency ?? 'DOP') . ' ' . number_format($this->bid->amount_estimated, 2)
+            ? ($this->bid->currency ?? 'DOP').' '.number_format($this->bid->amount_estimated, 2)
             : 'N/D';
 
         $deadline = $this->bid->tender_deadline
@@ -81,31 +83,31 @@ class SendBidNotification implements ShouldQueue
             : 'N/D';
 
         $text = "🔔 <b>Nueva Convocatoria SECP</b>\n\n"
-            . "📋 <b>{$this->bid->title}</b>\n"
-            . "🏢 {$this->bid->buyer_name}\n"
-            . "💰 {$amount}\n"
-            . "📅 Cierre: {$deadline}\n"
-            . "🏷 Rubros:\n{$rubros}\n\n"
-            . "🔗 <a href=\"{$this->bid->secp_url}\">Ver en SECP</a>";
+            ."📋 <b>{$this->bid->title}</b>\n"
+            ."🏢 {$this->bid->buyer_name}\n"
+            ."💰 {$amount}\n"
+            ."📅 Cierre: {$deadline}\n"
+            ."🏷 Rubros:\n{$rubros}\n\n"
+            ."🔗 <a href=\"{$this->bid->secp_url}\">Ver en SECP</a>";
 
         try {
             $sent = $telegram->sendMessage($text);
 
             NotificationLog::create([
-                'bid_id'     => $this->bid->id,
-                'channel'    => 'telegram',
-                'status'     => $sent ? 'sent' : 'failed',
+                'bid_id' => $this->bid->id,
+                'channel' => 'telegram',
+                'status' => $sent ? 'sent' : 'failed',
                 'created_at' => now(),
             ]);
 
-            Log::info("[SECP] Telegram " . ($sent ? 'sent' : 'failed') . " for bid {$this->bid->process_code}");
+            Log::info('[SECP] Telegram '.($sent ? 'sent' : 'failed')." for bid {$this->bid->process_code}");
         } catch (\Throwable $e) {
             NotificationLog::create([
-                'bid_id'        => $this->bid->id,
-                'channel'       => 'telegram',
-                'status'        => 'failed',
+                'bid_id' => $this->bid->id,
+                'channel' => 'telegram',
+                'status' => 'failed',
                 'error_message' => $e->getMessage(),
-                'created_at'    => now(),
+                'created_at' => now(),
             ]);
 
             Log::error("[SECP] Telegram exception for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);

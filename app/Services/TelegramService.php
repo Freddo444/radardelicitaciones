@@ -12,25 +12,27 @@ class TelegramService
 
     public function sendMessage(string $text): bool
     {
-        $token  = Setting::get('telegram_bot_token') ?? config('services.telegram.bot_token');
-        $chatId = Setting::get('telegram_chat_id')   ?? config('services.telegram.chat_id');
+        $token = Setting::get('telegram_bot_token') ?? config('services.telegram.bot_token');
+        $chatId = Setting::get('telegram_chat_id') ?? config('services.telegram.chat_id');
 
         if (empty($token) || empty($chatId)) {
             Log::warning('[Telegram] Bot token or chat ID not configured.');
+
             return false;
         }
 
-        $response = Http::timeout(15)->post(self::API_BASE . $token . '/sendMessage', [
-            'chat_id'    => $chatId,
-            'text'       => $text,
+        $response = Http::timeout(15)->post(self::API_BASE.$token.'/sendMessage', [
+            'chat_id' => $chatId,
+            'text' => $text,
             'parse_mode' => 'HTML',
         ]);
 
         if ($response->failed()) {
             Log::error('[Telegram] sendMessage failed', [
-                'status'   => $response->status(),
+                'status' => $response->status(),
                 'response' => $response->body(),
             ]);
+
             return false;
         }
 
@@ -39,8 +41,9 @@ class TelegramService
 
     public function isConfigured(): bool
     {
-        $token  = Setting::get('telegram_bot_token');
+        $token = Setting::get('telegram_bot_token');
         $chatId = Setting::get('telegram_chat_id');
+
         return ! empty($token) && ! empty($chatId);
     }
 }

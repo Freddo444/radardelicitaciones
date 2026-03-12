@@ -18,6 +18,7 @@ class BidNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         $buyer = $this->bid->buyer_name ?? 'N/D';
+
         return new Envelope(
             subject: "[SECP] {$this->bid->title} — {$buyer}",
         );

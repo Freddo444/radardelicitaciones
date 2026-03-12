@@ -15,10 +15,10 @@ class Bid extends Model
 
     protected $casts = [
         'matched_rubros' => 'array',
-        'raw_data'       => 'array',
-        'published_at'   => 'datetime',
-        'tender_deadline'=> 'datetime',
-        'notified_at'    => 'datetime',
+        'raw_data' => 'array',
+        'published_at' => 'datetime',
+        'tender_deadline' => 'datetime',
+        'notified_at' => 'datetime',
         'amount_estimated' => 'decimal:2',
     ];
 

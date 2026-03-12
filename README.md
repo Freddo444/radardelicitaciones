@@ -1,59 +1,110 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SECP Monitor
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Procurement monitoring application for the Dominican Republic DGCP (Dirección General de Contrataciones Públicas). Polls the public DGCP API, matches new procurement processes against a configurable UNSPSC rubro watchlist, and delivers instant notifications via Email and Telegram.
 
-## About Laravel
+## What it does
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Polls the DGCP API** on a configurable interval (default: hourly) for new procurement processes
+- **Matches by UNSPSC code** at familia, clase, or subclase level — watching a familia automatically catches all classes and subclasses beneath it
+- **Notifies instantly** via Gmail SMTP and/or Telegram bot when a match is found
+- **Filters noise** — skip processes below/above an amount threshold, exclude modalities you don't care about, or ignore processes whose tender deadline has already passed
+- **Auto-cleans** expired and closed processes from the feed
+- **Local UNSPSC catalog** — 18,000+ codes stored locally for instant code lookup when adding rubros
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Layer | Technology |
+|---|---|
+| Backend | Laravel 12 (PHP 8.3) |
+| Database | MySQL |
+| Frontend | Blade + Tailwind CSS v4 |
+| Queue | Laravel Queue (database driver) |
+| Worker | Supervisor |
+| Notifications | Gmail SMTP + Telegram Bot API |
+| API | DGCP Datos Abiertos (public, no auth) |
 
-## Learning Laravel
+## Setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Requirements
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.2+
+- MySQL 8+
+- Composer
+- Node.js + npm
+- Supervisor (for queue worker)
 
-## Laravel Sponsors
+### Installation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+git clone https://github.com/Freddo444/SECPMonitor.git
+cd SECPMonitor
 
-### Premium Partners
+composer install
+npm install && npm run build
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+Configure your `.env`:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```env
+DB_DATABASE=secp_monitor
+DB_USERNAME=your_db_user
+DB_PASSWORD=your_db_password
 
-## Code of Conduct
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your@gmail.com
+MAIL_PASSWORD=your_app_password
+MAIL_FROM_ADDRESS=your@gmail.com
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Run migrations and seed the catalog:
 
-## Security Vulnerabilities
+```bash
+php artisan migrate
+php artisan secp:import-catalog
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Scheduler
+
+Add to server crontab:
+
+```bash
+* * * * * cd /path/to/SECPMonitor && php artisan schedule:run >> /dev/null 2>&1
+```
+
+### Queue Worker (Supervisor)
+
+A ready-to-use Supervisor config is included at `storage/nginx-secp.conf`. Configure Supervisor to run:
+
+```bash
+php artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+```
+
+## First Run
+
+1. Open `/configuracion`
+2. Test DGCP API connection
+3. Enter Gmail address + App Password → send test email
+4. Create a Telegram bot via @BotFather, get Chat ID via @userinfobot → send test message
+5. Go to `/rubros` → enter UNSPSC codes to monitor
+6. Click "Sondear ahora" to run the first poll
+
+## Polling Strategy
+
+Uses an articles-first approach for efficiency:
+
+1. For each active rubro, fetch `/procesos/articulos` filtered by code since last poll
+2. Collect matched process codes
+3. Direct lookup per new process via `/procesos?proceso=CODE`
+4. Apply filters (amount, modality, deadline)
+5. Save matches, dispatch notifications
+
+This scales well for watchlists with many rubros without fetching all processes in a date window.
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Private — all rights reserved.

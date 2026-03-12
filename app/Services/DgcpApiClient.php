@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Log;
 
 class DgcpApiClient
 {
-    private const BASE_URL         = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
+    private const BASE_URL = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
+
     private const REQUEST_DELAY_MS = 4500; // safely under 15 req/min
-    private const RATE_LIMIT_WAIT  = 65;   // seconds to sleep on 429
+
+    private const RATE_LIMIT_WAIT = 65;   // seconds to sleep on 429
 
     /**
      * Fetch articles for a rubro published since a given datetime.
@@ -21,29 +23,37 @@ class DgcpApiClient
     public function fetchArticlesSince(string $code, string $level, \DateTime $since): Collection
     {
         // /procesos/articulos supports familia, clase, subclase — not segmento
-        $paramKey = match($level) {
-            'familia'  => 'familia',
+        $paramKey = match ($level) {
+            'familia' => 'familia',
             'subclase' => 'subclase',
-            default    => 'clase',
+            default => 'clase',
         };
 
         $results = collect();
-        $page    = 1;
+        $page = 1;
 
         do {
             $response = $this->get('/procesos/articulos', [
                 $paramKey => (int) $code,   // API expects int
-                'page'    => $page,
-                'limit'   => 1000,
+                'page' => $page,
+                'limit' => 1000,
             ]);
 
             $items = collect($response['payload']['content'] ?? []);
-            if ($items->isEmpty()) break;
+            if ($items->isEmpty()) {
+                break;
+            }
 
             $inWindow = $items->filter(function ($item) use ($since) {
                 $pub = $item['fecha_publicacion'] ?? null;
-                if (!$pub) return false;
-                try { return new \DateTime($pub) >= $since; } catch (\Exception) { return false; }
+                if (! $pub) {
+                    return false;
+                }
+                try {
+                    return new \DateTime($pub) >= $since;
+                } catch (\Exception) {
+                    return false;
+                }
             });
 
             $results = $results->merge($inWindow);
@@ -51,15 +61,25 @@ class DgcpApiClient
             // Articles come newest-first; stop once a full page is older than the window
             $hasRecent = $items->contains(function ($item) use ($since) {
                 $pub = $item['fecha_publicacion'] ?? null;
-                if (!$pub) return false;
-                try { return new \DateTime($pub) >= $since; } catch (\Exception) { return false; }
+                if (! $pub) {
+                    return false;
+                }
+                try {
+                    return new \DateTime($pub) >= $since;
+                } catch (\Exception) {
+                    return false;
+                }
             });
 
-            if (!$hasRecent) break;
+            if (! $hasRecent) {
+                break;
+            }
 
             $totalPages = $response['pages'] ?? 1;
             $page++;
-            if ($page <= $totalPages) usleep(self::REQUEST_DELAY_MS * 1000);
+            if ($page <= $totalPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
 
         } while ($page <= $totalPages);
 
@@ -71,20 +91,20 @@ class DgcpApiClient
      */
     public function searchCatalog(
         ?string $segmento = null,
-        ?string $familia  = null,
-        ?string $clase    = null,
+        ?string $familia = null,
+        ?string $clase = null,
         ?string $subclase = null,
-        int $page  = 1,
+        int $page = 1,
         int $limit = 50
     ): array {
         $params = array_filter([
             'segmento' => $segmento,
-            'familia'  => $familia,
-            'clase'    => $clase,
+            'familia' => $familia,
+            'clase' => $clase,
             'subclase' => $subclase,
-            'page'     => $page,
-            'limit'    => $limit,
-        ], fn($v) => $v !== null);
+            'page' => $page,
+            'limit' => $limit,
+        ], fn ($v) => $v !== null);
 
         return $this->get('/catalogo', $params);
     }
@@ -95,6 +115,7 @@ class DgcpApiClient
     public function fetchProcessByCode(string $code): ?array
     {
         $response = $this->get('/procesos', ['proceso' => $code]);
+
         return $response['payload']['content'][0] ?? null;
     }
 
@@ -105,6 +126,7 @@ class DgcpApiClient
     {
         try {
             $response = $this->get('/procesos', ['limit' => 1, 'page' => 1]);
+
             return isset($response['code']) && $response['code'] === 200;
         } catch (\Throwable) {
             return false;
@@ -116,12 +138,12 @@ class DgcpApiClient
      */
     private function get(string $endpoint, array $params = []): array
     {
-        $url = self::BASE_URL . $endpoint;
+        $url = self::BASE_URL.$endpoint;
 
         $response = Http::timeout(30)->get($url, $params);
 
         if ($response->status() === 429) {
-            Log::warning("[DGCP] Rate limited on {$endpoint}, sleeping " . self::RATE_LIMIT_WAIT . "s");
+            Log::warning("[DGCP] Rate limited on {$endpoint}, sleeping ".self::RATE_LIMIT_WAIT.'s');
             sleep(self::RATE_LIMIT_WAIT);
             $response = Http::timeout(30)->get($url, $params);
         }

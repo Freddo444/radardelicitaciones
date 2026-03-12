@@ -2,18 +2,19 @@
 
 namespace App\Console\Commands;
 
+use App\Exceptions\DgcpApiException;
 use App\Jobs\SendBidNotification;
 use App\Models\Bid;
 use App\Models\Rubro;
 use App\Models\Setting;
 use App\Services\DgcpApiClient;
-use App\Exceptions\DgcpApiException;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class PollCommand extends Command
 {
-    protected $signature   = 'secp:poll {--dry-run : Fetch and filter but do not save or notify}';
+    protected $signature = 'secp:poll {--dry-run : Fetch and filter but do not save or notify}';
+
     protected $description = 'Poll the DGCP API for new procurement processes and notify on matches';
 
     public function handle(DgcpApiClient $api): int
@@ -29,6 +30,7 @@ class PollCommand extends Command
         if ($activeRubros->isEmpty()) {
             $this->progress('No hay rubros activos configurados. Abortando.', 'warn');
             Setting::set('poll_status', 'idle');
+
             return self::SUCCESS;
         }
 
@@ -36,14 +38,14 @@ class PollCommand extends Command
         $from = $lastPolledAt
             ? new \DateTime($lastPolledAt)
             : new \DateTime('-24 hours');
-        $to = new \DateTime();
+        $to = new \DateTime;
 
         $this->progress("Ventana: {$from->format('Y-m-d H:i')} → {$to->format('Y-m-d H:i')}", 'info');
-        $this->progress($activeRubros->count() . " rubro(s) activo(s) a procesar.", 'info');
+        $this->progress($activeRubros->count().' rubro(s) activo(s) a procesar.', 'info');
 
-        $matchesByProcess      = collect();
+        $matchesByProcess = collect();
         $firstArticleByProcess = collect();
-        $rubroIndex            = 0;
+        $rubroIndex = 0;
 
         foreach ($activeRubros as $rubro) {
             $rubroIndex++;
@@ -54,6 +56,7 @@ class PollCommand extends Command
             } catch (DgcpApiException $e) {
                 $this->progress("  Error en {$rubro->code}: {$e->getMessage()}", 'warn');
                 Log::warning("[SECP] fetchArticlesSince failed for {$rubro->code}", ['error' => $e->getMessage()]);
+
                 continue;
             }
 
@@ -61,15 +64,17 @@ class PollCommand extends Command
 
             foreach ($articles as $article) {
                 $code = $article['codigo_proceso'] ?? '';
-                if (empty($code)) continue;
+                if (empty($code)) {
+                    continue;
+                }
 
-                if (!$matchesByProcess->has($code)) {
+                if (! $matchesByProcess->has($code)) {
                     $matchesByProcess->put($code, collect());
                     $firstArticleByProcess->put($code, $article);
                 }
 
                 $existing = $matchesByProcess->get($code);
-                if (!$existing->contains('code', $rubro->code)) {
+                if (! $existing->contains('code', $rubro->code)) {
                     $existing->push(['code' => $rubro->code, 'name' => $rubro->name]);
                 }
             }
@@ -80,28 +85,29 @@ class PollCommand extends Command
         $knownCodes = Bid::whereIn('process_code', $matchesByProcess->keys()->all())
             ->pluck('process_code');
 
-        $newMatches = $matchesByProcess->filter(fn($_, $code) => !$knownCodes->contains($code));
+        $newMatches = $matchesByProcess->filter(fn ($_, $code) => ! $knownCodes->contains($code));
 
         $this->progress("{$newMatches->count()} proceso(s) nuevos (no almacenados previamente).", 'info');
 
         if ($newMatches->isEmpty()) {
             $this->progress('Sin procesos nuevos. Sondeo completo.', 'success');
-            if (!$this->option('dry-run')) {
+            if (! $this->option('dry-run')) {
                 Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
                 Setting::set('poll_status', 'idle');
             }
+
             return self::SUCCESS;
         }
 
         // Load filters once
-        $minEnabled          = Setting::get('min_amount_filter') === '1';
-        $minValue            = (float) (Setting::get('min_amount_value') ?? 0);
-        $maxEnabled          = Setting::get('max_amount_filter') === '1';
-        $maxValue            = (float) (Setting::get('max_amount_value') ?? 0);
-        $excluded            = json_decode(Setting::get('excluded_modalities', '[]'), true) ?: [];
+        $minEnabled = Setting::get('min_amount_filter') === '1';
+        $minValue = (float) (Setting::get('min_amount_value') ?? 0);
+        $maxEnabled = Setting::get('max_amount_filter') === '1';
+        $maxValue = (float) (Setting::get('max_amount_value') ?? 0);
+        $excluded = json_decode(Setting::get('excluded_modalities', '[]'), true) ?: [];
         $openDeadlineEnabled = Setting::get('open_deadline_filter') === '1';
 
-        $this->progress("Obteniendo detalles de " . $newMatches->count() . " proceso(s)...", 'info');
+        $this->progress('Obteniendo detalles de '.$newMatches->count().' proceso(s)...', 'info');
 
         $notified = 0;
 
@@ -114,28 +120,32 @@ class PollCommand extends Command
             }
 
             // Apply filters
-            $amount   = $this->parseAmount($process['monto_estimado'] ?? null);
+            $amount = $this->parseAmount($process['monto_estimado'] ?? null);
             $modality = $process['modalidad'] ?? null;
 
             if ($minEnabled && $amount !== null && $amount < $minValue) {
                 $this->progress("[FILTRADO] {$processCode} — monto {$amount} por debajo del mínimo {$minValue}", 'warn');
+
                 continue;
             }
 
             if ($maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
                 $this->progress("[FILTRADO] {$processCode} — monto {$amount} por encima del máximo {$maxValue}", 'warn');
+
                 continue;
             }
 
             if ($modality && in_array($modality, $excluded)) {
                 $this->progress("[FILTRADO] {$processCode} — modalidad '{$modality}' excluida", 'warn');
+
                 continue;
             }
 
             if ($openDeadlineEnabled) {
                 $deadline = $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null);
-                if ($deadline !== null && $deadline < new \DateTime()) {
+                if ($deadline !== null && $deadline < new \DateTime) {
                     $this->progress("[FILTRADO] {$processCode} — plazo vencido ({$deadline->format('Y-m-d H:i')})", 'warn');
+
                     continue;
                 }
             }
@@ -143,34 +153,35 @@ class PollCommand extends Command
             $firstArticle = $firstArticleByProcess->get($processCode, []);
 
             if ($this->option('dry-run')) {
-                $this->progress("[DRY] {$processCode} — " . $matchedRubros->pluck('name')->join(', '), 'match');
+                $this->progress("[DRY] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
+
                 continue;
             }
 
             $bid = Bid::create([
-                'process_code'       => $processCode,
-                'ocid'               => $process['ocid'] ?? ('ocds-6550wx-' . $processCode),
-                'title'              => $process['titulo'] ?? $firstArticle['descripcion_articulo'] ?? $processCode,
-                'buyer_name'         => $process['unidad_compra'] ?? null,
-                'buyer_code'         => $process['codigo_unidad_compra'] ?? null,
+                'process_code' => $processCode,
+                'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
+                'title' => $process['titulo'] ?? $firstArticle['descripcion_articulo'] ?? $processCode,
+                'buyer_name' => $process['unidad_compra'] ?? null,
+                'buyer_code' => $process['codigo_unidad_compra'] ?? null,
                 'procurement_method' => $process['modalidad'] ?? null,
-                'status'             => $process['estado_proceso'] ?? null,
-                'amount_estimated'   => $this->parseAmount($process['monto_estimado'] ?? null),
-                'currency'           => $process['divisa'] ?? 'DOP',
-                'published_at'       => $this->parseDate($process['fecha_publicacion'] ?? $firstArticle['fecha_publicacion'] ?? null),
-                'tender_deadline'    => $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null),
-                'matched_rubros'     => $matchedRubros->values()->all(),
-                'secp_url'           => $process['url'] ?? "https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index?q={$processCode}",
-                'raw_data'           => $process ?? $firstArticle,
+                'status' => $process['estado_proceso'] ?? null,
+                'amount_estimated' => $this->parseAmount($process['monto_estimado'] ?? null),
+                'currency' => $process['divisa'] ?? 'DOP',
+                'published_at' => $this->parseDate($process['fecha_publicacion'] ?? $firstArticle['fecha_publicacion'] ?? null),
+                'tender_deadline' => $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null),
+                'matched_rubros' => $matchedRubros->values()->all(),
+                'secp_url' => isset($process['url']) ? preg_replace('#([^:])//+#', '$1/', $process['url']) : "https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index?q={$processCode}",
+                'raw_data' => $process ?? $firstArticle,
             ]);
 
             SendBidNotification::dispatch($bid);
             $notified++;
 
-            $this->progress("[MATCH] {$processCode} — " . $matchedRubros->pluck('name')->join(', '), 'match');
+            $this->progress("[MATCH] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
         }
 
-        if (!$this->option('dry-run')) {
+        if (! $this->option('dry-run')) {
             Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
             Setting::set('poll_status', 'idle');
             $this->cleanup();
@@ -187,7 +198,7 @@ class PollCommand extends Command
     {
         $this->line($message);
 
-        $log   = json_decode(Setting::get('poll_log', '[]'), true) ?: [];
+        $log = json_decode(Setting::get('poll_log', '[]'), true) ?: [];
         $log[] = ['time' => now()->format('H:i:s'), 'msg' => $message, 'type' => $type];
 
         if (count($log) > 300) {
@@ -209,9 +220,9 @@ class PollCommand extends Command
         ];
 
         $deleted = Bid::where(function ($q) {
-                $q->whereNotNull('tender_deadline')
-                  ->where('tender_deadline', '<', now());
-            })
+            $q->whereNotNull('tender_deadline')
+                ->where('tender_deadline', '<', now());
+        })
             ->orWhereIn('status', $closedStatuses)
             ->delete();
 
@@ -223,14 +234,23 @@ class PollCommand extends Command
 
     private function parseAmount(mixed $value): ?float
     {
-        if ($value === null || $value === '') return null;
+        if ($value === null || $value === '') {
+            return null;
+        }
         $cleaned = preg_replace('/[^\d.]/', '', (string) $value);
+
         return $cleaned !== '' ? (float) $cleaned : null;
     }
 
     private function parseDate(mixed $value): ?\DateTime
     {
-        if (empty($value)) return null;
-        try { return new \DateTime($value); } catch (\Exception) { return null; }
+        if (empty($value)) {
+            return null;
+        }
+        try {
+            return new \DateTime($value);
+        } catch (\Exception) {
+            return null;
+        }
     }
 }

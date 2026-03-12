@@ -15,6 +15,7 @@ class PollController extends Controller
         }
 
         RunPollJob::dispatch();
+
         return redirect()->route('poll.progress');
     }
 }

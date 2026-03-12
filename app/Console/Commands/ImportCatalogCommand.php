@@ -10,27 +10,30 @@ use Illuminate\Support\Facades\Log;
 
 class ImportCatalogCommand extends Command
 {
-    protected $signature   = 'secp:import-catalog';
+    protected $signature = 'secp:import-catalog';
+
     protected $description = 'Import UNSPSC catalog from DGCP API into local database';
 
     private const API_URL = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1/catalogo';
-    private const LIMIT   = 1000;
+
+    private const LIMIT = 1000;
 
     public function handle(): int
     {
         $this->info('Importing UNSPSC catalog...');
 
-        $page  = 1;
+        $page = 1;
         $total = 0;
 
         do {
             $response = Http::timeout(30)->get(self::API_URL, [
-                'page'  => $page,
+                'page' => $page,
                 'limit' => self::LIMIT,
             ]);
 
             if ($response->failed()) {
-                $this->error("API error on page {$page}: " . $response->status());
+                $this->error("API error on page {$page}: ".$response->status());
+
                 return self::FAILURE;
             }
 
@@ -43,13 +46,13 @@ class ImportCatalogCommand extends Command
             $batch = [];
             foreach ($items as $item) {
                 $batch[] = [
-                    'subclase'             => $item['subclase'],
+                    'subclase' => $item['subclase'],
                     'descripcion_subclase' => trim($item['descripcion_subclase'] ?? ''),
-                    'clase'                => $item['clase'],
-                    'descripcion_clase'    => trim($item['descripcion_clase'] ?? ''),
-                    'familia'              => $item['familia'],
-                    'descripcion_familia'  => trim($item['descripcion_familia'] ?? ''),
-                    'segmento'             => $item['segmento'],
+                    'clase' => $item['clase'],
+                    'descripcion_clase' => trim($item['descripcion_clase'] ?? ''),
+                    'familia' => $item['familia'],
+                    'descripcion_familia' => trim($item['descripcion_familia'] ?? ''),
+                    'segmento' => $item['segmento'],
                     'descripcion_segmento' => trim($item['descripcion_segmento'] ?? ''),
                 ];
             }

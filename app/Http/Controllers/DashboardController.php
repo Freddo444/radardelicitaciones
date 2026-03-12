@@ -9,8 +9,8 @@ class DashboardController extends Controller
     public function index()
     {
         $stats = [
-            'total'      => Bid::count(),
-            'this_week'  => Bid::where('published_at', '>=', now()->subDays(7))->count(),
+            'total' => Bid::count(),
+            'this_week' => Bid::where('published_at', '>=', now()->subDays(7))->count(),
             'unnotified' => Bid::whereNull('notified_at')->count(),
         ];
 

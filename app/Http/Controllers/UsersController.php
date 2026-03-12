@@ -13,20 +13,21 @@ class UsersController extends Controller
     public function index()
     {
         $users = User::orderBy('name')->get();
+
         return view('users.index', compact('users'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
+            'name' => $request->name,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
         ]);
 
@@ -54,6 +55,7 @@ class UsersController extends Controller
 
         $email = $user->email;
         $user->delete();
+
         return back()->with('success', "Usuario {$email} eliminado.");
     }
 }

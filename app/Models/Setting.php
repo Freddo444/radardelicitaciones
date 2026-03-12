@@ -7,15 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 class Setting extends Model
 {
     public $incrementing = false;
-    public $timestamps   = false;
+
+    public $timestamps = false;
 
     protected $primaryKey = 'key';
-    protected $keyType    = 'string';
-    protected $fillable   = ['key', 'value', 'updated_at'];
+
+    protected $keyType = 'string';
+
+    protected $fillable = ['key', 'value', 'updated_at'];
 
     public static function get(string $key, mixed $default = null): mixed
     {
         $row = static::find($key);
+
         return $row ? $row->value : $default;
     }
 

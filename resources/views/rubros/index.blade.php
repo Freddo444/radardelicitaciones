@@ -114,25 +114,20 @@
                     {{-- Drawer body --}}
                     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6">
 
-                        {{-- Search mode --}}
-                        <div id="search-mode">
-                            <label for="rubro-search" class="block text-sm font-medium text-gray-900">
-                                Buscar por código UNSPSC
-                            </label>
-                            <p class="mt-1 text-xs text-gray-500">Ingresa un código de 8 dígitos (ej. <span class="font-mono">72101500</span>). Solo aparecen códigos con procesos activos en DGCP.</p>
-                            <div class="relative mt-2">
-                                <input type="text" id="rubro-search" autocomplete="off"
-                                       placeholder="ej. 72101500"
-                                       class="w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
-                                <div id="search-spinner" class="absolute inset-y-0 right-3 hidden items-center">
-                                    <svg class="size-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
-                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                                    </svg>
-                                </div>
+                        <label for="rubro-search" class="block text-sm font-medium text-gray-900">Código UNSPSC</label>
+                        <p class="mt-1 text-xs text-gray-500">Ingresa el código de 8 dígitos (ej. <span class="font-mono">72101500</span>).</p>
+                        <div class="relative mt-2">
+                            <input type="text" id="rubro-search" autocomplete="off" maxlength="8"
+                                   placeholder="ej. 72101500"
+                                   class="w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
+                            <div id="search-spinner" class="absolute inset-y-0 right-3 hidden items-center">
+                                <svg class="size-4 animate-spin text-indigo-500" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                                </svg>
                             </div>
-                            <ul id="rubro-results" role="list" class="mt-2 divide-y divide-gray-100 rounded-md border border-gray-100 empty:hidden"></ul>
                         </div>
+                        <ul id="rubro-results" role="list" class="mt-2 divide-y divide-gray-100 rounded-md border border-gray-100 empty:hidden"></ul>
 
                         {{-- Selected rubro display --}}
                         <div id="selected-rubro" class="mt-4 hidden rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3">
@@ -142,36 +137,6 @@
                                     class="mt-1 text-xs text-indigo-500 underline hover:text-indigo-700">
                                 Cambiar selección
                             </button>
-                        </div>
-
-                        {{-- Divider --}}
-                        <div class="my-5 flex items-center gap-x-3">
-                            <div class="h-px flex-1 bg-gray-200"></div>
-                            <span class="text-xs text-gray-400">o ingresar manualmente</span>
-                            <div class="h-px flex-1 bg-gray-200"></div>
-                        </div>
-
-                        {{-- Manual entry --}}
-                        <div id="manual-mode" class="space-y-4">
-                            <div>
-                                <label for="manual-code" class="block text-sm font-medium text-gray-900">Código UNSPSC</label>
-                                <input type="text" id="manual-code" placeholder="ej. 72101500" maxlength="20"
-                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
-                            </div>
-                            <div>
-                                <label for="manual-name" class="block text-sm font-medium text-gray-900">Descripción</label>
-                                <input type="text" id="manual-name" placeholder="ej. Servicios de construcción de obras civiles" maxlength="255"
-                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600"/>
-                            </div>
-                            <div>
-                                <label for="manual-level" class="block text-sm font-medium text-gray-900">Nivel</label>
-                                <select id="manual-level"
-                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600">
-                                    <option value="clase" selected>clase</option>
-                                    <option value="subclase">subclase</option>
-                                    <option value="familia">familia</option>
-                                </select>
-                            </div>
                         </div>
 
                     </div>
@@ -215,18 +180,14 @@
     const formCode      = document.getElementById('form-code');
     const formName      = document.getElementById('form-name');
     const formLevel     = document.getElementById('form-level');
-    const manualCode    = document.getElementById('manual-code');
-    const manualName    = document.getElementById('manual-name');
-    const manualLevel   = document.getElementById('manual-level');
 
     let debounceTimer;
 
-    // Search input handler
     searchInput.addEventListener('input', function () {
         clearTimeout(debounceTimer);
         const q = this.value.trim();
 
-        if (q.length < 2) {
+        if (q.length < 8) {
             resultsList.innerHTML = '';
             return;
         }
@@ -244,12 +205,7 @@
                 spinner.classList.remove('flex');
 
                 if (!data.length) {
-                    resultsList.innerHTML = '';
-                    // Auto-fill manual entry with whatever they typed
-                    if (/^\d+$/.test(q)) {
-                        manualCode.value = q;
-                        manualName.focus();
-                    }
+                    resultsList.innerHTML = '<li class="px-3 py-3 text-xs text-gray-400">Código no encontrado en el catálogo UNSPSC.</li>';
                     return;
                 }
 
@@ -269,7 +225,7 @@
                 spinner.classList.remove('flex');
                 resultsList.innerHTML = '<li class="px-3 py-3 text-xs text-red-400">Error al consultar el catálogo.</li>';
             }
-        }, 400);
+        }, 300);
     });
 
     function selectRubro(code, name, level) {
@@ -282,62 +238,24 @@
         resultsList.innerHTML = '';
         searchInput.value = '';
         saveBtn.disabled = false;
-
-        // Clear manual fields when catalog selection is made
-        manualCode.value = '';
-        manualName.value = '';
     }
 
-    // Clear selection
     clearBtn.addEventListener('click', () => {
-        formCode.value = '';
-        formName.value = '';
+        formCode.value  = '';
+        formName.value  = '';
         formLevel.value = '';
         selectedBox.classList.add('hidden');
         saveBtn.disabled = true;
         searchInput.focus();
     });
 
-    // Manual fields — enable save when both code + name are filled
-    function checkManual() {
-        const code = manualCode.value.trim();
-        const name = manualName.value.trim();
-        if (code && name) {
-            formCode.value  = code;
-            formName.value  = name;
-            formLevel.value = manualLevel.value;
-            selectedBox.classList.add('hidden');
-            saveBtn.disabled = false;
-        } else if (!formCode.value) {
-            saveBtn.disabled = true;
-        }
-    }
+    saveBtn.addEventListener('click', () => document.getElementById('rubro-form').submit());
 
-    manualCode.addEventListener('input', checkManual);
-    manualName.addEventListener('input', checkManual);
-    manualLevel.addEventListener('change', function () {
-        if (formCode.value) formLevel.value = this.value;
-    });
-
-    // Save button submits the hidden form
-    saveBtn.addEventListener('click', () => {
-        // Sync manual fields one last time
-        if (manualCode.value.trim() && manualName.value.trim()) {
-            formCode.value  = manualCode.value.trim();
-            formName.value  = manualName.value.trim();
-            formLevel.value = manualLevel.value;
-        }
-        document.getElementById('rubro-form').submit();
-    });
-
-    // Reset drawer state when closed
     document.getElementById('rubros-drawer').addEventListener('close', () => {
-        searchInput.value  = '';
-        manualCode.value   = '';
-        manualName.value   = '';
-        formCode.value     = '';
-        formName.value     = '';
-        formLevel.value    = '';
+        searchInput.value = '';
+        formCode.value    = '';
+        formName.value    = '';
+        formLevel.value   = '';
         resultsList.innerHTML = '';
         selectedBox.classList.add('hidden');
         saveBtn.disabled = true;
