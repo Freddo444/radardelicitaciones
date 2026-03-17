@@ -18,6 +18,16 @@
                        class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('dashboard') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
                              class="size-6 shrink-0 {{ request()->routeIs('dashboard') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
+                            <path d="m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Inicio
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('convocatorias.index') }}"
+                       class="group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('convocatorias.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                             class="size-6 shrink-0 {{ request()->routeIs('convocatorias.*') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
                             <path d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5m.75-9 3-3 2.148 2.148A12.061 12.061 0 0 1 16.5 7.605" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Convocatorias

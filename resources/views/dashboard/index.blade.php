@@ -138,11 +138,7 @@
                 <h2 class="text-sm font-semibold text-gray-900">Convocatorias recientes</h2>
                 <div class="flex items-center gap-x-3 text-xs text-gray-500">
                     <span>{{ number_format($bidStats['total']) }} total · {{ number_format($bidStats['this_week']) }} esta semana</span>
-                    @if(!$showAll)
-                    <a href="/?ver=1" class="font-medium text-blue-600 hover:underline">Ver todas →</a>
-                    @else
-                    <a href="/" class="font-medium text-blue-600 hover:underline">← Resumir</a>
-                    @endif
+                    <a href="{{ route('convocatorias.index') }}" class="font-medium text-blue-600 hover:underline">Ver todas →</a>
                 </div>
             </div>
 

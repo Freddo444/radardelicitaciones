@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConvocatoriasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentosController;
 use App\Http\Controllers\EmpresaController;
@@ -30,6 +31,9 @@ Route::middleware('auth')->group(function () {
 
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Convocatorias
+    Route::get('/convocatorias', [ConvocatoriasController::class, 'index'])->name('convocatorias.index');
 
     // Rubros
     Route::get('/rubros', [RubrosController::class, 'index'])->name('rubros.index');

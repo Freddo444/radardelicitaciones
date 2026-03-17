@@ -212,16 +212,7 @@ class PollCommand extends Command
 
     private function cleanup(DgcpApiClient $api): void
     {
-        $closedStatuses = [
-            'Cancelado',
-            'Proceso adjudicado y celebrado',
-            'Proceso con etapa cerrada',
-            'Proceso desierto',
-            'Sobres abiertos o aperturados',
-            'Sobres estan abriendose',
-        ];
-
-        // Refresh status for all stored bids — DGCP may have changed them since we saved
+        // Refresh status for all active bids — DGCP may have changed them since we saved
         foreach (Bid::all() as $bid) {
             try {
                 $process = $api->fetchProcessByCode($bid->process_code);
@@ -233,16 +224,9 @@ class PollCommand extends Command
             }
         }
 
-        $deleted = Bid::where(function ($q) {
-            $q->whereNotNull('tender_deadline')
-                ->where('tender_deadline', '<', now());
-        })
-            ->orWhereIn('status', $closedStatuses)
-            ->delete();
-
-        if ($deleted > 0) {
-            $this->progress("Limpieza: {$deleted} convocatoria(s) eliminada(s) por plazo vencido o proceso cerrado.", 'info');
-            Log::info("[SECP] Cleanup removed {$deleted} expired/closed bids.");
+        $refreshed = Bid::count();
+        if ($refreshed > 0) {
+            $this->progress("Limpieza: {$refreshed} convocatoria(s) actualizada(s).", 'info');
         }
     }
 
