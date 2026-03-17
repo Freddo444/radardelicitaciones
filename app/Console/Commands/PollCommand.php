@@ -100,7 +100,7 @@ class PollCommand extends Command
             return self::SUCCESS;
         }
 
-        // Load filters once
+        // Load notification filters (bids are always saved; filters only gate notifications)
         $minEnabled = Setting::get('min_amount_filter') === '1';
         $minValue = (float) (Setting::get('min_amount_value') ?? 0);
         $maxEnabled = Setting::get('max_amount_filter') === '1';
@@ -110,6 +110,7 @@ class PollCommand extends Command
 
         $this->progress('Obteniendo detalles de '.$newMatches->count().' proceso(s)...', 'info');
 
+        $saved = 0;
         $notified = 0;
 
         foreach ($newMatches as $processCode => $matchedRubros) {
@@ -120,37 +121,6 @@ class PollCommand extends Command
                 $process = null;
             }
 
-            // Apply filters
-            $amount = $this->parseAmount($process['monto_estimado'] ?? null);
-            $modality = $process['modalidad'] ?? null;
-
-            if ($minEnabled && $amount !== null && $amount < $minValue) {
-                $this->progress("[FILTRADO] {$processCode} — monto {$amount} por debajo del mínimo {$minValue}", 'warn');
-
-                continue;
-            }
-
-            if ($maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
-                $this->progress("[FILTRADO] {$processCode} — monto {$amount} por encima del máximo {$maxValue}", 'warn');
-
-                continue;
-            }
-
-            if ($modality && in_array($modality, $excluded)) {
-                $this->progress("[FILTRADO] {$processCode} — modalidad '{$modality}' excluida", 'warn');
-
-                continue;
-            }
-
-            if ($openDeadlineEnabled) {
-                $deadline = $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null);
-                if ($deadline !== null && $deadline < new \DateTime) {
-                    $this->progress("[FILTRADO] {$processCode} — plazo vencido ({$deadline->format('Y-m-d H:i')})", 'warn');
-
-                    continue;
-                }
-            }
-
             $firstArticle = $firstArticleByProcess->get($processCode, []);
 
             if ($this->option('dry-run')) {
@@ -159,6 +129,7 @@ class PollCommand extends Command
                 continue;
             }
 
+            // Always save the bid
             $bid = Bid::create([
                 'process_code' => $processCode,
                 'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
@@ -176,10 +147,40 @@ class PollCommand extends Command
                 'raw_data' => $process ?? $firstArticle,
             ]);
 
-            SendBidNotification::dispatch($bid);
-            $notified++;
+            $saved++;
+            $this->progress("[GUARDADO] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
 
-            $this->progress("[MATCH] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
+            // Apply filters only for notification
+            $amount = $bid->amount_estimated;
+            $modality = $bid->procurement_method;
+            $shouldNotify = true;
+
+            if ($minEnabled && $amount !== null && $amount < $minValue) {
+                $this->progress("  [SIN NOTIFICAR] monto {$amount} por debajo del mínimo {$minValue}", 'warn');
+                $shouldNotify = false;
+            }
+
+            if ($shouldNotify && $maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
+                $this->progress("  [SIN NOTIFICAR] monto {$amount} por encima del máximo {$maxValue}", 'warn');
+                $shouldNotify = false;
+            }
+
+            if ($shouldNotify && $modality && in_array($modality, $excluded)) {
+                $this->progress("  [SIN NOTIFICAR] modalidad '{$modality}' excluida", 'warn');
+                $shouldNotify = false;
+            }
+
+            if ($shouldNotify && $openDeadlineEnabled) {
+                if ($bid->tender_deadline && $bid->tender_deadline < now()) {
+                    $this->progress("  [SIN NOTIFICAR] plazo vencido ({$bid->tender_deadline->format('Y-m-d H:i')})", 'warn');
+                    $shouldNotify = false;
+                }
+            }
+
+            if ($shouldNotify) {
+                SendBidNotification::dispatch($bid);
+                $notified++;
+            }
         }
 
         if (! $this->option('dry-run')) {
@@ -188,7 +189,7 @@ class PollCommand extends Command
             $this->cleanup($api);
         }
 
-        $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Notificados: {$notified}";
+        $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Guardados: {$saved} | Notificados: {$notified}";
         $this->progress($summary, 'success');
         Log::info("[SECP] {$summary}");
 

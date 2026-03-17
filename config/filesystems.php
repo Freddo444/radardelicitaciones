@@ -47,6 +47,20 @@ return [
             'report' => false,
         ],
 
+        // Private vault — company documents, never publicly accessible
+        'vault' => [
+            'driver' => 'local',
+            'root' => storage_path('app/vault'),
+            'throw' => true,
+        ],
+
+        // DGCP source documents (pliego PDFs downloaded from API)
+        'bid_docs' => [
+            'driver' => 'local',
+            'root' => storage_path('app/bid_docs'),
+            'throw' => true,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
