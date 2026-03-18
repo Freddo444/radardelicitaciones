@@ -180,6 +180,9 @@ class PollCommand extends Command
             if ($shouldNotify) {
                 SendBidNotification::dispatch($bid);
                 $notified++;
+            } else {
+                // Mark as "notified" so it doesn't appear as a missed notification
+                $bid->update(['notified_at' => now()]);
             }
         }
 
@@ -212,21 +215,24 @@ class PollCommand extends Command
 
     private function cleanup(DgcpApiClient $api): void
     {
-        // Refresh status for all active bids — DGCP may have changed them since we saved
-        foreach (Bid::all() as $bid) {
-            try {
-                $process = $api->fetchProcessByCode($bid->process_code);
-                if ($process && isset($process['estado_proceso'])) {
-                    $bid->update(['status' => $process['estado_proceso']]);
-                }
-            } catch (\Throwable) {
-                // Keep existing status if API call fails
-            }
-        }
+        $closedStatuses = [
+            'Cancelado',
+            'Proceso adjudicado y celebrado',
+            'Proceso desierto',
+        ];
 
-        $refreshed = Bid::count();
-        if ($refreshed > 0) {
-            $this->progress("Limpieza: {$refreshed} convocatoria(s) actualizada(s).", 'info');
+        $deleted = Bid::where(function ($q) use ($closedStatuses) {
+            $q->where(function ($q2) {
+                $q2->whereNotNull('tender_deadline')
+                    ->where('tender_deadline', '<', now());
+            })->orWhereIn('status', $closedStatuses);
+        })
+            ->whereDoesntHave('offers')
+            ->delete();
+
+        if ($deleted > 0) {
+            $this->progress("Limpieza: {$deleted} convocatoria(s) eliminada(s) por plazo vencido o proceso cerrado.", 'info');
+            Log::info("[SECP] Cleanup removed {$deleted} expired/closed bids.");
         }
     }
 

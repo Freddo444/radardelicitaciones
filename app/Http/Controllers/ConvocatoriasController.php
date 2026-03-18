@@ -9,7 +9,7 @@ class ConvocatoriasController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Bid::query();
+        $query = Bid::filtered();
 
         // Search
         if ($search = $request->input('q')) {

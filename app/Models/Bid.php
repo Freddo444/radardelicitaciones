@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Bid extends Model
@@ -25,5 +26,53 @@ class Bid extends Model
     public function notificationLogs()
     {
         return $this->hasMany(NotificationLog::class);
+    }
+
+    public function offers()
+    {
+        return $this->hasMany(Offer::class);
+    }
+
+    /**
+     * Apply the user's configured filters from Settings.
+     */
+    public function scopeFiltered(Builder $query): Builder
+    {
+        if (Setting::get('min_amount_filter') === '1') {
+            $min = (float) (Setting::get('min_amount_value') ?? 0);
+            if ($min > 0) {
+                $query->where(function ($q) use ($min) {
+                    $q->whereNull('amount_estimated')
+                      ->orWhere('amount_estimated', '>=', $min);
+                });
+            }
+        }
+
+        if (Setting::get('max_amount_filter') === '1') {
+            $max = (float) (Setting::get('max_amount_value') ?? 0);
+            if ($max > 0) {
+                $query->where(function ($q) use ($max) {
+                    $q->whereNull('amount_estimated')
+                      ->orWhere('amount_estimated', '<=', $max);
+                });
+            }
+        }
+
+        $excluded = json_decode(Setting::get('excluded_modalities', '[]'), true) ?: [];
+        if (! empty($excluded)) {
+            $query->where(function ($q) use ($excluded) {
+                $q->whereNull('procurement_method')
+                  ->orWhereNotIn('procurement_method', $excluded);
+            });
+        }
+
+        if (Setting::get('open_deadline_filter') === '1') {
+            $query->where(function ($q) {
+                $q->whereNull('tender_deadline')
+                  ->orWhere('tender_deadline', '>=', now());
+            });
+        }
+
+        return $query;
     }
 }

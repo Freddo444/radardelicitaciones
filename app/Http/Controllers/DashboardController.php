@@ -57,19 +57,20 @@ class DashboardController extends Controller
         $lastPolledAt = Setting::get('last_polled_at');
         $pollIntervalMins = (int) (Setting::get('poll_interval_minutes') ?? 60);
 
-        // ── Bid feed ──────────────────────────────────────────────────
+        // ── Bid feed (respects settings filters) ─────────────────────
+        $bidQuery = Bid::filtered();
         $bidStats = [
-            'total' => Bid::count(),
-            'this_week' => Bid::where('published_at', '>=', now()->subDays(7))->count(),
-            'unnotified' => Bid::whereNull('notified_at')->count(),
+            'total'      => (clone $bidQuery)->count(),
+            'this_week'  => (clone $bidQuery)->where('published_at', '>=', now()->subDays(7))->count(),
+            'unnotified' => (clone $bidQuery)->whereNull('notified_at')->count(),
         ];
 
         if ($showAll) {
-            $bids = Bid::orderByDesc('published_at')->paginate(25);
+            $bids       = (clone $bidQuery)->orderByDesc('published_at')->paginate(25);
             $recentBids = null;
         } else {
-            $recentBids = Bid::orderByDesc('published_at')->limit(5)->get();
-            $bids = null;
+            $recentBids = (clone $bidQuery)->orderByDesc('published_at')->limit(5)->get();
+            $bids       = null;
         }
 
         return view('dashboard.index', compact(
