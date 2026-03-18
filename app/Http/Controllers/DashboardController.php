@@ -60,17 +60,17 @@ class DashboardController extends Controller
         // ── Bid feed (respects settings filters) ─────────────────────
         $bidQuery = Bid::filtered();
         $bidStats = [
-            'total'      => (clone $bidQuery)->count(),
-            'this_week'  => (clone $bidQuery)->where('published_at', '>=', now()->subDays(7))->count(),
+            'total' => (clone $bidQuery)->count(),
+            'this_week' => (clone $bidQuery)->where('published_at', '>=', now()->subDays(7))->count(),
             'unnotified' => (clone $bidQuery)->whereNull('notified_at')->count(),
         ];
 
         if ($showAll) {
-            $bids       = (clone $bidQuery)->orderByDesc('published_at')->paginate(25);
+            $bids = (clone $bidQuery)->orderByDesc('published_at')->paginate(25);
             $recentBids = null;
         } else {
             $recentBids = (clone $bidQuery)->orderByDesc('published_at')->limit(5)->get();
-            $bids       = null;
+            $bids = null;
         }
 
         return view('dashboard.index', compact(

@@ -43,7 +43,7 @@ class Bid extends Model
             if ($min > 0) {
                 $query->where(function ($q) use ($min) {
                     $q->whereNull('amount_estimated')
-                      ->orWhere('amount_estimated', '>=', $min);
+                        ->orWhere('amount_estimated', '>=', $min);
                 });
             }
         }
@@ -53,7 +53,7 @@ class Bid extends Model
             if ($max > 0) {
                 $query->where(function ($q) use ($max) {
                     $q->whereNull('amount_estimated')
-                      ->orWhere('amount_estimated', '<=', $max);
+                        ->orWhere('amount_estimated', '<=', $max);
                 });
             }
         }
@@ -62,14 +62,14 @@ class Bid extends Model
         if (! empty($excluded)) {
             $query->where(function ($q) use ($excluded) {
                 $q->whereNull('procurement_method')
-                  ->orWhereNotIn('procurement_method', $excluded);
+                    ->orWhereNotIn('procurement_method', $excluded);
             });
         }
 
         if (Setting::get('open_deadline_filter') === '1') {
             $query->where(function ($q) {
                 $q->whereNull('tender_deadline')
-                  ->orWhere('tender_deadline', '>=', now());
+                    ->orWhere('tender_deadline', '>=', now());
             });
         }
 
