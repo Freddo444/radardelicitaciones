@@ -41,6 +41,14 @@
                     </a>
                 </li>
                 <li>
+                    <a href="#notificaciones" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                            <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Notificaciones
+                    </a>
+                </li>
+                <li>
                     <a href="#filtros" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
                             <path d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -182,6 +190,49 @@
                     </dl>
                 </div>
 
+                {{-- Notificaciones --}}
+                <div id="notificaciones">
+                    <h2 class="text-base/7 font-semibold text-gray-900">Notificaciones</h2>
+                    <p class="mt-1 text-sm/6 text-gray-500">Elige si las alertas se envían de inmediato o agrupadas en un resumen periódico.</p>
+
+                    <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
+                        <div class="py-6 sm:flex sm:items-start">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Modo de envío</dt>
+                            <dd class="mt-2 sm:mt-0 sm:flex-auto">
+                                <fieldset>
+                                    <div class="space-y-3">
+                                        <label class="flex items-center gap-x-3">
+                                            <input type="radio" name="notification_mode" value="instant"
+                                                   {{ ($settings['notification_mode'] ?? 'instant') === 'instant' ? 'checked' : '' }}
+                                                   class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-blue-600 checked:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"/>
+                                            <span class="text-sm/6 text-gray-900">Instantáneo — cada convocatoria se envía al detectarse</span>
+                                        </label>
+                                        <label class="flex items-center gap-x-3">
+                                            <input type="radio" name="notification_mode" value="digest"
+                                                   {{ ($settings['notification_mode'] ?? 'instant') === 'digest' ? 'checked' : '' }}
+                                                   class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-blue-600 checked:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"/>
+                                            <span class="text-sm/6 text-gray-900">Resumen (digest) — agrupa varias convocatorias en un solo envío</span>
+                                        </label>
+                                    </div>
+                                </fieldset>
+                            </dd>
+                        </div>
+                        <div class="py-6 sm:flex sm:items-center">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Frecuencia del resumen</dt>
+                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
+                                <select name="digest_frequency"
+                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="hourly" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'hourly' ? 'selected' : '' }}>Cada hora</option>
+                                    <option value="every_2h" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'every_2h' ? 'selected' : '' }}>Cada 2 horas</option>
+                                    <option value="twice_daily" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'twice_daily' ? 'selected' : '' }}>Dos veces al día (9am y 3pm)</option>
+                                    <option value="daily_9am" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'daily_9am' ? 'selected' : '' }}>Diario a las 9:00 AM</option>
+                                </select>
+                                <p class="mt-2 text-xs text-gray-500">Solo aplica cuando el modo es "Resumen".</p>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+
                 {{-- Filtros --}}
                 <div id="filtros">
                     <h2 class="text-base/7 font-semibold text-gray-900">Filtros</h2>
@@ -296,6 +347,34 @@
                                     </label>
                                     @endforeach
                                 </div>
+                            </dd>
+                        </div>
+
+                        {{-- Positive keywords --}}
+                        <div class="py-6 sm:flex sm:items-start">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
+                                Palabras clave positivas
+                                <p class="mt-1 text-xs font-normal text-gray-500">Convocatorias que contengan alguna de estas palabras se marcan como "Relevante". Separar con comas.</p>
+                            </dt>
+                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
+                                <input type="text" name="radar_keywords"
+                                       value="{{ $settings['radar_keywords'] }}"
+                                       placeholder="software, consultoría, estudio de suelo"
+                                       class="w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </dd>
+                        </div>
+
+                        {{-- Negative keywords --}}
+                        <div class="py-6 sm:flex sm:items-start">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
+                                Palabras clave negativas
+                                <p class="mt-1 text-xs font-normal text-gray-500">Convocatorias que contengan alguna de estas palabras se ocultan del listado filtrado. Separar con comas.</p>
+                            </dt>
+                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
+                                <input type="text" name="radar_excluded_keywords"
+                                       value="{{ $settings['radar_excluded_keywords'] }}"
+                                       placeholder="alimentos, medicamentos, combustible"
+                                       class="w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>
 

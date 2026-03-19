@@ -61,6 +61,46 @@ class FormGeneratorService
         ]);
     }
 
+    /**
+     * Generate a single template by its file path relative to tplRoot.
+     * Used by prellenado for templates that don't have a dedicated builder.
+     */
+    public function generateFromTemplate(
+        string $relativePath,
+        array $params = [],
+        ?int $offerId = null,
+        ?int $prellenadoPackageId = null
+    ): OfferGeneratedFile {
+        $company = Company::instance();
+        $tpl = $this->tpl($relativePath);
+        $this->set($tpl, $this->companyTokens($company), $this->processTokens($params));
+
+        // Apply extra tokens passed directly
+        $extraTokens = $params['_extra_tokens'] ?? [];
+        if (! empty($extraTokens)) {
+            $this->set($tpl, $extraTokens);
+        }
+
+        $slug = pathinfo($relativePath, PATHINFO_FILENAME);
+        $fullPath = $this->save($tpl, $slug);
+
+        return OfferGeneratedFile::create([
+            'offer_id' => $offerId,
+            'prellenado_package_id' => $prellenadoPackageId,
+            'form_code' => $slug,
+            'source_context_json' => [
+                'template' => $relativePath,
+                'company' => $company->only(['razon_social', 'rnc']),
+                ...$params,
+            ],
+            'path' => 'generated/'.basename($fullPath),
+            'sha256' => hash_file('sha256', $fullPath),
+            'file_size' => filesize($fullPath),
+            'generated_at' => now(),
+            'generated_by' => Auth::id(),
+        ]);
+    }
+
     // ── Private helpers ───────────────────────────────────────────────
 
     private function tpl(string $relative): TemplateProcessor

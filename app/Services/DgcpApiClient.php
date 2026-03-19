@@ -120,6 +120,255 @@ class DgcpApiClient
     }
 
     /**
+     * Fetch documents for a process code.
+     */
+    public function fetchDocuments(string $processCode): array
+    {
+        $response = $this->get('/procesos/documentos', ['proceso' => $processCode]);
+
+        return $response['payload']['content'] ?? [];
+    }
+
+    /**
+     * Fetch articles/line items for a process code.
+     */
+    public function fetchProcessArticles(string $processCode): array
+    {
+        $response = $this->get('/procesos/articulos', ['proceso' => $processCode]);
+
+        return $response['payload']['content'] ?? [];
+    }
+
+    /**
+     * Fetch contracts for a process code.
+     */
+    public function fetchContracts(string $processCode): array
+    {
+        $response = $this->get('/contratos', ['proceso' => $processCode]);
+
+        return $response['payload']['content'] ?? [];
+    }
+
+    /**
+     * Fetch awarded articles for a process code.
+     */
+    public function fetchContractArticles(string $processCode): array
+    {
+        $response = $this->get('/contratos/articulos', ['proceso' => $processCode]);
+
+        return $response['payload']['content'] ?? [];
+    }
+
+    /**
+     * Fetch contract articles filtered by UNSPSC level, paginated.
+     * Returns all pages up to $maxPages.
+     */
+    public function fetchContractArticlesByRubro(string $code, string $level, int $maxPages = 50): Collection
+    {
+        $paramKey = match ($level) {
+            'familia' => 'familia',
+            'subclase' => 'subclase',
+            default => 'clase',
+        };
+
+        $results = collect();
+        $page = 0;
+
+        do {
+            $response = $this->get('/contratos/articulos', [
+                $paramKey => (int) $code,
+                'page' => $page,
+                'limit' => 100,
+            ]);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
+     * Fetch contracts paginated. Supports filtering by unidad_compra, rpe, proceso.
+     */
+    public function fetchContractsPaginated(array $filters = [], int $maxPages = 50): Collection
+    {
+        $results = collect();
+        $page = 0;
+
+        do {
+            $params = array_merge($filters, ['page' => $page, 'limit' => 100]);
+            $response = $this->get('/contratos', $params);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
+     * Fetch PACC plans (annual purchase plans), paginated.
+     */
+    public function fetchPaccPlans(?int $year = null, ?int $unidadCompra = null, int $maxPages = 50): Collection
+    {
+        $results = collect();
+        $page = 0;
+
+        do {
+            $params = array_filter([
+                'año' => $year ?? (int) date('Y'),
+                'unidad_compra' => $unidadCompra,
+                'page' => $page,
+                'limit' => 100,
+            ], fn ($v) => $v !== null);
+
+            $response = $this->get('/pacc', $params);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
+     * Fetch PACC acquisitions (planned purchases within a PACC), paginated.
+     */
+    public function fetchPaccAcquisitions(?int $year = null, ?int $unidadCompra = null, ?string $paccId = null, int $maxPages = 100): Collection
+    {
+        $results = collect();
+        $page = 0;
+
+        do {
+            $params = array_filter([
+                'año' => $year ?? (int) date('Y'),
+                'unidad_compra' => $unidadCompra,
+                'pacc_id' => $paccId,
+                'page' => $page,
+                'limit' => 100,
+            ], fn ($v) => $v !== null);
+
+            $response = $this->get('/pacc/adquisiciones', $params);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
+     * Fetch providers (suppliers), paginated.
+     */
+    public function fetchProviders(array $filters = [], int $maxPages = 200): Collection
+    {
+        $results = collect();
+        $page = 0;
+
+        do {
+            $params = array_merge($filters, ['page' => $page, 'limit' => 100]);
+            $response = $this->get('/proveedores', $params);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
+     * Fetch purchasing units (institutions), paginated.
+     */
+    public function fetchInstitutions(int $maxPages = 100): Collection
+    {
+        $results = collect();
+        $page = 0;
+
+        do {
+            $params = ['page' => $page, 'limit' => 100];
+            $response = $this->get('/unidades_compra', $params);
+
+            $items = collect($response['payload']['content'] ?? []);
+            if ($items->isEmpty()) {
+                break;
+            }
+
+            $results = $results->merge($items);
+
+            $totalPages = $response['pages'] ?? 1;
+            $page++;
+
+            if ($page < $totalPages && $page < $maxPages) {
+                usleep(self::REQUEST_DELAY_MS * 1000);
+            }
+
+        } while ($page < $totalPages && $page < $maxPages);
+
+        return $results;
+    }
+
+    /**
      * Test API connectivity.
      */
     public function testConnection(): bool

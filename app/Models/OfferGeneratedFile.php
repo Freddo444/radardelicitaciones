@@ -10,6 +10,7 @@ class OfferGeneratedFile extends Model
 {
     protected $fillable = [
         'offer_id',
+        'prellenado_package_id',
         'form_code',
         'source_context_json',
         'path',
@@ -47,6 +48,11 @@ class OfferGeneratedFile extends Model
 
     /** Forms that require selecting projects. */
     public static array $requiresProjects = ['SNCC.D.049'];
+
+    public function prellenadoPackage(): BelongsTo
+    {
+        return $this->belongsTo(PrellenadoPackage::class);
+    }
 
     public function supersedes(): BelongsTo
     {

@@ -47,6 +47,21 @@ class UsersController extends Controller
         return back()->with('success', "Contraseña de {$user->email} actualizada.");
     }
 
+    public function updateRole(Request $request, User $user)
+    {
+        $request->validate([
+            'role' => 'required|in:admin,user',
+        ]);
+
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'No puedes cambiar tu propio rol.');
+        }
+
+        $user->update(['role' => $request->role]);
+
+        return back()->with('success', "Rol de {$user->email} actualizado a {$request->role}.");
+    }
+
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {

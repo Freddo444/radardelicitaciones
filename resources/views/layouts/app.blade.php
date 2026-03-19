@@ -24,7 +24,7 @@
                         </svg>
                     </button>
                 </div>
-                <div class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 px-6 pb-4">
+                <div x-data="{ sidebarCollapsed: false }" class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 px-6 pb-4">
                     @include('layouts.sidebar-content')
                 </div>
             </el-dialog-panel>
@@ -32,15 +32,21 @@
     </dialog>
 </el-dialog>
 
-{{-- ── Desktop sidebar (fixed) ─────────────────────────────────────── --}}
-<div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-    <div class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 px-6 pb-4">
+{{-- ── Desktop sidebar + Main (shared Alpine scope) ──────────────── --}}
+<div x-data="{ sidebarCollapsed: JSON.parse(localStorage.getItem('sidebarCollapsed') ?? 'false') }"
+     x-effect="localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed))">
+
+{{-- Desktop sidebar --}}
+<div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300"
+     :class="sidebarCollapsed ? 'lg:w-16' : 'lg:w-72'">
+    <div class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 pb-4 transition-all duration-300"
+         :class="sidebarCollapsed ? 'px-2' : 'px-6'">
         @include('layouts.sidebar-content')
     </div>
 </div>
 
 {{-- ── Main area ────────────────────────────────────────────────────── --}}
-<div class="lg:pl-72">
+<div class="transition-all duration-300" :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'">
 
     {{-- Top bar --}}
     <div class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">
@@ -65,6 +71,82 @@
                     <span class="text-yellow-500">Sin sondear aún</span>
                 @endif
             </span>
+
+            <div aria-hidden="true" class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10"></div>
+
+            {{-- Notification bell --}}
+            <div x-data="notificationBell()" x-init="init()" class="relative">
+                <button @click="toggle()" class="relative -m-1.5 p-1.5 text-gray-400 hover:text-gray-500">
+                    <span class="sr-only">Notificaciones</span>
+                    <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0"/>
+                    </svg>
+                    <span x-show="unreadCount > 0" x-cloak
+                          class="absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white"
+                          x-text="unreadCount > 9 ? '9+' : unreadCount"></span>
+                </button>
+
+                {{-- Dropdown panel --}}
+                <div x-show="open" x-cloak @click.away="open = false"
+                     x-transition:enter="transition ease-out duration-100"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition ease-in duration-75"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
+
+                    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                        <h3 class="text-sm font-semibold text-gray-900">Notificaciones</h3>
+                        <button x-show="unreadCount > 0" @click.stop="markAllRead()"
+                                class="text-xs text-blue-600 hover:text-blue-500">
+                            Marcar todas como leídas
+                        </button>
+                    </div>
+
+                    <div class="max-h-80 overflow-y-auto">
+                        <template x-if="loading">
+                            <div class="flex items-center justify-center py-8">
+                                <svg class="size-5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </div>
+                        </template>
+                        <template x-if="!loading && notifications.length === 0">
+                            <div class="px-4 py-8 text-center text-sm text-gray-500">
+                                Sin notificaciones
+                            </div>
+                        </template>
+                        <template x-for="n in notifications" :key="n.id">
+                            <a :href="n.bid_id ? '/convocatorias?drawer=' + n.bid_id : '#'"
+                               @click="markRead(n)"
+                               class="flex gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                               :class="n.read ? '' : 'bg-blue-50/50'">
+                                <div class="shrink-0 mt-0.5">
+                                    <span class="flex size-2 rounded-full" :class="n.read ? 'bg-transparent' : 'bg-blue-500'"></span>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-gray-900 truncate" x-text="n.title"></p>
+                                    <p class="text-xs text-gray-500 truncate" x-text="n.body"></p>
+                                    <p class="mt-0.5 text-xs text-gray-400" x-text="n.ago"></p>
+                                </div>
+                                <div class="shrink-0">
+                                    <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                                          :class="typeStyle(n.type)"
+                                          x-text="typeLabel(n.type)"></span>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+
+                    <div class="border-t border-gray-100 px-4 py-2">
+                        <a href="{{ route('logs.index') }}" class="text-xs text-gray-500 hover:text-gray-700">
+                            Ver todos los registros &rarr;
+                        </a>
+                    </div>
+                </div>
+            </div>
 
             <div aria-hidden="true" class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10"></div>
 
@@ -126,11 +208,151 @@
     </script>
     @endif
 
+    {{-- Breadcrumbs --}}
+    @hasSection('breadcrumbs')
+        @yield('breadcrumbs')
+    @else
+        @php
+        $__route = request()->route()?->getName();
+        $__crumbs = match($__route) {
+            // Monitor
+            'convocatorias.index' => [['label' => 'Convocatorias']],
+            'rubros.index' => [['label' => 'Rubros']],
+            'tablero.index' => [['label' => 'Tablero']],
+            'poll.progress' => [['label' => 'Sondeo']],
+
+            // Inteligencia
+            'inteligencia.adjudicados' => [['label' => 'Inteligencia', 'url' => '#'], ['label' => 'Adjudicados']],
+            'inteligencia.pacc' => [['label' => 'Inteligencia', 'url' => '#'], ['label' => 'PACC']],
+            'inteligencia.contratos' => [['label' => 'Inteligencia', 'url' => '#'], ['label' => 'Contratos']],
+            'inteligencia.proveedores' => [['label' => 'Inteligencia', 'url' => '#'], ['label' => 'Proveedores']],
+            'inteligencia.instituciones' => [['label' => 'Inteligencia', 'url' => '#'], ['label' => 'Instituciones']],
+
+            // Empresa
+            'empresa.index' => [['label' => 'Empresa']],
+            'documentos.index' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Documentos']],
+            'documentos.versions' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Documentos', 'url' => route('documentos.index')], ['label' => 'Versiones']],
+            'personal.index' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Personal']],
+            'personal.show' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Personal', 'url' => route('personal.index')], ['label' => 'Detalle']],
+            'proyectos.index' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Proyectos']],
+            'proyectos.show' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Proyectos', 'url' => route('proyectos.index')], ['label' => 'Detalle']],
+            'equipos.index' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Equipos']],
+            'financiero.index' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Financiero']],
+            'financiero.create' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Financiero', 'url' => route('financiero.index')], ['label' => 'Nuevo']],
+            'financiero.show' => [['label' => 'Empresa', 'url' => route('empresa.index')], ['label' => 'Financiero', 'url' => route('financiero.index')], ['label' => 'Detalle']],
+
+            // Ofertas
+            'ofertas.index' => [['label' => 'Preparaciones']],
+            'ofertas.create' => [['label' => 'Preparaciones', 'url' => route('ofertas.index')], ['label' => 'Nueva']],
+            'ofertas.show' => [['label' => 'Preparaciones', 'url' => route('ofertas.index')], ['label' => 'Detalle']],
+            'documentos-generados.index' => [['label' => 'Docs. Generados']],
+            'documentos-generados.show' => [['label' => 'Docs. Generados', 'url' => route('documentos-generados.index')], ['label' => 'Detalle']],
+            'prellenado.show' => [['label' => 'Docs. Generados', 'url' => route('documentos-generados.index')], ['label' => 'Prellenado']],
+            'formularios.index' => [['label' => 'Formularios']],
+
+            // Sistema
+            'settings.index' => [['label' => 'Configuración']],
+            'users.index' => [['label' => 'Usuarios']],
+            'logs.index' => [['label' => 'Registros']],
+
+            default => [],
+        };
+        @endphp
+        <x-breadcrumbs :crumbs="$__crumbs" />
+    @endif
+
     {{-- Page content --}}
     <main>
         @yield('content')
     </main>
 
 </div>
+</div>{{-- /Alpine sidebar scope --}}
+
+<script>
+function notificationBell() {
+    return {
+        open: false,
+        loading: false,
+        unreadCount: 0,
+        notifications: [],
+        pollInterval: null,
+
+        init() {
+            this.fetchCount();
+            this.pollInterval = setInterval(() => this.fetchCount(), 60000);
+        },
+
+        async fetchCount() {
+            try {
+                const r = await fetch('/notifications/unread-count', {
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                });
+                if (r.ok) {
+                    const d = await r.json();
+                    this.unreadCount = d.count;
+                }
+            } catch (e) {}
+        },
+
+        async toggle() {
+            this.open = !this.open;
+            if (this.open) {
+                this.loading = true;
+                try {
+                    const r = await fetch('/notifications/recent', {
+                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                    });
+                    if (r.ok) {
+                        const d = await r.json();
+                        this.notifications = d.notifications;
+                    }
+                } catch (e) {}
+                this.loading = false;
+            }
+        },
+
+        async markAllRead() {
+            try {
+                const r = await fetch('/notifications/mark-all-read', {
+                    method: 'PATCH',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                });
+                if (r.ok) {
+                    this.unreadCount = 0;
+                    this.notifications = this.notifications.map(n => ({ ...n, read: true }));
+                }
+            } catch (e) {
+                console.error('markAllRead failed:', e);
+            }
+        },
+
+        async markRead(n) {
+            if (n.read) return;
+            try {
+                await fetch(`/notifications/${n.id}/read`, {
+                    method: 'PATCH',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                });
+                n.read = true;
+                this.unreadCount = Math.max(0, this.unreadCount - 1);
+            } catch (e) {}
+        },
+
+        typeLabel(type) {
+            return { new_match: 'Nueva', status_changed: 'Cambio', deadline_approaching: 'Plazo', document_added: 'Doc' }[type] || type;
+        },
+
+        typeStyle(type) {
+            return {
+                new_match: 'bg-green-50 text-green-700',
+                status_changed: 'bg-yellow-50 text-yellow-700',
+                deadline_approaching: 'bg-red-50 text-red-700',
+                document_added: 'bg-blue-50 text-blue-700',
+            }[type] || 'bg-gray-50 text-gray-700';
+        }
+    };
+}
+</script>
 </body>
 </html>

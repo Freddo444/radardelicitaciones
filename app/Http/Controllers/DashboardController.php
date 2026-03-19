@@ -61,7 +61,7 @@ class DashboardController extends Controller
         $bidQuery = Bid::filtered();
         $bidStats = [
             'total' => (clone $bidQuery)->count(),
-            'this_week' => (clone $bidQuery)->where('published_at', '>=', now()->subDays(7))->count(),
+            'this_week' => (clone $bidQuery)->where('published_at', '>=', now()->startOfWeek())->count(),
             'unnotified' => (clone $bidQuery)->whereNull('notified_at')->count(),
         ];
 
@@ -69,7 +69,7 @@ class DashboardController extends Controller
             $bids = (clone $bidQuery)->orderByDesc('published_at')->paginate(25);
             $recentBids = null;
         } else {
-            $recentBids = (clone $bidQuery)->orderByDesc('published_at')->limit(5)->get();
+            $recentBids = (clone $bidQuery)->orderByDesc('published_at')->limit(7)->get();
             $bids = null;
         }
 

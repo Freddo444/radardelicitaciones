@@ -24,6 +24,9 @@ class Offer extends Model
         'en_preparacion' => 'En preparación',
         'listo' => 'Listo',
         'enviado' => 'Enviado',
+        'adjudicada' => 'Adjudicada',
+        'perdida' => 'Perdida',
+        'impugnacion' => 'Impugnación',
     ];
 
     public static array $estadoColors = [
@@ -31,6 +34,9 @@ class Offer extends Model
         'en_preparacion' => 'bg-blue-50 text-blue-700',
         'listo' => 'bg-green-50 text-green-700',
         'enviado' => 'bg-purple-50 text-purple-700',
+        'adjudicada' => 'bg-yellow-50 text-yellow-800',
+        'perdida' => 'bg-red-50 text-red-700',
+        'impugnacion' => 'bg-orange-50 text-orange-700',
     ];
 
     // ── Relations ────────────────────────────────────────────────────
@@ -104,7 +110,7 @@ class Offer extends Model
 
     public function isLocked(): bool
     {
-        return in_array($this->estado, ['listo', 'enviado']);
+        return in_array($this->estado, ['listo', 'enviado', 'adjudicada', 'perdida', 'impugnacion']);
     }
 
     public function isEditable(): bool

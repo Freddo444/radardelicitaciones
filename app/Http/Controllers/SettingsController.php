@@ -24,10 +24,14 @@ class SettingsController extends Controller
             'max_amount_filter' => Setting::get('max_amount_filter', '0'),
             'max_amount_value' => Setting::get('max_amount_value', '0'),
             'max_amount_currency' => Setting::get('max_amount_currency', 'DOP'),
+            'notification_mode' => Setting::get('notification_mode', 'instant'),
+            'digest_frequency' => Setting::get('digest_frequency', 'daily_9am'),
             'catalog_item_count' => Setting::get('catalog_item_count'),
             'catalog_last_imported_at' => Setting::get('catalog_last_imported_at'),
             'open_deadline_filter' => Setting::get('open_deadline_filter', '0'),
             'excluded_modalities' => json_decode(Setting::get('excluded_modalities', '[]'), true) ?? [],
+            'radar_keywords' => implode(', ', json_decode(Setting::get('radar_keywords', '[]'), true) ?: []),
+            'radar_excluded_keywords' => implode(', ', json_decode(Setting::get('radar_excluded_keywords', '[]'), true) ?: []),
         ];
 
         return view('settings.index', compact('settings'));
@@ -48,6 +52,8 @@ class SettingsController extends Controller
             'excluded_modalities.*' => 'string',
         ]);
 
+        Setting::set('notification_mode', $request->input('notification_mode', 'instant'));
+        Setting::set('digest_frequency', $request->input('digest_frequency', 'daily_9am'));
         Setting::set('notification_email', $request->notification_email);
         Setting::set('telegram_bot_token', $request->telegram_bot_token);
         Setting::set('telegram_chat_id', $request->telegram_chat_id);
@@ -60,6 +66,16 @@ class SettingsController extends Controller
         Setting::set('max_amount_currency', $request->max_amount_currency);
         Setting::set('open_deadline_filter', $request->has('open_deadline_filter') ? '1' : '0');
         Setting::set('excluded_modalities', json_encode($request->input('excluded_modalities', [])));
+
+        // Keyword radar
+        $positiveRaw = $request->input('radar_keywords', '');
+        $negativeRaw = $request->input('radar_excluded_keywords', '');
+        Setting::set('radar_keywords', json_encode(
+            array_values(array_filter(array_map('trim', explode(',', $positiveRaw))))
+        ));
+        Setting::set('radar_excluded_keywords', json_encode(
+            array_values(array_filter(array_map('trim', explode(',', $negativeRaw))))
+        ));
 
         return redirect()->route('settings.index')->with('success', 'Configuración guardada correctamente.');
     }

@@ -1,21 +1,27 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ConvocatoriasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentosController;
+use App\Http\Controllers\DocumentosGeneradosController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\EquiposController;
 use App\Http\Controllers\FinancieroController;
 use App\Http\Controllers\FormulariosController;
+use App\Http\Controllers\InteligenciaController;
 use App\Http\Controllers\LogsController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfertasController;
 use App\Http\Controllers\PersonalController;
 use App\Http\Controllers\PollController;
 use App\Http\Controllers\PollProgressController;
+use App\Http\Controllers\PrellenadoController;
 use App\Http\Controllers\ProyectosController;
 use App\Http\Controllers\RubrosController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\TableroController;
 use App\Http\Controllers\UsersController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +40,45 @@ Route::middleware('auth')->group(function () {
 
     // Convocatorias
     Route::get('/convocatorias', [ConvocatoriasController::class, 'index'])->name('convocatorias.index');
+    Route::get('/convocatorias/{bid}/detail', [ConvocatoriasController::class, 'detail'])->name('convocatorias.detail');
+    Route::get('/convocatorias/{bid}/tab', [ConvocatoriasController::class, 'tabData'])->name('convocatorias.tab');
+    Route::patch('/convocatorias/{bid}/bookmark', [ConvocatoriasController::class, 'bookmark'])->name('convocatorias.bookmark');
+    Route::patch('/convocatorias/{bid}/watch', [ConvocatoriasController::class, 'watch'])->name('convocatorias.watch');
+    Route::get('/convocatorias/{bid}/download-doc', [ConvocatoriasController::class, 'downloadDocument'])->name('convocatorias.download-doc');
+
+    // Calendar .ics export
+    Route::get('/calendar/bid/{bid}.ics', [CalendarController::class, 'bidIcs'])->name('calendar.bid');
+    Route::get('/calendar/offer/{offer}.ics', [CalendarController::class, 'offerIcs'])->name('calendar.offer');
+
+    // Prellenado workspace
+    Route::get('/convocatorias/{bid}/prellenar', [PrellenadoController::class, 'show'])->name('prellenado.show');
+    Route::post('/convocatorias/{bid}/prellenar', [PrellenadoController::class, 'generate'])->name('prellenado.generate');
+
+    // Documentos Generados
+    Route::get('/documentos-generados', [DocumentosGeneradosController::class, 'index'])->name('documentos-generados.index');
+    Route::get('/documentos-generados/{package}', [DocumentosGeneradosController::class, 'show'])->name('documentos-generados.show');
+    Route::get('/documentos-generados/{package}/zip', [DocumentosGeneradosController::class, 'downloadZip'])->name('documentos-generados.zip');
+    Route::get('/documentos-generados/file/{file}', [DocumentosGeneradosController::class, 'downloadFile'])->name('documentos-generados.file');
+
+    // Tablero (Kanban)
+    Route::get('/tablero', [TableroController::class, 'index'])->name('tablero.index');
+    Route::get('/tablero/cards', [TableroController::class, 'cards'])->name('tablero.cards');
+    Route::get('/tablero/calendar', [TableroController::class, 'calendar'])->name('tablero.calendar');
+    Route::patch('/tablero/{offer}/move', [TableroController::class, 'move'])->name('tablero.move');
+    Route::post('/tablero/add-bid', [TableroController::class, 'addBid'])->name('tablero.add-bid');
+
+    // Inteligencia
+    Route::get('/inteligencia/adjudicados', [InteligenciaController::class, 'adjudicados'])->name('inteligencia.adjudicados');
+    Route::get('/inteligencia/pacc', [InteligenciaController::class, 'pacc'])->name('inteligencia.pacc');
+    Route::get('/inteligencia/contratos', [InteligenciaController::class, 'contratos'])->name('inteligencia.contratos');
+    Route::get('/inteligencia/proveedores', [InteligenciaController::class, 'proveedores'])->name('inteligencia.proveedores');
+    Route::get('/inteligencia/instituciones', [InteligenciaController::class, 'instituciones'])->name('inteligencia.instituciones');
+
+    // Notifications (AJAX)
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::get('/notifications/recent', [NotificationController::class, 'recent'])->name('notifications.recent');
+    Route::patch('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+    Route::patch('/notifications/{inAppNotification}/read', [NotificationController::class, 'markRead'])->name('notifications.mark-read');
 
     // Rubros
     Route::get('/rubros', [RubrosController::class, 'index'])->name('rubros.index');
@@ -43,12 +88,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/rubros/search', [RubrosController::class, 'search'])->name('rubros.search');
 
     // Settings
-    Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/configuracion', [SettingsController::class, 'update'])->name('settings.update');
-    Route::post('/configuracion/import-catalog', [SettingsController::class, 'importCatalog'])->name('settings.import-catalog');
-    Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
-    Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
-    Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');
+    // Settings (admin only)
+    Route::middleware('admin')->group(function () {
+        Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('/configuracion', [SettingsController::class, 'update'])->name('settings.update');
+        Route::post('/configuracion/import-catalog', [SettingsController::class, 'importCatalog'])->name('settings.import-catalog');
+        Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
+        Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
+        Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');
+    });
 
     // Manual poll
     Route::post('/sondeo/manual', [PollController::class, 'manual'])->name('poll.manual');
@@ -158,9 +206,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/equipos/{equipo}/toggle', [EquiposController::class, 'toggle'])->name('equipos.toggle');
     Route::delete('/equipos/{equipo}', [EquiposController::class, 'destroy'])->name('equipos.destroy');
 
-    // Users
-    Route::get('/usuarios', [UsersController::class, 'index'])->name('users.index');
-    Route::post('/usuarios', [UsersController::class, 'store'])->name('users.store');
-    Route::delete('/usuarios/{user}', [UsersController::class, 'destroy'])->name('users.destroy');
-    Route::patch('/usuarios/{user}/password', [UsersController::class, 'updatePassword'])->name('users.password');
+    // Users (admin only)
+    Route::middleware('admin')->group(function () {
+        Route::get('/usuarios', [UsersController::class, 'index'])->name('users.index');
+        Route::post('/usuarios', [UsersController::class, 'store'])->name('users.store');
+        Route::delete('/usuarios/{user}', [UsersController::class, 'destroy'])->name('users.destroy');
+        Route::patch('/usuarios/{user}/password', [UsersController::class, 'updatePassword'])->name('users.password');
+        Route::patch('/usuarios/{user}/role', [UsersController::class, 'updateRole'])->name('users.role');
+    });
 });

@@ -30,6 +30,7 @@
                         <tr>
                             <th scope="col" class="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-3">Nombre</th>
                             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Correo</th>
+                            <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Rol</th>
                             <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Registrado</th>
                             <th scope="col" class="py-3.5 pr-4 pl-3 sm:pr-3"><span class="sr-only">Acciones</span></th>
                         </tr>
@@ -44,6 +45,22 @@
                                 @endif
                             </td>
                             <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{{ $user->email }}</td>
+                            <td class="px-3 py-4 text-sm whitespace-nowrap">
+                                @if($user->id === auth()->id())
+                                    <span class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium {{ $user->role === 'admin' ? 'bg-purple-50 text-purple-700' : 'bg-gray-50 text-gray-600' }}">
+                                        {{ $user->role === 'admin' ? 'Admin' : 'Usuario' }}
+                                    </span>
+                                @else
+                                    <form method="POST" action="{{ route('users.role', $user) }}">
+                                        @csrf @method('PATCH')
+                                        <select name="role" onchange="this.form.submit()"
+                                                class="rounded-md bg-white py-1 pr-8 pl-2 text-xs font-medium outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 {{ $user->role === 'admin' ? 'text-purple-700' : 'text-gray-600' }}">
+                                            <option value="admin" {{ $user->role === 'admin' ? 'selected' : '' }}>Admin</option>
+                                            <option value="user" {{ $user->role === 'user' ? 'selected' : '' }}>Usuario</option>
+                                        </select>
+                                    </form>
+                                @endif
+                            </td>
                             <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{{ $user->created_at->format('d/m/Y') }}</td>
                             <td class="py-4 pr-4 pl-3 text-right text-sm whitespace-nowrap sm:pr-3">
                                 <div class="flex items-center justify-end gap-x-1">

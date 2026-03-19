@@ -4,8 +4,10 @@ namespace App\Jobs;
 
 use App\Mail\BidNotificationMail;
 use App\Models\Bid;
+use App\Models\InAppNotification;
 use App\Models\NotificationLog;
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\TelegramService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -24,8 +26,15 @@ class SendBidNotification implements ShouldQueue
 
     public function handle(TelegramService $telegram): void
     {
-        $this->sendEmail();
-        $this->sendTelegram($telegram);
+        $mode = Setting::get('notification_mode', 'instant');
+
+        if ($mode === 'instant') {
+            $this->sendEmail();
+            $this->sendTelegram($telegram);
+        }
+        // In digest mode, email/telegram are batched by secp:send-digest
+
+        $this->createInAppNotification();
 
         $this->bid->update(['notified_at' => now()]);
     }
@@ -111,6 +120,37 @@ class SendBidNotification implements ShouldQueue
             ]);
 
             Log::error("[SECP] Telegram exception for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
+        }
+    }
+
+    private function createInAppNotification(): void
+    {
+        $amount = $this->bid->amount_estimated
+            ? ($this->bid->currency ?? 'DOP').' '.number_format($this->bid->amount_estimated, 2)
+            : null;
+
+        $rubros = collect($this->bid->matched_rubros ?? [])
+            ->pluck('name')
+            ->join(', ');
+
+        $body = $this->bid->buyer_name ?? '';
+        if ($amount) {
+            $body .= " — {$amount}";
+        }
+
+        // Create for all users
+        foreach (User::all() as $user) {
+            InAppNotification::create([
+                'user_id' => $user->id,
+                'bid_id' => $this->bid->id,
+                'type' => 'new_match',
+                'title' => $this->bid->title,
+                'body' => $body,
+                'data' => [
+                    'process_code' => $this->bid->process_code,
+                    'rubros' => $rubros,
+                ],
+            ]);
         }
     }
 }
