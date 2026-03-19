@@ -30,19 +30,12 @@ jobs:
             # Pull latest code
             git pull origin main
 
-            # Ensure php-gd is installed (required by phpword)
-            dpkg -l php8.3-gd > /dev/null 2>&1 || sudo apt-get install -y php8.3-gd
-
             # Install/update PHP dependencies (no dev)
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
             # Install JS dependencies and build assets
             npm ci --no-audit
             npm run build
-
-            # Fix permissions for web server
-            sudo chown -R www-data:www-data storage bootstrap/cache
-            sudo chmod -R 775 storage bootstrap/cache
 
             # Run migrations
             php artisan migrate --force
