@@ -21,10 +21,17 @@ jobs:
           key: ${{ secrets.VULTR_KEY }}
           port: ${{ secrets.VULTR_PORT }}
           script: |
-            cd ${{ secrets.VULTR_DEPLOYMENT_PATH }}
+            export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
+            cd "$DEPLOY_PATH"
+
+            # Trust repo ownership for this SSH user
+            git config --global --add safe.directory "$DEPLOY_PATH"
 
             # Pull latest code
             git pull origin main
+
+            # Ensure php-gd is installed (required by phpword)
+            dpkg -l php8.3-gd > /dev/null 2>&1 || sudo apt-get install -y php8.3-gd
 
             # Install/update PHP dependencies (no dev)
             composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
@@ -32,6 +39,10 @@ jobs:
             # Install JS dependencies and build assets
             npm ci --no-audit
             npm run build
+
+            # Fix permissions for web server
+            sudo chown -R www-data:www-data storage bootstrap/cache
+            sudo chmod -R 775 storage bootstrap/cache
 
             # Run migrations
             php artisan migrate --force
