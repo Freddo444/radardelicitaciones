@@ -27,8 +27,8 @@ jobs:
             # Trust repo ownership for this SSH user
             git config --global --add safe.directory "$DEPLOY_PATH"
 
-            # Pull latest code (use token for HTTPS auth)
-            git remote set-url origin https://x-access-token:${{ secrets.GH_DEPLOY_TOKEN }}@github.com/Freddo444/SECPMonitor.git
+            # Pull latest code (uses deploy key on server for SSH auth)
+            git remote set-url origin git@github.com:Freddo444/SECPMonitor.git
             git pull origin main
 
             # Install/update PHP dependencies (no dev)
