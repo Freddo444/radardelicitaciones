@@ -46,8 +46,8 @@ jobs:
               php artisan package:discover --ansi
 
               # Install JS dependencies and build assets
-              npm ci --no-audit
-              npm run build
+              npm ci --no-audit --cache /tmp/.npm-deploy
+              npx vite build
 
               # Run migrations
               php artisan migrate --force
