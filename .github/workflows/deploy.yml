@@ -27,39 +27,45 @@ jobs:
           script: |
             export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
 
-            # Trust repo ownership for the ssh user
+            # Trust repo ownership
             git config --global --add safe.directory "$DEPLOY_PATH"
 
-            # Detect the owner of the deploy path and run everything as that user
-            DEPLOY_USER=$(stat -c '%U' "$DEPLOY_PATH")
+            cd "$DEPLOY_PATH"
 
-            echo "$SUDO_PASS" | sudo -S -u "$DEPLOY_USER" bash -c "
+            # Pull as deploy user (secp has git credentials)
+            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
+            git pull origin main
+            git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
+
+            # Install JS dependencies and build assets (as secp — has npm access)
+            npm ci --no-audit
+            npm run build
+
+            # Fix ownership back to www-data
+            echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH"
+            echo "$SUDO_PASS" | sudo -S chmod -R 755 "$DEPLOY_PATH"
+            echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
+
+            # Fix file permissions (644 for files, 755 for dirs) to keep git clean
+            echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
+            echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type d -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 755 {} +
+            echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
+            echo "$SUDO_PASS" | sudo -S chmod 755 "$DEPLOY_PATH/artisan"
+
+            # PHP tasks as www-data
+            echo "$SUDO_PASS" | sudo -S -u www-data bash -c "
               cd '$DEPLOY_PATH'
-
-              # Pull latest code
-              git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
-              git pull origin main
-              git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
-
-              # Install/update PHP dependencies (no dev)
               composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
               php artisan package:discover --ansi
-
-              # Install JS dependencies and build assets
-              npm ci --no-audit --cache /tmp/.npm-deploy
-              npx vite build
-
-              # Run migrations
               php artisan migrate --force
-
-              # Clear and rebuild caches
               php artisan config:cache
               php artisan route:cache
               php artisan view:cache
               php artisan event:cache
-
-              # Restart queue worker if running
               php artisan queue:restart 2>/dev/null || true
-
-              echo 'Deployment complete.'
             "
+
+            # Restart supervisor worker
+            echo "$SUDO_PASS" | sudo -S supervisorctl restart secp-worker:* 2>/dev/null || true
+
+            echo 'Deployment complete.'
