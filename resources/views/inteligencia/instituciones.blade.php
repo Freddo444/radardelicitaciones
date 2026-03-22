@@ -192,7 +192,7 @@
 
     @if($institutions->hasPages())
         <div class="mt-6">
-            {{ $institutions->links() }}
+            {{ $institutions->links('components.pagination') }}
         </div>
     @endif
 

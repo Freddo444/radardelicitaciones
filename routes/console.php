@@ -34,7 +34,7 @@ Schedule::call(function () {
     };
 
     if ($shouldRun) {
-        \Artisan::call('secp:send-digest');
+        Artisan::call('secp:send-digest');
     }
 })->hourly()->appendOutputTo(storage_path('logs/secp-digest.log'));
 
@@ -55,3 +55,9 @@ Schedule::command('secp:sync-pacc')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-pacc.log'));
+
+Schedule::command('secp:sync-institutions')
+    ->quarterly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/secp-sync-institutions.log'));

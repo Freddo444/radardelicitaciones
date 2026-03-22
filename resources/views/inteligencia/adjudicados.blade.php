@@ -8,8 +8,7 @@
         <div>
             <h1 class="text-base font-semibold text-gray-900">Artículos Adjudicados</h1>
             <p class="mt-1 text-sm text-gray-500">
-                {{ number_format($articles->total()) }} artículo{{ $articles->total() !== 1 ? 's' : '' }} encontrado{{ $articles->total() !== 1 ? 's' : '' }}
-                de {{ number_format($totalCount) }} total{{ $totalCount !== 1 ? 'es' : '' }}.
+                {{ number_format($totalCount) }} artículo{{ $totalCount !== 1 ? 's' : '' }} en total.
             </p>
         </div>
         <div class="mt-3 sm:mt-0">
@@ -368,7 +367,7 @@
     {{-- Pagination --}}
     @if($articles->hasPages())
         <div class="mt-6">
-            {{ $articles->links() }}
+            {{ $articles->links('components.pagination') }}
         </div>
     @endif
 

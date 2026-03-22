@@ -409,7 +409,7 @@
     {{-- Pagination --}}
     @if($acquisitions->hasPages())
         <div class="mt-6">
-            {{ $acquisitions->links() }}
+            {{ $acquisitions->links('components.pagination') }}
         </div>
     @endif
 

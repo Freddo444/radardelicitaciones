@@ -2,202 +2,302 @@
 
 namespace App\Console\Commands;
 
-use App\Exceptions\DgcpApiException;
 use App\Models\AwardedArticle;
 use App\Models\Contract;
-use App\Models\Rubro;
-use App\Services\DgcpApiClient;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class SyncContractsCommand extends Command
 {
     protected $signature = 'secp:sync-contracts
-        {--rubro= : Sync only a specific rubro code}
-        {--max-pages=50 : Max pages to fetch per rubro}
+        {--max-pages=0 : Max pages to fetch (0 = unlimited, 1000 records/page)}
         {--only-articles : Only sync awarded articles, skip contracts}
         {--only-contracts : Only sync contracts, skip articles}';
 
-    protected $description = 'Sync contracts and awarded articles from the DGCP API';
+    protected $description = 'Sync all contracts and awarded articles from the DGCP API';
 
-    public function handle(DgcpApiClient $api): int
+    private const BASE_URL = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
+
+    private const PAGE_SIZE = 1000;
+
+    private const UPSERT_CHUNK = 200;
+
+    public function handle(): int
     {
         $maxPages = (int) $this->option('max-pages');
-        $onlyArticles = $this->option('only-articles');
-        $onlyContracts = $this->option('only-contracts');
 
-        if (! $onlyArticles) {
-            $this->syncContracts($api, $maxPages);
+        if (! $this->option('only-articles')) {
+            $this->syncContracts($maxPages);
         }
 
-        if (! $onlyContracts) {
-            $this->syncArticles($api, $maxPages);
+        if (! $this->option('only-contracts')) {
+            $this->syncArticles($maxPages);
         }
 
         return self::SUCCESS;
     }
 
-    private function syncContracts(DgcpApiClient $api, int $maxPages): void
+    private function syncContracts(int $maxPages): void
     {
         $this->info('=== Syncing contracts ===');
 
-        try {
-            $contracts = $api->fetchContractsPaginated(maxPages: $maxPages);
-        } catch (DgcpApiException $e) {
-            $this->error("Failed to fetch contracts: {$e->getMessage()}");
-            Log::error("[SyncContracts] Contracts fetch failed: {$e->getMessage()}");
+        $first = $this->fetchPage('/contratos', 0);
+        if (! $first || empty($first['payload']['content'] ?? [])) {
+            $this->warn('  No contracts returned from API.');
 
             return;
         }
 
-        $this->info("  → {$contracts->count()} contract(s) fetched.");
+        $totalPages = $first['pages'] ?? 1;
+        if ($maxPages > 0) {
+            $totalPages = min($totalPages, $maxPages);
+        }
+        $totalRecords = $first['totalResults'] ?? ($totalPages * self::PAGE_SIZE);
+        $this->info("  {$totalRecords} contracts across {$totalPages} pages.");
 
-        $new = 0;
-        $updated = 0;
+        $bar = $this->output->createProgressBar($totalPages);
+        $bar->setFormat('  %current%/%max% pages [%bar%] %percent:3s%% — %elapsed:6s% / ~%estimated:-6s% — %message%');
+        $bar->setMessage('starting...');
+        $bar->start();
 
-        foreach ($contracts as $item) {
-            $contractCode = $item['codigo_contrato'] ?? $item['contrato'] ?? null;
-            if (! $contractCode) {
+        $startTime = microtime(true);
+        $page = 0;
+        $upserted = 0;
+
+        do {
+            $json = $page === 0 ? $first : $this->fetchPage('/contratos', $page);
+            if (! $json) {
+                $page++;
+                $bar->advance();
+
                 continue;
             }
 
-            $data = [
-                'process_code' => $item['codigo_proceso'] ?? null,
-                'status' => $item['estado_contrato'] ?? null,
-                'provider_name' => $item['razon_social'] ?? null,
-                'provider_rpe' => (string) ($item['rpe'] ?? ''),
-                'institution_name' => $item['unidad_compra'] ?? null,
-                'institution_code' => (string) ($item['codigo_unidad_compra'] ?? ''),
-                'amount' => $this->parseDecimal($item['valor_contratado'] ?? null),
-                'currency' => $item['divisa'] ?? 'DOP',
-                'payment_method' => $item['metodo_pago'] ?? null,
-                'payment_terms' => $item['plazo_pago_factura'] ?? null,
-                'description' => $item['descripcion'] ?? null,
-                'award_date' => $this->parseDate($item['fecha_adjudicacion'] ?? null),
-                'contract_date' => $this->parseDate($item['fecha_creacion_contrato'] ?? null),
-                'url' => $item['url_contrato'] ?? null,
-                'raw_data' => $item,
-            ];
-
-            $existing = Contract::where('contract_code', $contractCode)->first();
-
-            if ($existing) {
-                $existing->update($data);
-                $updated++;
-            } else {
-                $data['contract_code'] = $contractCode;
-                Contract::create($data);
-                $new++;
+            $items = $json['payload']['content'] ?? [];
+            if (empty($items)) {
+                break;
             }
-        }
 
-        $summary = "Contracts: {$new} new, {$updated} updated.";
-        $this->info($summary);
+            $rows = [];
+            $now = now();
+            foreach ($items as $item) {
+                $code = $item['codigo_contrato'] ?? null;
+                if (! $code) {
+                    continue;
+                }
+
+                $rows[] = [
+                    'contract_code' => mb_substr($code, 0, 100),
+                    'process_code' => mb_substr($item['codigo_proceso'] ?? '', 0, 80) ?: null,
+                    'status' => mb_substr($item['estado_contrato'] ?? '', 0, 50) ?: null,
+                    'provider_name' => mb_substr($item['razon_social'] ?? '', 0, 255) ?: null,
+                    'provider_rpe' => mb_substr((string) ($item['rpe'] ?? ''), 0, 50),
+                    'institution_name' => mb_substr($item['unidad_compra'] ?? '', 0, 255) ?: null,
+                    'institution_code' => mb_substr((string) ($item['codigo_unidad_compra'] ?? ''), 0, 50),
+                    'amount' => $this->parseDecimal($item['valor_contratado'] ?? null),
+                    'currency' => mb_substr($item['divisa'] ?? 'DOP', 0, 10),
+                    'payment_method' => mb_substr($item['metodo_pago'] ?? '', 0, 100) ?: null,
+                    'payment_terms' => mb_substr($item['plazo_pago_factura'] ?? '', 0, 255) ?: null,
+                    'description' => $item['descripcion'] ?? null,
+                    'award_date' => $this->parseDate($item['fecha_adjudicacion'] ?? null),
+                    'contract_date' => $this->parseDate($item['fecha_creacion_contrato'] ?? null),
+                    'url' => mb_substr($item['url_contrato'] ?? '', 0, 500) ?: null,
+                    'raw_data' => json_encode($item),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if (! empty($rows)) {
+                foreach (array_chunk($rows, self::UPSERT_CHUNK) as $chunk) {
+                    Contract::upsert($chunk, ['contract_code'], [
+                        'process_code', 'status', 'provider_name', 'provider_rpe',
+                        'institution_name', 'institution_code', 'amount', 'currency',
+                        'payment_method', 'payment_terms', 'description',
+                        'award_date', 'contract_date', 'url', 'raw_data', 'updated_at',
+                    ]);
+                }
+                $upserted += count($rows);
+            }
+
+            $page++;
+            $rate = $page / max(microtime(true) - $startTime, 0.1);
+            $bar->setMessage("{$upserted} upserted — ".number_format($rate * self::PAGE_SIZE, 0).' rec/min');
+            $bar->advance();
+        } while ($page < $totalPages);
+
+        $bar->finish();
+        $this->newLine();
+
+        $elapsed = round(microtime(true) - $startTime, 1);
+        $summary = "Contracts: {$upserted} upserted — {$elapsed}s";
+        $this->info("  {$summary}");
         Log::info("[SyncContracts] {$summary}");
     }
 
-    private function syncArticles(DgcpApiClient $api, int $maxPages): void
+    private function syncArticles(int $maxPages): void
     {
         $this->info('=== Syncing awarded articles ===');
 
-        if ($rubroCode = $this->option('rubro')) {
-            $rubros = Rubro::where('code', $rubroCode)->get();
-            if ($rubros->isEmpty()) {
-                $this->error("Rubro '{$rubroCode}' not found.");
+        // Build in-memory lookup for provider/institution enrichment
+        $this->info('  Loading contract cache...');
+        $contractCache = DB::table('contracts')
+            ->select('contract_code', 'provider_name', 'provider_rpe', 'institution_name', 'institution_code', 'currency')
+            ->get()
+            ->keyBy('contract_code');
+        $this->info("  {$contractCache->count()} contracts cached.");
 
-                return;
-            }
-        } else {
-            $rubros = Rubro::where('active', true)->get();
-        }
-
-        if ($rubros->isEmpty()) {
-            $this->warn('No active rubros to sync articles.');
+        $first = $this->fetchPage('/contratos/articulos', 0);
+        if (! $first || empty($first['payload']['content'] ?? [])) {
+            $this->warn('  No articles returned from API.');
 
             return;
         }
 
-        $this->info("Syncing articles for {$rubros->count()} rubro(s), max {$maxPages} pages each...");
+        $totalPages = $first['pages'] ?? 1;
+        if ($maxPages > 0) {
+            $totalPages = min($totalPages, $maxPages);
+        }
+        $totalRecords = $first['totalResults'] ?? ($totalPages * self::PAGE_SIZE);
+        $this->info("  {$totalRecords} articles across {$totalPages} pages.");
 
-        $totalNew = 0;
-        $totalUpdated = 0;
+        $bar = $this->output->createProgressBar($totalPages);
+        $bar->setFormat('  %current%/%max% pages [%bar%] %percent:3s%% — %elapsed:6s% / ~%estimated:-6s% — %message%');
+        $bar->setMessage('starting...');
+        $bar->start();
 
-        foreach ($rubros as $i => $rubro) {
-            $idx = $i + 1;
-            $this->info("[{$idx}/{$rubros->count()}] {$rubro->code} — {$rubro->name} ({$rubro->level})");
+        $startTime = microtime(true);
+        $page = 0;
+        $upserted = 0;
 
-            try {
-                $articles = $api->fetchContractArticlesByRubro($rubro->code, $rubro->level, $maxPages);
-            } catch (DgcpApiException $e) {
-                $this->warn("  Error: {$e->getMessage()}");
-                Log::warning("[SyncContracts] Failed for {$rubro->code}: {$e->getMessage()}");
+        do {
+            $json = $page === 0 ? $first : $this->fetchPage('/contratos/articulos', $page);
+            if (! $json) {
+                $page++;
+                $bar->advance();
 
                 continue;
             }
 
-            $this->info("  → {$articles->count()} article(s) fetched.");
+            $items = $json['payload']['content'] ?? [];
+            if (empty($items)) {
+                break;
+            }
 
-            $new = 0;
-            $updated = 0;
+            $rows = [];
+            $now = now();
+            foreach ($items as $item) {
+                $hash = $this->computeHash($item);
+                $contractCode = $item['codigo_contrato'] ?? '';
+                $contract = $contractCache->get($contractCode);
 
-            foreach ($articles as $item) {
-                $hash = $this->computeArticleHash($item);
-
-                $data = [
-                    'contract_code' => $item['codigo_contrato'] ?? null,
-                    'process_code' => $item['codigo_proceso'] ?? null,
-                    'unspsc_familia' => $item['familia'] ?? null,
-                    'unspsc_clase' => $item['clase'] ?? null,
-                    'unspsc_subclase' => $item['subclase'] ?? null,
-                    'unspsc_description' => $item['descripcion_articulo'] ?? null,
+                $rows[] = [
+                    'api_hash' => $hash,
+                    'contract_code' => mb_substr($item['codigo_contrato'] ?? '', 0, 80) ?: null,
+                    'process_code' => mb_substr($item['codigo_proceso'] ?? '', 0, 80) ?: null,
+                    'unspsc_familia' => mb_substr($item['familia'] ?? '', 0, 20) ?: null,
+                    'unspsc_clase' => mb_substr($item['clase'] ?? '', 0, 20) ?: null,
+                    'unspsc_subclase' => mb_substr($item['subclase'] ?? '', 0, 20) ?: null,
+                    'unspsc_description' => mb_substr($item['descripcion_articulo'] ?? '', 0, 500) ?: null,
                     'description' => $item['descripcion_usuario'] ?? $item['descripcion_articulo'] ?? null,
-                    'unit_measure' => $item['unidad_medida'] ?? null,
+                    'unit_measure' => mb_substr($item['unidad_medida'] ?? '', 0, 100) ?: null,
                     'quantity' => $this->parseDecimal($item['cantidad'] ?? null),
                     'unit_price' => $this->parseDecimal($item['precio_unitario'] ?? null),
                     'total' => $this->parseDecimal($item['costo_total'] ?? null),
-                    'currency' => 'DOP',
-                    'provider_name' => null,
-                    'provider_rpe' => '',
-                    'institution_name' => null,
-                    'institution_code' => '',
+                    'currency' => mb_substr($contract->currency ?? 'DOP', 0, 10),
+                    'provider_name' => mb_substr($contract->provider_name ?? '', 0, 255) ?: null,
+                    'provider_rpe' => mb_substr($contract->provider_rpe ?? '', 0, 50),
+                    'institution_name' => mb_substr($contract->institution_name ?? '', 0, 255) ?: null,
+                    'institution_code' => mb_substr($contract->institution_code ?? '', 0, 50),
                     'award_date' => $this->parseDate($item['fecha_creacion_contrato'] ?? null),
-                    'raw_data' => $item,
+                    'raw_data' => json_encode($item),
+                    'created_at' => $now,
+                    'updated_at' => $now,
                 ];
-
-                $existing = AwardedArticle::where('api_hash', $hash)->first();
-
-                if ($existing) {
-                    $existing->update($data);
-                    $updated++;
-                } else {
-                    $data['api_hash'] = $hash;
-                    AwardedArticle::create($data);
-                    $new++;
-                }
             }
 
-            $this->info("  → {$new} new, {$updated} updated.");
-            $totalNew += $new;
-            $totalUpdated += $updated;
-        }
+            if (! empty($rows)) {
+                foreach (array_chunk($rows, self::UPSERT_CHUNK) as $chunk) {
+                    AwardedArticle::upsert($chunk, ['api_hash'], [
+                        'contract_code', 'process_code', 'unspsc_familia', 'unspsc_clase',
+                        'unspsc_subclase', 'unspsc_description', 'description', 'unit_measure',
+                        'quantity', 'unit_price', 'total', 'currency', 'provider_name',
+                        'provider_rpe', 'institution_name', 'institution_code',
+                        'award_date', 'raw_data', 'updated_at',
+                    ]);
+                }
+                $upserted += count($rows);
+            }
 
-        $summary = "Articles: {$totalNew} new, {$totalUpdated} updated.";
-        $this->info($summary);
+            $page++;
+            $rate = $page / max(microtime(true) - $startTime, 0.1);
+            $bar->setMessage("{$upserted} upserted — ".number_format($rate * self::PAGE_SIZE, 0).' rec/min');
+            $bar->advance();
+        } while ($page < $totalPages);
+
+        $bar->finish();
+        $this->newLine();
+
+        $elapsed = round(microtime(true) - $startTime, 1);
+        $summary = "Articles: {$upserted} upserted — {$elapsed}s";
+        $this->info("  {$summary}");
         Log::info("[SyncContracts] {$summary}");
     }
 
-    private function computeArticleHash(array $item): string
+    private function fetchPage(string $endpoint, int $page, int $maxRetries = 3): ?array
     {
-        $key = implode('|', [
+        $params = ['page' => $page, 'limit' => self::PAGE_SIZE];
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            try {
+                $response = Http::timeout(60)->get(self::BASE_URL.$endpoint, $params);
+
+                if ($response->status() === 429) {
+                    $this->warn('  Rate limited, sleeping 65s...');
+                    sleep(65);
+
+                    continue;
+                }
+
+                if ($response->serverError()) {
+                    $this->warn("  HTTP {$response->status()} on {$endpoint} page {$page} (attempt {$attempt}/{$maxRetries})");
+                    sleep(5 * $attempt);
+
+                    continue;
+                }
+
+                if ($response->failed()) {
+                    $this->warn("  HTTP {$response->status()} on {$endpoint} page {$page}");
+
+                    return null;
+                }
+
+                return $response->json();
+            } catch (\Throwable $e) {
+                $this->warn("  Error on {$endpoint} page {$page} (attempt {$attempt}/{$maxRetries}): {$e->getMessage()}");
+                if ($attempt < $maxRetries) {
+                    sleep(5 * $attempt);
+                }
+            }
+        }
+
+        $this->warn("  Giving up on {$endpoint} page {$page} after {$maxRetries} attempts");
+
+        return null;
+    }
+
+    private function computeHash(array $item): string
+    {
+        return hash('sha256', implode('|', [
             $item['codigo_contrato'] ?? '',
             $item['codigo_proceso'] ?? '',
             $item['descripcion_articulo'] ?? '',
             $item['subclase'] ?? '',
             $item['cantidad'] ?? '',
             $item['precio_unitario'] ?? '',
-        ]);
-
-        return hash('sha256', $key);
+        ]));
     }
 
     private function parseDecimal(mixed $value): float

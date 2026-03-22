@@ -8,8 +8,7 @@
         <div>
             <h1 class="text-base font-semibold text-gray-900">Directorio de Proveedores</h1>
             <p class="mt-1 text-sm text-gray-500">
-                {{ number_format($providers->total()) }} proveedor{{ $providers->total() !== 1 ? 'es' : '' }} encontrado{{ $providers->total() !== 1 ? 's' : '' }}
-                de {{ number_format($totalCount) }} total{{ $totalCount !== 1 ? 'es' : '' }}.
+                {{ number_format($totalCount) }} proveedor{{ $totalCount !== 1 ? 'es' : '' }} en total.
             </p>
         </div>
         <div class="mt-3 sm:mt-0">
@@ -270,7 +269,7 @@
     {{-- Pagination --}}
     @if($providers->hasPages())
         <div class="mt-6">
-            {{ $providers->links() }}
+            {{ $providers->links('components.pagination') }}
         </div>
     @endif
 

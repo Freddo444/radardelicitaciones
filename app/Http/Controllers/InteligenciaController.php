@@ -9,24 +9,22 @@ use App\Models\PaccAcquisition;
 use App\Models\Provider;
 use App\Models\Rubro;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class InteligenciaController extends Controller
 {
+    private const CACHE_TTL = 3600; // 1 hour — matches sync frequency
+
+    private const PER_PAGE = 50;
+
     public function adjudicados(Request $request)
     {
         $query = AwardedArticle::query();
 
         // Search
         if ($search = $request->input('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('provider_name', 'like', "%{$search}%")
-                    ->orWhere('institution_name', 'like', "%{$search}%")
-                    ->orWhere('process_code', 'like', "%{$search}%")
-                    ->orWhere('contract_code', 'like', "%{$search}%")
-                    ->orWhere('unspsc_description', 'like', "%{$search}%");
-            });
+            $this->fulltextSearch($query, $search, ['description', 'provider_name', 'institution_name', 'process_code', 'contract_code', 'unspsc_description']);
         }
 
         // UNSPSC filters
@@ -66,37 +64,45 @@ class InteligenciaController extends Controller
             $query->where('award_date', '<=', $dateTo);
         }
 
+        // Clone for aggregates BEFORE applying sort
+        $baseQuery = clone $query;
+
         // Sorting
         $sortable = ['description', 'provider_name', 'institution_name', 'unit_price', 'total', 'quantity', 'award_date'];
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'award_date';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $articles = $query->orderBy($sort, $dir)->paginate(50)->withQueryString();
+        $articles = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
 
-        // Filter dropdowns
-        $institutions = AwardedArticle::select('institution_name', 'institution_code')
-            ->whereNotNull('institution_name')
-            ->where('institution_name', '!=', '')
-            ->distinct()
-            ->orderBy('institution_name')
-            ->get();
+        $hasFilters = $request->hasAny(['q', 'familia', 'clase', 'subclase', 'institucion', 'proveedor', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
+        $totalCount = Cache::remember('intel.adjudicados.count', self::CACHE_TTL, fn () => AwardedArticle::count());
 
-        $familias = AwardedArticle::select('unspsc_familia', 'unspsc_description')
-            ->whereNotNull('unspsc_familia')
-            ->distinct()
-            ->orderBy('unspsc_familia')
-            ->get()
-            ->unique('unspsc_familia');
+        // Filter dropdowns — cached (DB::table for lightweight serialization)
+        $institutions = Cache::remember('intel.adjudicados.institutions', self::CACHE_TTL, fn () =>
+            DB::table('awarded_articles')
+                ->select('institution_name', 'institution_code')
+                ->whereNotNull('institution_name')
+                ->where('institution_name', '!=', '')
+                ->distinct()
+                ->orderBy('institution_name')
+                ->get()
+        );
 
-        $totalCount = AwardedArticle::count();
+        $familias = Cache::remember('intel.adjudicados.familias', self::CACHE_TTL, fn () =>
+            DB::table('awarded_articles')
+                ->select('unspsc_familia', 'unspsc_description')
+                ->whereNotNull('unspsc_familia')
+                ->distinct()
+                ->orderBy('unspsc_familia')
+                ->get()
+                ->unique('unspsc_familia')
+        );
 
         // Aggregates for the current filtered set
-        $hasFilters = $request->hasAny(['q', 'familia', 'clase', 'subclase', 'institucion', 'proveedor', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
         $aggregates = null;
 
         if ($hasFilters) {
-            $aggQuery = clone $query;
-            $agg = $aggQuery->selectRaw('
+            $agg = (clone $baseQuery)->selectRaw('
                 COUNT(*) as total_articles,
                 AVG(unit_price) as avg_unit_price,
                 MIN(unit_price) as min_unit_price,
@@ -107,8 +113,7 @@ class InteligenciaController extends Controller
             ')->first();
 
             // Price trend by month
-            $trendQuery = clone $query;
-            $priceTrend = $trendQuery
+            $priceTrend = (clone $baseQuery)
                 ->select(DB::raw("DATE_FORMAT(award_date, '%Y-%m') as month"), DB::raw('AVG(unit_price) as avg_price'), DB::raw('COUNT(*) as article_count'))
                 ->whereNotNull('award_date')
                 ->where('unit_price', '>', 0)
@@ -117,7 +122,7 @@ class InteligenciaController extends Controller
                 ->get();
 
             // Top providers by total awarded
-            $topProviders = (clone $query)
+            $topProviders = (clone $baseQuery)
                 ->select('provider_name', 'provider_rpe', DB::raw('SUM(total) as awarded_total'), DB::raw('COUNT(*) as article_count'))
                 ->whereNotNull('provider_name')
                 ->where('provider_name', '!=', '')
@@ -127,7 +132,7 @@ class InteligenciaController extends Controller
                 ->get();
 
             // Top institutions by total awarded
-            $topInstitutions = (clone $query)
+            $topInstitutions = (clone $baseQuery)
                 ->select('institution_name', 'institution_code', DB::raw('SUM(total) as awarded_total'), DB::raw('COUNT(*) as article_count'))
                 ->whereNotNull('institution_name')
                 ->where('institution_name', '!=', '')
@@ -159,12 +164,7 @@ class InteligenciaController extends Controller
 
         // Search
         if ($search = $request->input('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('institution_name', 'like', "%{$search}%")
-                    ->orWhere('purpose', 'like', "%{$search}%")
-                    ->orWhere('unspsc_description', 'like', "%{$search}%");
-            });
+            $this->fulltextSearch($query, $search, ['description', 'institution_name', 'purpose', 'unspsc_description']);
         }
 
         // UNSPSC filters
@@ -217,43 +217,56 @@ class InteligenciaController extends Controller
             $query->where('start_date', '<=', $dateTo);
         }
 
+        // Clone for aggregates BEFORE applying sort
+        $baseQuery = clone $query;
+
         // Sorting
         $sortable = ['description', 'institution_name', 'estimated_amount', 'start_date', 'modality', 'object_type'];
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'start_date';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $acquisitions = $query->orderBy($sort, $dir)->paginate(50)->withQueryString();
+        $acquisitions = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
-        // Filter dropdowns
-        $institutions = PaccAcquisition::select('institution_name', 'institution_code')
-            ->whereNotNull('institution_name')
-            ->where('institution_name', '!=', '')
-            ->distinct()
-            ->orderBy('institution_name')
-            ->get();
+        // Filter dropdowns — cached (DB::table for lightweight serialization)
+        $institutions = Cache::remember('intel.pacc.institutions', self::CACHE_TTL, fn () =>
+            DB::table('pacc_acquisitions')
+                ->select('institution_name', 'institution_code')
+                ->whereNotNull('institution_name')
+                ->where('institution_name', '!=', '')
+                ->distinct()
+                ->orderBy('institution_name')
+                ->get()
+        );
 
-        $modalities = PaccAcquisition::select('modality')
-            ->whereNotNull('modality')
-            ->where('modality', '!=', '')
-            ->distinct()
-            ->orderBy('modality')
-            ->pluck('modality');
+        $modalities = Cache::remember('intel.pacc.modalities', self::CACHE_TTL, fn () =>
+            DB::table('pacc_acquisitions')
+                ->whereNotNull('modality')
+                ->where('modality', '!=', '')
+                ->distinct()
+                ->orderBy('modality')
+                ->pluck('modality')
+        );
 
-        $objectTypes = PaccAcquisition::select('object_type')
-            ->whereNotNull('object_type')
-            ->where('object_type', '!=', '')
-            ->distinct()
-            ->orderBy('object_type')
-            ->pluck('object_type');
+        $objectTypes = Cache::remember('intel.pacc.objectTypes', self::CACHE_TTL, fn () =>
+            DB::table('pacc_acquisitions')
+                ->whereNotNull('object_type')
+                ->where('object_type', '!=', '')
+                ->distinct()
+                ->orderBy('object_type')
+                ->pluck('object_type')
+        );
 
-        $familias = PaccAcquisition::select('unspsc_familia', 'unspsc_description')
-            ->whereNotNull('unspsc_familia')
-            ->distinct()
-            ->orderBy('unspsc_familia')
-            ->get()
-            ->unique('unspsc_familia');
+        $familias = Cache::remember('intel.pacc.familias', self::CACHE_TTL, fn () =>
+            DB::table('pacc_acquisitions')
+                ->select('unspsc_familia', 'unspsc_description')
+                ->whereNotNull('unspsc_familia')
+                ->distinct()
+                ->orderBy('unspsc_familia')
+                ->get()
+                ->unique('unspsc_familia')
+        );
 
-        $totalCount = PaccAcquisition::count();
+        $totalCount = Cache::remember('intel.pacc.count', self::CACHE_TTL, fn () => PaccAcquisition::count());
 
         // Highlight acquisitions matching user's active rubros
         $activeRubros = Rubro::where('active', true)->get();
@@ -267,7 +280,7 @@ class InteligenciaController extends Controller
         $aggregates = null;
 
         if ($hasFilters) {
-            $agg = (clone $query)->selectRaw('
+            $agg = (clone $baseQuery)->selectRaw('
                 COUNT(*) as total_acquisitions,
                 SUM(estimated_amount) as sum_estimated,
                 AVG(estimated_amount) as avg_estimated,
@@ -277,7 +290,7 @@ class InteligenciaController extends Controller
                 SUM(CASE WHEN mipymes = 1 THEN 1 ELSE 0 END) as mipymes_count
             ')->first();
 
-            $byModality = (clone $query)
+            $byModality = (clone $baseQuery)
                 ->select('modality', DB::raw('COUNT(*) as count'), DB::raw('SUM(estimated_amount) as total'))
                 ->whereNotNull('modality')
                 ->where('modality', '!=', '')
@@ -286,7 +299,7 @@ class InteligenciaController extends Controller
                 ->limit(10)
                 ->get();
 
-            $byInstitution = (clone $query)
+            $byInstitution = (clone $baseQuery)
                 ->select('institution_name', 'institution_code', DB::raw('COUNT(*) as count'), DB::raw('SUM(estimated_amount) as total'))
                 ->whereNotNull('institution_name')
                 ->where('institution_name', '!=', '')
@@ -320,13 +333,7 @@ class InteligenciaController extends Controller
 
         // Search
         if ($search = $request->input('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('description', 'like', "%{$search}%")
-                    ->orWhere('provider_name', 'like', "%{$search}%")
-                    ->orWhere('institution_name', 'like', "%{$search}%")
-                    ->orWhere('process_code', 'like', "%{$search}%")
-                    ->orWhere('contract_code', 'like', "%{$search}%");
-            });
+            $this->fulltextSearch($query, $search, ['description', 'provider_name', 'institution_name', 'process_code', 'contract_code']);
         }
 
         // Institution
@@ -360,43 +367,54 @@ class InteligenciaController extends Controller
             $query->where('contract_date', '<=', $dateTo);
         }
 
+        // Clone for aggregates BEFORE applying sort
+        $baseQuery = clone $query;
+
         // Sorting
         $sortable = ['contract_code', 'provider_name', 'institution_name', 'amount', 'status', 'contract_date', 'award_date'];
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'contract_date';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $contracts = $query->orderBy($sort, $dir)->paginate(50)->withQueryString();
+        $contracts = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
 
-        // Filter dropdowns
-        $institutions = Contract::select('institution_name', 'institution_code')
-            ->whereNotNull('institution_name')
-            ->where('institution_name', '!=', '')
-            ->distinct()
-            ->orderBy('institution_name')
-            ->get();
+        $hasFilters = $request->hasAny(['q', 'institucion', 'proveedor', 'estado', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
+        $totalCount = Cache::remember('intel.contratos.count', self::CACHE_TTL, fn () => Contract::count());
 
-        $providers = Contract::select('provider_name', 'provider_rpe')
-            ->whereNotNull('provider_name')
-            ->where('provider_name', '!=', '')
-            ->distinct()
-            ->orderBy('provider_name')
-            ->get();
+        // Filter dropdowns — cached (DB::table for lightweight serialization)
+        $institutions = Cache::remember('intel.contratos.institutions', self::CACHE_TTL, fn () =>
+            DB::table('contracts')
+                ->select('institution_name', 'institution_code')
+                ->whereNotNull('institution_name')
+                ->where('institution_name', '!=', '')
+                ->distinct()
+                ->orderBy('institution_name')
+                ->get()
+        );
 
-        $statuses = Contract::select('status')
-            ->whereNotNull('status')
-            ->where('status', '!=', '')
-            ->distinct()
-            ->orderBy('status')
-            ->pluck('status');
+        $providers = Cache::remember('intel.contratos.providers', self::CACHE_TTL, fn () =>
+            DB::table('contracts')
+                ->select('provider_name', 'provider_rpe')
+                ->whereNotNull('provider_name')
+                ->where('provider_name', '!=', '')
+                ->distinct()
+                ->orderBy('provider_name')
+                ->get()
+        );
 
-        $totalCount = Contract::count();
+        $statuses = Cache::remember('intel.contratos.statuses', self::CACHE_TTL, fn () =>
+            DB::table('contracts')
+                ->whereNotNull('status')
+                ->where('status', '!=', '')
+                ->distinct()
+                ->orderBy('status')
+                ->pluck('status')
+        );
 
         // Aggregates when filters active
-        $hasFilters = $request->hasAny(['q', 'institucion', 'proveedor', 'estado', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
         $aggregates = null;
 
         if ($hasFilters) {
-            $agg = (clone $query)->selectRaw('
+            $agg = (clone $baseQuery)->selectRaw('
                 COUNT(*) as total_contracts,
                 SUM(amount) as sum_amount,
                 AVG(amount) as avg_amount,
@@ -406,7 +424,7 @@ class InteligenciaController extends Controller
                 COUNT(DISTINCT institution_code) as unique_institutions
             ')->first();
 
-            $topProviders = (clone $query)
+            $topProviders = (clone $baseQuery)
                 ->select('provider_name', 'provider_rpe', DB::raw('SUM(amount) as total_amount'), DB::raw('COUNT(*) as contract_count'))
                 ->whereNotNull('provider_name')
                 ->where('provider_name', '!=', '')
@@ -415,7 +433,7 @@ class InteligenciaController extends Controller
                 ->limit(5)
                 ->get();
 
-            $topInstitutions = (clone $query)
+            $topInstitutions = (clone $baseQuery)
                 ->select('institution_name', 'institution_code', DB::raw('SUM(amount) as total_amount'), DB::raw('COUNT(*) as contract_count'))
                 ->whereNotNull('institution_name')
                 ->where('institution_name', '!=', '')
@@ -424,7 +442,7 @@ class InteligenciaController extends Controller
                 ->limit(5)
                 ->get();
 
-            $byStatus = (clone $query)
+            $byStatus = (clone $baseQuery)
                 ->select('status', DB::raw('COUNT(*) as count'), DB::raw('SUM(amount) as total'))
                 ->whereNotNull('status')
                 ->where('status', '!=', '')
@@ -456,13 +474,7 @@ class InteligenciaController extends Controller
 
         // Search
         if ($search = $request->input('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('razon_social', 'like', "%{$search}%")
-                    ->orWhere('rnc', 'like', "%{$search}%")
-                    ->orWhere('rpe', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('contact_name', 'like', "%{$search}%");
-            });
+            $this->fulltextSearch($query, $search, ['razon_social', 'rnc', 'rpe', 'email', 'contact_name']);
         }
 
         // Status
@@ -490,31 +502,37 @@ class InteligenciaController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'razon_social';
         $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
 
-        $providers = $query->orderBy($sort, $dir)->paginate(50)->withQueryString();
+        $providers = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
 
-        // Filter dropdowns
-        $statuses = Provider::select('status')
-            ->whereNotNull('status')
-            ->where('status', '!=', '')
-            ->distinct()
-            ->orderBy('status')
-            ->pluck('status');
+        $totalCount = Cache::remember('intel.proveedores.count', self::CACHE_TTL, fn () => Provider::count());
 
-        $tiposPersona = Provider::select('tipo_persona')
-            ->whereNotNull('tipo_persona')
-            ->where('tipo_persona', '!=', '')
-            ->distinct()
-            ->orderBy('tipo_persona')
-            ->pluck('tipo_persona');
+        // Filter dropdowns — cached
+        $statuses = Cache::remember('intel.proveedores.statuses', self::CACHE_TTL, fn () =>
+            DB::table('providers')
+                ->whereNotNull('status')
+                ->where('status', '!=', '')
+                ->distinct()
+                ->orderBy('status')
+                ->pluck('status')
+        );
 
-        $provinces = Provider::select('province')
-            ->whereNotNull('province')
-            ->where('province', '!=', '')
-            ->distinct()
-            ->orderBy('province')
-            ->pluck('province');
+        $tiposPersona = Cache::remember('intel.proveedores.tiposPersona', self::CACHE_TTL, fn () =>
+            DB::table('providers')
+                ->whereNotNull('tipo_persona')
+                ->where('tipo_persona', '!=', '')
+                ->distinct()
+                ->orderBy('tipo_persona')
+                ->pluck('tipo_persona')
+        );
 
-        $totalCount = Provider::count();
+        $provinces = Cache::remember('intel.proveedores.provinces', self::CACHE_TTL, fn () =>
+            DB::table('providers')
+                ->whereNotNull('province')
+                ->where('province', '!=', '')
+                ->distinct()
+                ->orderBy('province')
+                ->pluck('province')
+        );
 
         return view('inteligencia.proveedores', compact(
             'providers',
@@ -531,12 +549,7 @@ class InteligenciaController extends Controller
 
         // Search
         if ($search = $request->input('q')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('acronym', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
-            });
+            $this->fulltextSearch($query, $search, ['name', 'acronym', 'code', 'email']);
         }
 
         // Status
@@ -549,22 +562,49 @@ class InteligenciaController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'name';
         $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
 
-        $institutions = $query->orderBy($sort, $dir)->paginate(50)->withQueryString();
+        $institutions = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
-        // Filter dropdowns
-        $statuses = Institution::select('status')
-            ->whereNotNull('status')
-            ->where('status', '!=', '')
-            ->distinct()
-            ->orderBy('status')
-            ->pluck('status');
+        // Filter dropdowns — cached
+        $statuses = Cache::remember('intel.instituciones.statuses', self::CACHE_TTL, fn () =>
+            DB::table('institutions')
+                ->whereNotNull('status')
+                ->where('status', '!=', '')
+                ->distinct()
+                ->orderBy('status')
+                ->pluck('status')
+        );
 
-        $totalCount = Institution::count();
+        $totalCount = Cache::remember('intel.instituciones.count', self::CACHE_TTL, fn () => Institution::count());
 
         return view('inteligencia.instituciones', compact(
             'institutions',
             'statuses',
             'totalCount',
         ));
+    }
+
+    private function fulltextSearch($query, string $search, array $columns): void
+    {
+        $cleaned = preg_replace('/[+\-><()\~*"@]/', ' ', $search);
+        $words = array_filter(preg_split('/\s+/', trim($cleaned)));
+
+        if (empty($words)) {
+            return;
+        }
+
+        // FULLTEXT minimum token size is 3 — fall back to LIKE for short terms
+        $hasShortWords = collect($words)->contains(fn ($w) => mb_strlen($w) < 3);
+
+        if ($hasShortWords) {
+            $query->where(function ($q) use ($search, $columns) {
+                foreach ($columns as $col) {
+                    $q->orWhere($col, 'like', "%{$search}%");
+                }
+            });
+        } else {
+            $columnList = implode(', ', array_map(fn ($c) => "`{$c}`", $columns));
+            $ftQuery = implode(' ', array_map(fn ($w) => '+' . $w . '*', $words));
+            $query->whereRaw("MATCH({$columnList}) AGAINST(? IN BOOLEAN MODE)", [$ftQuery]);
+        }
     }
 }
