@@ -25,34 +25,37 @@ jobs:
           port: ${{ secrets.VULTR_PORT }}
           envs: GH_TOKEN,SUDO_PASS
           script: |
+            set -e
             export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
 
-            # Trust repo ownership
+            # Trust repo ownership for any user
             git config --global --add safe.directory "$DEPLOY_PATH"
+
+            # 1. Take ownership so secp can do git pull + npm
+            echo "$SUDO_PASS" | sudo -S chown -R secp:secp "$DEPLOY_PATH"
 
             cd "$DEPLOY_PATH"
 
-            # Pull as deploy user (secp has git credentials)
+            # 2. Pull latest code
             git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
             git pull origin main
             git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
 
-            # Install JS dependencies and build assets (as secp — has npm access)
+            # 3. Install JS dependencies and build assets
             npm ci --no-audit
             npm run build
 
-            # Fix ownership back to www-data
+            # 4. Give www-data ownership of app files (not node_modules, not .git, not public/build)
             echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH"
-            echo "$SUDO_PASS" | sudo -S chmod -R 755 "$DEPLOY_PATH"
-            echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
+            echo "$SUDO_PASS" | sudo -S chown -R secp:secp "$DEPLOY_PATH/.git" "$DEPLOY_PATH/node_modules" "$DEPLOY_PATH/public/build"
 
-            # Fix file permissions (644 for files, 755 for dirs) to keep git clean
+            # 5. Fix file permissions: 644 for files, 755 for dirs, 775 for writable dirs
             echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
             echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type d -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 755 {} +
             echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
             echo "$SUDO_PASS" | sudo -S chmod 755 "$DEPLOY_PATH/artisan"
 
-            # PHP tasks as www-data
+            # 6. PHP tasks as www-data (composer, migrations, caches)
             echo "$SUDO_PASS" | sudo -S -u www-data bash -c "
               cd '$DEPLOY_PATH'
               composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
@@ -65,7 +68,7 @@ jobs:
               php artisan queue:restart 2>/dev/null || true
             "
 
-            # Restart supervisor worker
+            # 7. Restart supervisor worker
             echo "$SUDO_PASS" | sudo -S supervisorctl restart secp-worker:* 2>/dev/null || true
 
             echo 'Deployment complete.'
