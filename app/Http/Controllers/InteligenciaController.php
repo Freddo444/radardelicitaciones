@@ -78,24 +78,22 @@ class InteligenciaController extends Controller
         $totalCount = Cache::remember('intel.adjudicados.count', self::CACHE_TTL, fn () => AwardedArticle::count());
 
         // Filter dropdowns — cached (DB::table for lightweight serialization)
-        $institutions = Cache::remember('intel.adjudicados.institutions', self::CACHE_TTL, fn () =>
-            DB::table('awarded_articles')
-                ->select('institution_name', 'institution_code')
-                ->whereNotNull('institution_name')
-                ->where('institution_name', '!=', '')
-                ->distinct()
-                ->orderBy('institution_name')
-                ->get()
+        $institutions = Cache::remember('intel.adjudicados.institutions', self::CACHE_TTL, fn () => DB::table('awarded_articles')
+            ->select('institution_name', 'institution_code')
+            ->whereNotNull('institution_name')
+            ->where('institution_name', '!=', '')
+            ->distinct()
+            ->orderBy('institution_name')
+            ->get()
         );
 
-        $familias = Cache::remember('intel.adjudicados.familias', self::CACHE_TTL, fn () =>
-            DB::table('awarded_articles')
-                ->select('unspsc_familia', 'unspsc_description')
-                ->whereNotNull('unspsc_familia')
-                ->distinct()
-                ->orderBy('unspsc_familia')
-                ->get()
-                ->unique('unspsc_familia')
+        $familias = Cache::remember('intel.adjudicados.familias', self::CACHE_TTL, fn () => DB::table('awarded_articles')
+            ->select('unspsc_familia', 'unspsc_description')
+            ->whereNotNull('unspsc_familia')
+            ->distinct()
+            ->orderBy('unspsc_familia')
+            ->get()
+            ->unique('unspsc_familia')
         );
 
         // Aggregates for the current filtered set
@@ -228,42 +226,38 @@ class InteligenciaController extends Controller
         $acquisitions = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
         // Filter dropdowns — cached (DB::table for lightweight serialization)
-        $institutions = Cache::remember('intel.pacc.institutions', self::CACHE_TTL, fn () =>
-            DB::table('pacc_acquisitions')
-                ->select('institution_name', 'institution_code')
-                ->whereNotNull('institution_name')
-                ->where('institution_name', '!=', '')
-                ->distinct()
-                ->orderBy('institution_name')
-                ->get()
+        $institutions = Cache::remember('intel.pacc.institutions', self::CACHE_TTL, fn () => DB::table('pacc_acquisitions')
+            ->select('institution_name', 'institution_code')
+            ->whereNotNull('institution_name')
+            ->where('institution_name', '!=', '')
+            ->distinct()
+            ->orderBy('institution_name')
+            ->get()
         );
 
-        $modalities = Cache::remember('intel.pacc.modalities', self::CACHE_TTL, fn () =>
-            DB::table('pacc_acquisitions')
-                ->whereNotNull('modality')
-                ->where('modality', '!=', '')
-                ->distinct()
-                ->orderBy('modality')
-                ->pluck('modality')
+        $modalities = Cache::remember('intel.pacc.modalities', self::CACHE_TTL, fn () => DB::table('pacc_acquisitions')
+            ->whereNotNull('modality')
+            ->where('modality', '!=', '')
+            ->distinct()
+            ->orderBy('modality')
+            ->pluck('modality')
         );
 
-        $objectTypes = Cache::remember('intel.pacc.objectTypes', self::CACHE_TTL, fn () =>
-            DB::table('pacc_acquisitions')
-                ->whereNotNull('object_type')
-                ->where('object_type', '!=', '')
-                ->distinct()
-                ->orderBy('object_type')
-                ->pluck('object_type')
+        $objectTypes = Cache::remember('intel.pacc.objectTypes', self::CACHE_TTL, fn () => DB::table('pacc_acquisitions')
+            ->whereNotNull('object_type')
+            ->where('object_type', '!=', '')
+            ->distinct()
+            ->orderBy('object_type')
+            ->pluck('object_type')
         );
 
-        $familias = Cache::remember('intel.pacc.familias', self::CACHE_TTL, fn () =>
-            DB::table('pacc_acquisitions')
-                ->select('unspsc_familia', 'unspsc_description')
-                ->whereNotNull('unspsc_familia')
-                ->distinct()
-                ->orderBy('unspsc_familia')
-                ->get()
-                ->unique('unspsc_familia')
+        $familias = Cache::remember('intel.pacc.familias', self::CACHE_TTL, fn () => DB::table('pacc_acquisitions')
+            ->select('unspsc_familia', 'unspsc_description')
+            ->whereNotNull('unspsc_familia')
+            ->distinct()
+            ->orderBy('unspsc_familia')
+            ->get()
+            ->unique('unspsc_familia')
         );
 
         $totalCount = Cache::remember('intel.pacc.count', self::CACHE_TTL, fn () => PaccAcquisition::count());
@@ -381,33 +375,30 @@ class InteligenciaController extends Controller
         $totalCount = Cache::remember('intel.contratos.count', self::CACHE_TTL, fn () => Contract::count());
 
         // Filter dropdowns — cached (DB::table for lightweight serialization)
-        $institutions = Cache::remember('intel.contratos.institutions', self::CACHE_TTL, fn () =>
-            DB::table('contracts')
-                ->select('institution_name', 'institution_code')
-                ->whereNotNull('institution_name')
-                ->where('institution_name', '!=', '')
-                ->distinct()
-                ->orderBy('institution_name')
-                ->get()
+        $institutions = Cache::remember('intel.contratos.institutions', self::CACHE_TTL, fn () => DB::table('contracts')
+            ->select('institution_name', 'institution_code')
+            ->whereNotNull('institution_name')
+            ->where('institution_name', '!=', '')
+            ->distinct()
+            ->orderBy('institution_name')
+            ->get()
         );
 
-        $providers = Cache::remember('intel.contratos.providers', self::CACHE_TTL, fn () =>
-            DB::table('contracts')
-                ->select('provider_name', 'provider_rpe')
-                ->whereNotNull('provider_name')
-                ->where('provider_name', '!=', '')
-                ->distinct()
-                ->orderBy('provider_name')
-                ->get()
+        $providers = Cache::remember('intel.contratos.providers', self::CACHE_TTL, fn () => DB::table('contracts')
+            ->select('provider_name', 'provider_rpe')
+            ->whereNotNull('provider_name')
+            ->where('provider_name', '!=', '')
+            ->distinct()
+            ->orderBy('provider_name')
+            ->get()
         );
 
-        $statuses = Cache::remember('intel.contratos.statuses', self::CACHE_TTL, fn () =>
-            DB::table('contracts')
-                ->whereNotNull('status')
-                ->where('status', '!=', '')
-                ->distinct()
-                ->orderBy('status')
-                ->pluck('status')
+        $statuses = Cache::remember('intel.contratos.statuses', self::CACHE_TTL, fn () => DB::table('contracts')
+            ->whereNotNull('status')
+            ->where('status', '!=', '')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status')
         );
 
         // Aggregates when filters active
@@ -507,31 +498,28 @@ class InteligenciaController extends Controller
         $totalCount = Cache::remember('intel.proveedores.count', self::CACHE_TTL, fn () => Provider::count());
 
         // Filter dropdowns — cached
-        $statuses = Cache::remember('intel.proveedores.statuses', self::CACHE_TTL, fn () =>
-            DB::table('providers')
-                ->whereNotNull('status')
-                ->where('status', '!=', '')
-                ->distinct()
-                ->orderBy('status')
-                ->pluck('status')
+        $statuses = Cache::remember('intel.proveedores.statuses', self::CACHE_TTL, fn () => DB::table('providers')
+            ->whereNotNull('status')
+            ->where('status', '!=', '')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status')
         );
 
-        $tiposPersona = Cache::remember('intel.proveedores.tiposPersona', self::CACHE_TTL, fn () =>
-            DB::table('providers')
-                ->whereNotNull('tipo_persona')
-                ->where('tipo_persona', '!=', '')
-                ->distinct()
-                ->orderBy('tipo_persona')
-                ->pluck('tipo_persona')
+        $tiposPersona = Cache::remember('intel.proveedores.tiposPersona', self::CACHE_TTL, fn () => DB::table('providers')
+            ->whereNotNull('tipo_persona')
+            ->where('tipo_persona', '!=', '')
+            ->distinct()
+            ->orderBy('tipo_persona')
+            ->pluck('tipo_persona')
         );
 
-        $provinces = Cache::remember('intel.proveedores.provinces', self::CACHE_TTL, fn () =>
-            DB::table('providers')
-                ->whereNotNull('province')
-                ->where('province', '!=', '')
-                ->distinct()
-                ->orderBy('province')
-                ->pluck('province')
+        $provinces = Cache::remember('intel.proveedores.provinces', self::CACHE_TTL, fn () => DB::table('providers')
+            ->whereNotNull('province')
+            ->where('province', '!=', '')
+            ->distinct()
+            ->orderBy('province')
+            ->pluck('province')
         );
 
         return view('inteligencia.proveedores', compact(
@@ -565,13 +553,12 @@ class InteligenciaController extends Controller
         $institutions = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
         // Filter dropdowns — cached
-        $statuses = Cache::remember('intel.instituciones.statuses', self::CACHE_TTL, fn () =>
-            DB::table('institutions')
-                ->whereNotNull('status')
-                ->where('status', '!=', '')
-                ->distinct()
-                ->orderBy('status')
-                ->pluck('status')
+        $statuses = Cache::remember('intel.instituciones.statuses', self::CACHE_TTL, fn () => DB::table('institutions')
+            ->whereNotNull('status')
+            ->where('status', '!=', '')
+            ->distinct()
+            ->orderBy('status')
+            ->pluck('status')
         );
 
         $totalCount = Cache::remember('intel.instituciones.count', self::CACHE_TTL, fn () => Institution::count());
@@ -603,7 +590,7 @@ class InteligenciaController extends Controller
             });
         } else {
             $columnList = implode(', ', array_map(fn ($c) => "`{$c}`", $columns));
-            $ftQuery = implode(' ', array_map(fn ($w) => '+' . $w . '*', $words));
+            $ftQuery = implode(' ', array_map(fn ($w) => '+'.$w.'*', $words));
             $query->whereRaw("MATCH({$columnList}) AGAINST(? IN BOOLEAN MODE)", [$ftQuery]);
         }
     }

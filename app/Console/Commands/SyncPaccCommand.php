@@ -293,9 +293,9 @@ class SyncPaccCommand extends Command
         if (preg_match('/^(\d{4,8})\s*-\s*(.+)/', $desc, $m)) {
             $rawLen = strlen($m[1]);
             $code = str_pad($m[1], 8, '0');
-            $result['unspsc_familia'] = substr($code, 0, 4) . '0000';
+            $result['unspsc_familia'] = substr($code, 0, 4).'0000';
             if ($rawLen >= 6) {
-                $result['unspsc_clase'] = substr($code, 0, 6) . '00';
+                $result['unspsc_clase'] = substr($code, 0, 6).'00';
             }
             if ($rawLen >= 8) {
                 $result['unspsc_subclase'] = $code;
