@@ -25,34 +25,40 @@ jobs:
           envs: GH_TOKEN
           script: |
             export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
-            cd "$DEPLOY_PATH"
 
-            # Trust repo ownership for this SSH user
+            # Trust repo ownership for the ssh user
             git config --global --add safe.directory "$DEPLOY_PATH"
 
-            # Pull latest code
-            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
-            git pull origin main
-            git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
+            # Detect the owner of the deploy path and run everything as that user
+            DEPLOY_USER=$(stat -c '%U' "$DEPLOY_PATH")
 
-            # Install/update PHP dependencies (no dev)
-            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-            php artisan package:discover --ansi
+            sudo -u "$DEPLOY_USER" bash -c "
+              cd '$DEPLOY_PATH'
 
-            # Install JS dependencies and build assets
-            npm ci --no-audit
-            npm run build
+              # Pull latest code
+              git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
+              git pull origin main
+              git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
 
-            # Run migrations
-            php artisan migrate --force
+              # Install/update PHP dependencies (no dev)
+              composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+              php artisan package:discover --ansi
 
-            # Clear and rebuild caches
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            php artisan event:cache
+              # Install JS dependencies and build assets
+              npm ci --no-audit
+              npm run build
 
-            # Restart queue worker if running
-            php artisan queue:restart 2>/dev/null || true
+              # Run migrations
+              php artisan migrate --force
 
-            echo "Deployment complete."
+              # Clear and rebuild caches
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+              php artisan event:cache
+
+              # Restart queue worker if running
+              php artisan queue:restart 2>/dev/null || true
+
+              echo 'Deployment complete.'
+            "
