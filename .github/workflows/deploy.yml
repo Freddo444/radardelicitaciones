@@ -17,12 +17,13 @@ jobs:
         uses: appleboy/ssh-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
+          SUDO_PASS: ${{ secrets.VULTR_SUDO_PASS }}
         with:
           host: ${{ secrets.VULTR_HOST }}
           username: ${{ secrets.VULTR_USER }}
           key: ${{ secrets.VULTR_KEY }}
           port: ${{ secrets.VULTR_PORT }}
-          envs: GH_TOKEN
+          envs: GH_TOKEN,SUDO_PASS
           script: |
             export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
 
@@ -32,7 +33,7 @@ jobs:
             # Detect the owner of the deploy path and run everything as that user
             DEPLOY_USER=$(stat -c '%U' "$DEPLOY_PATH")
 
-            sudo -u "$DEPLOY_USER" bash -c "
+            echo "$SUDO_PASS" | sudo -S -u "$DEPLOY_USER" bash -c "
               cd '$DEPLOY_PATH'
 
               # Pull latest code
