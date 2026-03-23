@@ -1,3 +1,19 @@
+@php
+    if (!isset($elements)) {
+        if ($paginator instanceof \Illuminate\Contracts\Pagination\LengthAwarePaginator) {
+            $window = \Illuminate\Pagination\UrlWindow::make($paginator);
+            $elements = array_filter([
+                $window['first'],
+                is_array($window['slider']) ? '...' : null,
+                $window['slider'],
+                is_array($window['last']) ? '...' : null,
+                $window['last'],
+            ]);
+        } else {
+            $elements = [];
+        }
+    }
+@endphp
 @if ($paginator->hasPages())
 <nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0">
 
