@@ -175,47 +175,54 @@
 </div>
 
 {{-- ── Add document drawer ─────────────────────────────────────── --}}
-<el-dialog id="add-doc-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-white">Agregar documento</h2>
-                <button command="close" commandfor="add-doc-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
-            <p class="mt-1 text-sm text-blue-300">Adjunta contratos, actas, informes u otros soportes del proyecto.</p>
-        </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form method="POST" action="{{ route('proyectos.documents.store', $proyecto) }}" enctype="multipart/form-data">
-                @csrf
-                <div class="space-y-5">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-900">Etiqueta / nombre del documento <span class="text-red-500">*</span></label>
-                        <input type="text" name="nombre" required placeholder="ej. Contrato firmado, Acta de recepción"
-                               class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
+<el-dialog>
+    <dialog id="add-doc-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-white">Agregar documento</h2>
+                            <button command="close" commandfor="add-doc-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="mt-1 text-sm text-blue-300">Adjunta contratos, actas, informes u otros soportes del proyecto.</p>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-900">Archivo <span class="text-red-500">*</span></label>
-                        <input type="file" name="file" required
-                               class="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
-                        <p class="mt-1 text-xs text-gray-500">Máx. 20 MB.</p>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form method="POST" action="{{ route('proyectos.documents.store', $proyecto) }}" enctype="multipart/form-data">
+                            @csrf
+                            <div class="space-y-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-900">Etiqueta / nombre del documento <span class="text-red-500">*</span></label>
+                                    <input type="text" name="nombre" required placeholder="ej. Contrato firmado, Acta de recepción"
+                                           class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-900">Archivo <span class="text-red-500">*</span></label>
+                                    <input type="file" name="file" required
+                                           class="mt-1 block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100">
+                                    <p class="mt-1 text-xs text-gray-500">Máx. 20 MB.</p>
+                                </div>
+                            </div>
+                            <div class="mt-6 flex justify-end gap-x-3">
+                                <button type="button" command="close" commandfor="add-doc-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+                                    Subir documento
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div class="mt-6 flex justify-end gap-x-3">
-                    <button type="button" command="close" commandfor="add-doc-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-                        Subir documento
-                    </button>
-                </div>
-            </form>
+            </el-dialog-panel>
         </div>
-    </div>
+    </dialog>
 </el-dialog>
 @endsection

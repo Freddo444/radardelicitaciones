@@ -543,9 +543,13 @@
     @if($tab === 'formularios')
     @php
         $groups = [
-            'Formularios de oferta' => ['SNCC.F.033','SNCC.F.034','SNCC.F.036','SNCC.F.037','SNCC.F.042'],
-            'Documentos técnicos'   => ['SNCC.D.045','SNCC.D.048','SNCC.D.049'],
-            'Declaraciones'         => ['DECL.JURADA','DECL.COMPROMISO_ETICO'],
+            'Formularios de oferta' => ['CARATULA.A','CARATULA.B','SNCC.F.033','SNCC.F.034','SNCC.F.035','SNCC.F.036','SNCC.F.037','SNCC.F.040','SNCC.F.042','SNCC.F.047','SNCC.F.056','OFERTA.TECNICA'],
+            'Documentos técnicos'   => ['SNCC.D.038','SNCC.D.043','SNCC.D.044','SNCC.D.045','SNCC.D.048','SNCC.D.049','SNCC.D.051','SNCC.D.052'],
+            'Cartas'                => ['CARTA.ACEPTACION','CARTA.ENTREGA','CARTA.PAGO','CARTA.GARANTIA','CARTA.PRECIO'],
+            'Aseguradoras / Fianzas'=> ['FIANZA.CDS','FIANZA.DCS','FIANZA.DCS.FC','FIANZA.APS','FIANZA.RESERVAS'],
+            'Declaraciones juradas' => ['DECL.JURADA','DECL.COMPROMISO_ETICO','DECL.INTEGRIDAD','DECL.CRONOGRAMA','DECL.GARANTIA','DECL.NATURALES'],
+            'Formularios FL'        => ['FL.01','FL.02','FL.03','FL.04','FL.05','FL.06'],
+            'Ley 47-25'            => ['LEY47.JURADA','LEY47.COLUSION','LEY47.JURIDICAS','LEY47.BENEFICIARIOS','LEY47.BENEFICIARIO.FORM','LEY47.DILIGENCIA','LEY47.SIG007'],
         ];
         $formLabels = \App\Models\OfferGeneratedFile::$forms;
     @endphp
@@ -652,14 +656,25 @@
                             @endif
                         </div>
                     </div>
-                    <a href="{{ route('ofertas.generated.download', [$oferta, $file]) }}"
-                       class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        <svg viewBox="0 0 20 20" fill="currentColor" class="-ml-0.5 size-4 text-gray-400">
-                            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/>
-                            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/>
-                        </svg>
-                        Descargar
-                    </a>
+                    <div class="flex items-center gap-x-2">
+                        <a href="{{ route('ofertas.generated.download', [$oferta, $file]) }}"
+                           class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            <svg viewBox="0 0 20 20" fill="currentColor" class="-ml-0.5 size-4 text-gray-400">
+                                <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/>
+                                <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/>
+                            </svg>
+                            Descargar
+                        </a>
+                        <form method="POST" action="{{ route('ofertas.generated.destroy', [$oferta, $file]) }}"
+                              onsubmit="return confirm('¿Eliminar este formulario generado?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" class="inline-flex items-center rounded-md bg-white px-2 py-1.5 text-sm text-red-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-red-50 hover:text-red-700">
+                                <svg viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                    <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.8l-.35 5.25a.75.75 0 0 1-1.497-.1l.35-5.25a.75.75 0 0 1 .797-.7Zm3.64.7a.75.75 0 0 0-1.497.1l.35 5.25a.75.75 0 0 0 1.497-.1l-.35-5.25Z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
                 </div>
                 @endforeach
             </div>
@@ -905,361 +920,396 @@
 {{-- ═══════════════════════════════════════════════════════════════════════ --}}
 
 {{-- Add requirement --}}
-<el-dialog id="add-req-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-white">Agregar requisito</h2>
-                <button command="close" commandfor="add-req-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+<el-dialog>
+    <dialog id="add-req-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-white">Agregar requisito</h2>
+                            <button command="close" commandfor="add-req-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form method="POST" action="{{ route('ofertas.requirements.store', $oferta) }}" class="space-y-5">
+                            @csrf
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Descripción <span class="text-red-500">*</span></label>
+                                <textarea name="descripcion" required rows="3"
+                                          placeholder="ej. Certificado de registro de proveedores vigente"
+                                          class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Tipo <span class="text-red-500">*</span></label>
+                                <select name="tipo" required
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    @foreach(\App\Models\OfferRequirement::$tipos as $val => $lbl)
+                                    <option value="{{ $val }}">{{ $lbl }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Notas</label>
+                                <textarea name="notes" rows="2"
+                                          class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-x-3 pt-4">
+                                <button type="button" command="close" commandfor="add-req-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
+                                    Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </el-dialog-panel>
         </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form method="POST" action="{{ route('ofertas.requirements.store', $oferta) }}" class="space-y-5">
-                @csrf
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Descripción <span class="text-red-500">*</span></label>
-                    <textarea name="descripcion" required rows="3"
-                              placeholder="ej. Certificado de registro de proveedores vigente"
-                              class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Tipo <span class="text-red-500">*</span></label>
-                    <select name="tipo" required
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        @foreach(\App\Models\OfferRequirement::$tipos as $val => $lbl)
-                        <option value="{{ $val }}">{{ $lbl }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Notas</label>
-                    <textarea name="notes" rows="2"
-                              class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
-                </div>
-                <div class="flex justify-end gap-x-3 pt-4">
-                    <button type="button" command="close" commandfor="add-req-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
-                        Agregar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </dialog>
 </el-dialog>
 
 {{-- Edit requirement --}}
-<el-dialog id="edit-req-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-white">Editar requisito</h2>
-                <button command="close" commandfor="edit-req-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+<el-dialog>
+    <dialog id="edit-req-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-white">Editar requisito</h2>
+                            <button command="close" commandfor="edit-req-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form id="edit-req-form" method="POST" action="" class="space-y-5">
+                            @csrf @method('PATCH')
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Descripción <span class="text-red-500">*</span></label>
+                                <textarea id="edit-req-descripcion" name="descripcion" required rows="3"
+                                          class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Tipo <span class="text-red-500">*</span></label>
+                                <select id="edit-req-tipo" name="tipo" required
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    @foreach(\App\Models\OfferRequirement::$tipos as $val => $lbl)
+                                    <option value="{{ $val }}">{{ $lbl }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Estado</label>
+                                <select id="edit-req-estado" name="estado"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="PENDIENTE">PENDIENTE</option>
+                                    <option value="CUMPLE">CUMPLE</option>
+                                    <option value="NO_CUMPLE">NO_CUMPLE</option>
+                                    <option value="ACEPTADO">ACEPTADO</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Notas</label>
+                                <textarea id="edit-req-notes" name="notes" rows="2"
+                                          class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Razón de aceptación</label>
+                                <input id="edit-req-acceptance" type="text" name="acceptance_reason"
+                                       placeholder="Requerido si el estado es ACEPTADO"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div class="flex justify-end gap-x-3 pt-4">
+                                <button type="button" command="close" commandfor="edit-req-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </el-dialog-panel>
         </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form id="edit-req-form" method="POST" action="" class="space-y-5">
-                @csrf @method('PATCH')
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Descripción <span class="text-red-500">*</span></label>
-                    <textarea id="edit-req-descripcion" name="descripcion" required rows="3"
-                              class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Tipo <span class="text-red-500">*</span></label>
-                    <select id="edit-req-tipo" name="tipo" required
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        @foreach(\App\Models\OfferRequirement::$tipos as $val => $lbl)
-                        <option value="{{ $val }}">{{ $lbl }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Estado</label>
-                    <select id="edit-req-estado" name="estado"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="PENDIENTE">PENDIENTE</option>
-                        <option value="CUMPLE">CUMPLE</option>
-                        <option value="NO_CUMPLE">NO_CUMPLE</option>
-                        <option value="ACEPTADO">ACEPTADO</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Notas</label>
-                    <textarea id="edit-req-notes" name="notes" rows="2"
-                              class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"></textarea>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Razón de aceptación</label>
-                    <input id="edit-req-acceptance" type="text" name="acceptance_reason"
-                           placeholder="Requerido si el estado es ACEPTADO"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div class="flex justify-end gap-x-3 pt-4">
-                    <button type="button" command="close" commandfor="edit-req-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
-                        Guardar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </dialog>
 </el-dialog>
 
 {{-- Assign vault item to requirement --}}
-<el-dialog id="assign-item-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl"
-         x-data="{ vaultType: '', vaultRefId: '' }">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-semibold text-white">Asignar documento</h2>
-                    <p id="assign-req-label" class="mt-1 text-sm text-blue-300 truncate max-w-xs"></p>
+<el-dialog>
+    <dialog id="assign-item-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl"
+                     x-data="{ vaultType: '', vaultRefId: '' }">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h2 class="text-base font-semibold text-white">Asignar documento</h2>
+                                <p id="assign-req-label" class="mt-1 text-sm text-blue-300 truncate max-w-xs"></p>
+                            </div>
+                            <button command="close" commandfor="assign-item-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form id="assign-item-form" method="POST" action="" class="space-y-5">
+                            @csrf
+                            <input type="hidden" name="vault_ref_id" :value="vaultRefId"/>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Tipo de recurso <span class="text-red-500">*</span></label>
+                                <select name="vault_ref_type" x-model="vaultType" required
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar tipo —</option>
+                                    <option value="vault_documents">Documento de bóveda</option>
+                                    <option value="personnel">Personal</option>
+                                    <option value="projects">Proyecto</option>
+                                    <option value="equipment">Equipo</option>
+                                    <option value="financial_records">Año fiscal</option>
+                                    <option value="offer_generated_files">Formulario generado</option>
+                                </select>
+                            </div>
+
+                            {{-- Vault documents --}}
+                            <div x-show="vaultType === 'vault_documents'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Documento</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @if($tab === 'checklist')
+                                    @foreach($vaultDocs as $doc)
+                                    <option value="{{ $doc->id }}">{{ $doc->name }} ({{ \App\Models\VaultDocument::$categories[$doc->category] ?? $doc->category }})</option>
+                                    @endforeach
+                                    @endif
+                                </select>
+                            </div>
+
+                            {{-- Personnel --}}
+                            <div x-show="vaultType === 'personnel'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Personal</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($availablePersonnel as $p)
+                                    <option value="{{ $p->id }}">{{ $p->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Projects --}}
+                            <div x-show="vaultType === 'projects'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Proyecto</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($availableProjects as $p)
+                                    <option value="{{ $p->id }}">{{ $p->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Equipment --}}
+                            <div x-show="vaultType === 'equipment'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Equipo</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($availableEquipment as $e)
+                                    <option value="{{ $e->id }}">{{ $e->fichaLabel() ?: $e->descripcion }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Financial records --}}
+                            <div x-show="vaultType === 'financial_records'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Año fiscal</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($availableFinancials as $fr)
+                                    <option value="{{ $fr->id }}">Año {{ $fr->anio_fiscal }} — {{ $fr->currency }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Generated files --}}
+                            <div x-show="vaultType === 'offer_generated_files'" x-cloak>
+                                <label class="block text-sm font-medium text-gray-900">Formulario generado</label>
+                                <select @change="vaultRefId = $event.target.value"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="">— Seleccionar —</option>
+                                    @foreach($oferta->generatedFiles as $gf)
+                                    <option value="{{ $gf->id }}">{{ \App\Models\OfferGeneratedFile::$forms[$gf->form_code] ?? $gf->form_code }} ({{ $gf->generated_at?->format('d/m/Y') }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Nota de rol</label>
+                                <input type="text" name="role_note" placeholder="ej. Copia notariada, Versión 2025"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+
+                            <div class="flex justify-end gap-x-3 pt-4">
+                                <button type="button" command="close" commandfor="assign-item-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit" :disabled="!vaultType || !vaultRefId"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:opacity-40">
+                                    Asignar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                <button command="close" commandfor="assign-item-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+            </el-dialog-panel>
         </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form id="assign-item-form" method="POST" action="" class="space-y-5">
-                @csrf
-                <input type="hidden" name="vault_ref_id" :value="vaultRefId"/>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Tipo de recurso <span class="text-red-500">*</span></label>
-                    <select name="vault_ref_type" x-model="vaultType" required
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar tipo —</option>
-                        <option value="vault_documents">Documento de bóveda</option>
-                        <option value="personnel">Personal</option>
-                        <option value="projects">Proyecto</option>
-                        <option value="equipment">Equipo</option>
-                        <option value="financial_records">Año fiscal</option>
-                        <option value="offer_generated_files">Formulario generado</option>
-                    </select>
-                </div>
-
-                {{-- Vault documents --}}
-                <div x-show="vaultType === 'vault_documents'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Documento</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @if($tab === 'checklist')
-                        @foreach($vaultDocs as $doc)
-                        <option value="{{ $doc->id }}">{{ $doc->name }} ({{ \App\Models\VaultDocument::$categories[$doc->category] ?? $doc->category }})</option>
-                        @endforeach
-                        @endif
-                    </select>
-                </div>
-
-                {{-- Personnel --}}
-                <div x-show="vaultType === 'personnel'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Personal</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($availablePersonnel as $p)
-                        <option value="{{ $p->id }}">{{ $p->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Projects --}}
-                <div x-show="vaultType === 'projects'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Proyecto</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($availableProjects as $p)
-                        <option value="{{ $p->id }}">{{ $p->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Equipment --}}
-                <div x-show="vaultType === 'equipment'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Equipo</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($availableEquipment as $e)
-                        <option value="{{ $e->id }}">{{ $e->fichaLabel() ?: $e->descripcion }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Financial records --}}
-                <div x-show="vaultType === 'financial_records'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Año fiscal</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($availableFinancials as $fr)
-                        <option value="{{ $fr->id }}">Año {{ $fr->anio_fiscal }} — {{ $fr->currency }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Generated files --}}
-                <div x-show="vaultType === 'offer_generated_files'" x-cloak>
-                    <label class="block text-sm font-medium text-gray-900">Formulario generado</label>
-                    <select @change="vaultRefId = $event.target.value"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="">— Seleccionar —</option>
-                        @foreach($oferta->generatedFiles as $gf)
-                        <option value="{{ $gf->id }}">{{ \App\Models\OfferGeneratedFile::$forms[$gf->form_code] ?? $gf->form_code }} ({{ $gf->generated_at?->format('d/m/Y') }})</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Nota de rol</label>
-                    <input type="text" name="role_note" placeholder="ej. Copia notariada, Versión 2025"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-
-                <div class="flex justify-end gap-x-3 pt-4">
-                    <button type="button" command="close" commandfor="assign-item-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit" :disabled="!vaultType || !vaultRefId"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 disabled:opacity-40">
-                        Asignar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </dialog>
 </el-dialog>
 
 {{-- Add event --}}
-<el-dialog id="add-event-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-white">Agregar evento</h2>
-                <button command="close" commandfor="add-event-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+<el-dialog>
+    <dialog id="add-event-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-white">Agregar evento</h2>
+                            <button command="close" commandfor="add-event-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form method="POST" action="{{ route('ofertas.events.store', $oferta) }}" class="space-y-5">
+                            @csrf
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Tipo de evento <span class="text-red-500">*</span></label>
+                                <select name="event_type" required id="add-event-type"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    @foreach(\App\Models\OfferEvent::$types as $val => $lbl)
+                                    <option value="{{ $val }}">{{ $lbl }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Descripción / nota</label>
+                                <input type="text" name="description" placeholder="ej. Sala de conferencias piso 3"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Fecha <span class="text-red-500">*</span></label>
+                                <input type="date" name="event_date" required
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Días de alerta anticipada</label>
+                                <input type="number" name="alert_days_before" min="0" max="30" value="1"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div class="flex justify-end gap-x-3 pt-4">
+                                <button type="button" command="close" commandfor="add-event-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
+                                    Agregar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </el-dialog-panel>
         </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form method="POST" action="{{ route('ofertas.events.store', $oferta) }}" class="space-y-5">
-                @csrf
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Tipo de evento <span class="text-red-500">*</span></label>
-                    <select name="event_type" required id="add-event-type"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        @foreach(\App\Models\OfferEvent::$types as $val => $lbl)
-                        <option value="{{ $val }}">{{ $lbl }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Descripción / nota</label>
-                    <input type="text" name="description" placeholder="ej. Sala de conferencias piso 3"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Fecha <span class="text-red-500">*</span></label>
-                    <input type="date" name="event_date" required
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Días de alerta anticipada</label>
-                    <input type="number" name="alert_days_before" min="0" max="30" value="1"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div class="flex justify-end gap-x-3 pt-4">
-                    <button type="button" command="close" commandfor="add-event-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
-                        Agregar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </dialog>
 </el-dialog>
 
 {{-- Edit event --}}
-<el-dialog id="edit-event-drawer" type="slideover" placement="right">
-    <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
-        <div class="bg-blue-800 px-4 py-6 sm:px-6">
-            <div class="flex items-center justify-between">
-                <h2 class="text-base font-semibold text-white">Editar evento</h2>
-                <button command="close" commandfor="edit-event-drawer" class="text-blue-200 hover:text-white">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
-                        <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-            </div>
+<el-dialog>
+    <dialog id="edit-event-drawer" class="backdrop:bg-transparent">
+        <el-dialog-backdrop class="fixed inset-0 bg-gray-900/80 transition-opacity duration-300 ease-linear data-closed:opacity-0"></el-dialog-backdrop>
+        <div tabindex="0" class="fixed inset-0 flex justify-end focus:outline-none">
+            <el-dialog-panel class="group/dialog-panel pointer-events-auto w-screen max-w-md transform transition duration-300 ease-in-out data-closed:translate-x-full">
+                <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
+                    <div class="bg-blue-800 px-4 py-6 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-base font-semibold text-white">Editar evento</h2>
+                            <button command="close" commandfor="edit-event-drawer" class="text-blue-200 hover:text-white">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-6">
+                                    <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
+                        <form id="edit-event-form" method="POST" action="" class="space-y-5">
+                            @csrf @method('PATCH')
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Descripción / nota</label>
+                                <input type="text" id="edit-event-description" name="description"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Fecha <span class="text-red-500">*</span></label>
+                                <input type="date" id="edit-event-date" name="event_date" required
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Días de alerta anticipada</label>
+                                <input type="number" id="edit-event-alert" name="alert_days_before" min="0" max="30"
+                                       class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-900">Estado</label>
+                                <select id="edit-event-status" name="status"
+                                        class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                    <option value="pending">Pendiente</option>
+                                    <option value="completed">Completado</option>
+                                    <option value="missed">Perdido</option>
+                                </select>
+                            </div>
+                            <div class="flex justify-end gap-x-3 pt-4">
+                                <button type="button" command="close" commandfor="edit-event-drawer"
+                                        class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    Cancelar
+                                </button>
+                                <button type="submit"
+                                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
+                                    Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </el-dialog-panel>
         </div>
-        <div class="flex flex-1 flex-col gap-y-5 px-4 py-6 sm:px-6">
-            <form id="edit-event-form" method="POST" action="" class="space-y-5">
-                @csrf @method('PATCH')
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Descripción / nota</label>
-                    <input type="text" id="edit-event-description" name="description"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Fecha <span class="text-red-500">*</span></label>
-                    <input type="date" id="edit-event-date" name="event_date" required
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Días de alerta anticipada</label>
-                    <input type="number" id="edit-event-alert" name="alert_days_before" min="0" max="30"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-900">Estado</label>
-                    <select id="edit-event-status" name="status"
-                            class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                        <option value="pending">Pendiente</option>
-                        <option value="completed">Completado</option>
-                        <option value="missed">Perdido</option>
-                    </select>
-                </div>
-                <div class="flex justify-end gap-x-3 pt-4">
-                    <button type="button" command="close" commandfor="edit-event-drawer"
-                            class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
-                        Guardar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </dialog>
 </el-dialog>
 
 <script>

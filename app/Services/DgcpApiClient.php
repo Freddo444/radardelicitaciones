@@ -11,7 +11,7 @@ class DgcpApiClient
 {
     private const BASE_URL = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
 
-    private const REQUEST_DELAY_MS = 4500; // safely under 15 req/min
+    private const REQUEST_DELAY_MS = 1500; // ~40 req/min — no documented rate limit, backs off on 429
 
     private const RATE_LIMIT_WAIT = 65;   // seconds to sleep on 429
 

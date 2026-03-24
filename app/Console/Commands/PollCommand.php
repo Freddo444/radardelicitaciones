@@ -19,19 +19,43 @@ class PollCommand extends Command
 
     protected $description = 'Poll the DGCP API for new procurement processes and notify on matches';
 
+    private const STALE_LOCK_MINUTES = 120;
+
+    private const BACKFILL_BATCH_SIZE = 50;
+
+    private array $logBuffer = [];
+
     public function handle(DgcpApiClient $api): int
     {
-        $this->progress('Iniciando sondeo...', 'info');
+        $this->resetStaleLock();
 
         Setting::set('poll_status', 'running');
         Setting::set('poll_log', '[]');
         Setting::set('poll_started_at', now()->toDateTimeString());
 
+        $this->progress('Iniciando sondeo...', 'info');
+
+        try {
+            return $this->runPoll($api);
+        } catch (\Throwable $e) {
+            $this->progress("Error fatal: {$e->getMessage()}", 'error');
+            Log::error('[SECP] Poll crashed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+
+            return self::FAILURE;
+        } finally {
+            $this->flushLog();
+            if (! $this->option('dry-run')) {
+                Setting::set('poll_status', 'idle');
+            }
+        }
+    }
+
+    private function runPoll(DgcpApiClient $api): int
+    {
         $activeRubros = Rubro::where('active', true)->get();
 
         if ($activeRubros->isEmpty()) {
             $this->progress('No hay rubros activos configurados. Abortando.', 'warn');
-            Setting::set('poll_status', 'idle');
 
             return self::SUCCESS;
         }
@@ -101,7 +125,7 @@ class PollCommand extends Command
         $knownCodes = Bid::whereIn('process_code', $matchesByProcess->keys()->all())
             ->pluck('process_code');
 
-        $newMatches = $matchesByProcess->filter(fn ($_, $code) => ! $knownCodes->contains($code));
+        $newMatches = $matchesByProcess->filter(fn ($rubros, $code) => ! $knownCodes->contains($code));
 
         $this->progress("{$newMatches->count()} proceso(s) nuevos (no almacenados previamente).", 'info');
 
@@ -109,8 +133,8 @@ class PollCommand extends Command
             $this->progress('Sin procesos nuevos. Sondeo completo.', 'success');
             if (! $this->option('dry-run')) {
                 Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
-                Setting::set('poll_status', 'idle');
                 $this->cleanup($api);
+                $this->refreshAllBidStatuses($api);
                 $this->backfillMissingData($api);
                 $this->checkWatchedBids($api);
             }
@@ -209,8 +233,8 @@ class PollCommand extends Command
 
         if (! $this->option('dry-run')) {
             Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
-            Setting::set('poll_status', 'idle');
             $this->cleanup($api);
+            $this->refreshAllBidStatuses($api);
             $this->backfillMissingData($api);
             $this->checkWatchedBids($api);
         }
@@ -222,18 +246,79 @@ class PollCommand extends Command
         return self::SUCCESS;
     }
 
-    private function progress(string $message, string $type = 'info'): void
+    /**
+     * If poll_status has been 'running' for longer than STALE_LOCK_MINUTES, reset it.
+     * Prevents a crashed poll from permanently blocking future polls.
+     */
+    private function resetStaleLock(): void
     {
-        $this->line($message);
-
-        $log = json_decode(Setting::get('poll_log', '[]'), true) ?: [];
-        $log[] = ['time' => now()->format('H:i:s'), 'msg' => $message, 'type' => $type];
-
-        if (count($log) > 300) {
-            $log = array_slice($log, -300);
+        if (Setting::get('poll_status') !== 'running') {
+            return;
         }
 
-        Setting::set('poll_log', json_encode($log));
+        $startedAt = Setting::get('poll_started_at');
+        if (! $startedAt) {
+            Setting::set('poll_status', 'idle');
+            Log::warning('[SECP] Reset stale poll lock (no started_at timestamp)');
+
+            return;
+        }
+
+        $minutesRunning = now()->diffInMinutes(new \DateTime($startedAt));
+        if ($minutesRunning >= self::STALE_LOCK_MINUTES) {
+            Setting::set('poll_status', 'idle');
+            Log::warning("[SECP] Reset stale poll lock after {$minutesRunning} minutes");
+            $this->progress("Lock anterior reseteado ({$minutesRunning} min sin respuesta).", 'warn');
+        }
+    }
+
+    /**
+     * Refresh status for all active bids (not just watched ones).
+     * Processes bids that haven't been checked recently, up to 30 per cycle.
+     */
+    private function refreshAllBidStatuses(DgcpApiClient $api): void
+    {
+        $bids = Bid::whereNotNull('status')
+            ->whereNotIn('status', ['Cancelado', 'Proceso adjudicado y celebrado', 'Proceso desierto'])
+            ->whereNotNull('tender_deadline')
+            ->where('tender_deadline', '>=', now()->subDays(7))
+            ->orderByRaw('COALESCE(updated_at, created_at) ASC')
+            ->limit(30)
+            ->get();
+
+        if ($bids->isEmpty()) {
+            return;
+        }
+
+        $this->progress("Actualizando estado de {$bids->count()} convocatoria(s) activa(s)...", 'info');
+        $updated = 0;
+
+        foreach ($bids as $bid) {
+            try {
+                $process = $api->fetchProcessByCode($bid->process_code);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if (! $process) {
+                continue;
+            }
+
+            $newStatus = $process['estado_proceso'] ?? null;
+            if ($newStatus && $newStatus !== $bid->status) {
+                $bid->update([
+                    'status' => $newStatus,
+                    'last_known_status' => $newStatus,
+                    'raw_data' => $process,
+                ]);
+                $updated++;
+                $this->progress("  [ESTADO] {$bid->process_code}: {$bid->getOriginal('status')} → {$newStatus}", 'info');
+            }
+        }
+
+        if ($updated > 0) {
+            $this->progress("  {$updated} estado(s) actualizado(s).", 'info');
+        }
     }
 
     private function cleanup(DgcpApiClient $api): void
@@ -260,8 +345,8 @@ class PollCommand extends Command
     }
 
     /**
-     * Re-fetch process details for bids missing critical fields (deadline, amount, etc.).
-     * Processes up to 10 per poll cycle to stay within rate limits.
+     * Re-fetch process details for bids missing critical fields.
+     * Processes up to BACKFILL_BATCH_SIZE per poll cycle.
      */
     private function backfillMissingData(DgcpApiClient $api): void
     {
@@ -269,7 +354,7 @@ class PollCommand extends Command
             $q->whereNull('tender_deadline')
                 ->orWhereNull('published_at')
                 ->orWhereNull('amount_estimated');
-        })->limit(10)->get();
+        })->limit(self::BACKFILL_BATCH_SIZE)->get();
 
         if ($bids->isEmpty()) {
             return;
@@ -280,7 +365,7 @@ class PollCommand extends Command
         foreach ($bids as $bid) {
             try {
                 $process = $api->fetchProcessByCode($bid->process_code);
-            } catch (\Throwable $e) {
+            } catch (\Throwable) {
                 continue;
             }
 
@@ -417,6 +502,38 @@ class PollCommand extends Command
                 ]);
             }
         }
+    }
+
+    /**
+     * Buffer log lines in memory, flush to DB periodically and on completion.
+     */
+    private function progress(string $message, string $type = 'info'): void
+    {
+        $this->line($message);
+
+        $this->logBuffer[] = ['time' => now()->format('H:i:s'), 'msg' => $message, 'type' => $type];
+
+        // Flush every 20 lines to keep the frontend updated without per-line DB writes
+        if (count($this->logBuffer) >= 20) {
+            $this->flushLog();
+        }
+    }
+
+    private function flushLog(): void
+    {
+        if (empty($this->logBuffer)) {
+            return;
+        }
+
+        $existing = json_decode(Setting::get('poll_log', '[]'), true) ?: [];
+        $merged = array_merge($existing, $this->logBuffer);
+
+        if (count($merged) > 300) {
+            $merged = array_slice($merged, -300);
+        }
+
+        Setting::set('poll_log', json_encode($merged));
+        $this->logBuffer = [];
     }
 
     private function parseAmount(mixed $value): ?float

@@ -473,6 +473,20 @@ class OfertasController extends Controller
         ]);
     }
 
+    public function deleteGeneratedFile(Offer $oferta, OfferGeneratedFile $file)
+    {
+        abort_unless($file->offer_id === $oferta->id, 403);
+
+        $fullPath = storage_path('app/'.$file->path);
+        if (file_exists($fullPath)) {
+            unlink($fullPath);
+        }
+
+        $file->delete();
+
+        return back()->with('success', 'Formulario eliminado.');
+    }
+
     // ── Private helpers ───────────────────────────────────────────────
 
     /**

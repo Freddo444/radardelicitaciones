@@ -109,6 +109,8 @@ Route::middleware('auth')->group(function () {
     // Empresa (M1)
     Route::get('/empresa', [EmpresaController::class, 'index'])->name('empresa.index');
     Route::post('/empresa', [EmpresaController::class, 'update'])->name('empresa.update');
+    Route::post('/empresa/imagen', [EmpresaController::class, 'uploadImage'])->name('empresa.uploadImage');
+    Route::delete('/empresa/imagen', [EmpresaController::class, 'deleteImage'])->name('empresa.deleteImage');
 
     // Documentos / Vault (M2)
     Route::get('/documentos', [DocumentosController::class, 'index'])->name('documentos.index');
@@ -183,6 +185,7 @@ Route::middleware('auth')->group(function () {
     // Form generation within offer context
     Route::post('/ofertas/{oferta}/generate-form', [OfertasController::class, 'generateForm'])->name('ofertas.generate.form');
     Route::get('/ofertas/{oferta}/generated/{file}/download', [OfertasController::class, 'downloadGeneratedFile'])->name('ofertas.generated.download');
+    Route::delete('/ofertas/{oferta}/generated/{file}', [OfertasController::class, 'deleteGeneratedFile'])->name('ofertas.generated.destroy');
 
     // Formularios / Form Generator (M7)
     Route::get('/formularios', [FormulariosController::class, 'index'])->name('formularios.index');

@@ -20,10 +20,15 @@ class Company extends Model
         'rep_legal_nombre',
         'rep_legal_cedula',
         'rep_legal_cargo',
+        'rep_legal_nacionalidad',
+        'rep_legal_estado_civil',
         'rpe_numero',
         'rpe_vence',
         'cpa_numero',
         'cpa_vence',
+        'firma_path',
+        'sello_path',
+        'logo_path',
     ];
 
     protected $casts = [

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OfferEquipment extends Model
 {
+    protected $table = 'offer_equipment';
+
     protected $fillable = ['offer_id', 'equipment_id', 'role_note'];
 
     public function offer(): BelongsTo

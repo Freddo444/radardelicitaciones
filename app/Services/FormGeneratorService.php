@@ -34,7 +34,8 @@ class FormGeneratorService
     ): OfferGeneratedFile {
         $company = Company::instance();
 
-        [$fullPath, $context] = match ($formCode) {
+        // Forms with dedicated builders (special data processing)
+        $result = match ($formCode) {
             'SNCC.F.033' => $this->buildF033($company, $params),
             'SNCC.F.034' => $this->buildF034($company, $params),
             'SNCC.F.036' => $this->buildF036($company, $params),
@@ -45,8 +46,24 @@ class FormGeneratorService
             'SNCC.D.049' => $this->buildD049($company, $params),
             'DECL.JURADA' => $this->buildDeclJurada($company, $params),
             'DECL.COMPROMISO_ETICO' => $this->buildCompromisoEtico($company, $params),
-            default => throw new \InvalidArgumentException("Unknown form code: {$formCode}"),
+            default => null,
         };
+
+        // Fallback: template-based generation for forms without a dedicated builder
+        if ($result === null) {
+            $templatePath = OfferGeneratedFile::$templatePaths[$formCode] ?? null;
+            if (! $templatePath) {
+                throw new \InvalidArgumentException("Unknown form code: {$formCode}");
+            }
+            $tpl = $this->tpl($templatePath);
+            $this->set($tpl, $this->companyTokens($company), $this->processTokens($params));
+            $result = [$this->save($tpl, $formCode), [
+                'company' => $company->only(['razon_social', 'rnc']),
+                ...$params,
+            ]];
+        }
+
+        [$fullPath, $context] = $result;
 
         return OfferGeneratedFile::create([
             'offer_id' => $offerId,
@@ -151,10 +168,14 @@ class FormGeneratorService
             'empresa_telefono' => $c->telefono ?? '',
             'empresa_email' => $c->email ?? '',
             'empresa_rpe' => $c->rpe_numero ?? '',
+            // Rep tokens — both short and full-name variants used across templates
             'rep_nombre' => $c->rep_legal_nombre ?? '',
+            'rep_legal_nombre' => $c->rep_legal_nombre ?? '',
             'rep_cedula' => $c->rep_legal_cedula ?? '',
             'rep_cargo' => $c->rep_legal_cargo ?? '',
-            // Rep domicilio not stored separately — fall back to company address
+            'rep_nacionalidad' => $c->rep_legal_nacionalidad ?? 'Dominicano/a',
+            'rep_estado_civil' => $c->rep_legal_estado_civil ?? '',
+            'rep_legal_estado_civil' => $c->rep_legal_estado_civil ?? '',
             'rep_domicilio' => $c->direccion ?? '',
             'rep_municipio' => $c->municipio ?? '',
         ];
@@ -163,12 +184,19 @@ class FormGeneratorService
     /** Standard process/bid tokens from $params. */
     private function processTokens(array $params): array
     {
+        $ref = $params['proceso_ref'] ?? $params['proceso_codigo'] ?? '';
+        $nombre = $params['proceso_nombre'] ?? '';
+        $entidad = $params['entidad_nombre'] ?? $params['entidad'] ?? '';
+
         return [
-            'proceso_ref' => $params['proceso_ref'] ?? $params['proceso_codigo'] ?? '',
-            'proceso_nombre' => $params['proceso_nombre'] ?? '',
+            'proceso_ref' => $ref,
+            'proceso_codigo' => $ref,
+            'proceso_nombre' => $nombre,
+            'proceso_titulo' => $nombre,
             'proceso_tipo' => $params['proceso_tipo'] ?? '',
-            'entidad_nombre' => $params['entidad_nombre'] ?? $params['entidad'] ?? '',
-            'obra_nombre' => $params['obra_nombre'] ?? $params['proceso_nombre'] ?? '',
+            'entidad_nombre' => $entidad,
+            'proceso_entidad' => $entidad,
+            'obra_nombre' => $params['obra_nombre'] ?? $nombre,
             'fecha' => now()->format('d/m/Y'),
         ];
     }
@@ -177,7 +205,7 @@ class FormGeneratorService
 
     private function buildF033(Company $c, array $p): array
     {
-        $tpl = $this->tpl('SNCC_F033_Of_Economica.docx');
+        $tpl = $this->tpl('estandar/SNCC_F033_Of_Economica.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
 
         return [$this->save($tpl, 'SNCC.F.033'), [
@@ -188,7 +216,7 @@ class FormGeneratorService
 
     private function buildF034(Company $c, array $p): array
     {
-        $tpl = $this->tpl('SNCC_F034_Presentacion_de_Oferta.docx');
+        $tpl = $this->tpl('estandar/SNCC_F034_Presentacion_de_Oferta.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
 
         return [$this->save($tpl, 'SNCC.F.034'), [
@@ -199,7 +227,7 @@ class FormGeneratorService
 
     private function buildF036(Company $c, array $p): array
     {
-        $tpl = $this->tpl('SNCC_F036_Equipos_Oferente.docx');
+        $tpl = $this->tpl('estandar/SNCC_F036_Equipos_Oferente.docx');
         $items = Equipment::where('company_id', $c->id)->active()->orderBy('descripcion')->get();
 
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
@@ -213,7 +241,7 @@ class FormGeneratorService
 
     private function buildF037(Company $c, array $p): array
     {
-        $tpl = $this->tpl('SNCC_F037_Personal_Oferente.docx');
+        $tpl = $this->tpl('estandar/SNCC_F037_Personal_Oferente.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
 
         return [$this->save($tpl, 'SNCC.F.037'), [
@@ -224,7 +252,7 @@ class FormGeneratorService
 
     private function buildF042(Company $c, array $p): array
     {
-        $tpl = $this->tpl('SNCC_F042_Informacion_Oferente.docx');
+        $tpl = $this->tpl('estandar/SNCC_F042_Informacion_Oferente.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
 
         return [$this->save($tpl, 'SNCC.F.042'), [
@@ -236,7 +264,7 @@ class FormGeneratorService
     private function buildD045(Company $c, array $p): array
     {
         $person = Personnel::findOrFail($p['personnel_id']);
-        $tpl = $this->tpl('SNCC_D045_Curriculo_Personal.docx');
+        $tpl = $this->tpl('estandar/SNCC_D045_Curriculo_Personal.docx');
 
         $educacion = implode(' | ', array_filter([
             $person->nivel_educativo ? ucfirst($person->nivel_educativo) : null,
@@ -268,7 +296,7 @@ class FormGeneratorService
     private function buildD048(Company $c, array $p): array
     {
         $person = Personnel::with('experiences')->findOrFail($p['personnel_id']);
-        $tpl = $this->tpl('SNCC_D048_Experiencia_Profesional_Personal.docx');
+        $tpl = $this->tpl('estandar/SNCC_D048_Experiencia_Profesional_Personal.docx');
 
         $this->set($tpl,
             $this->companyTokens($c),
@@ -293,7 +321,7 @@ class FormGeneratorService
     {
         $projectIds = $p['project_ids'] ?? [];
         $projects = Project::where('company_id', $c->id)->whereIn('id', $projectIds)->get();
-        $tpl = $this->tpl('SNCC_D049_Experiencia_contratista.docx');
+        $tpl = $this->tpl('estandar/SNCC_D049_Experiencia_contratista.docx');
 
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
 
@@ -306,7 +334,7 @@ class FormGeneratorService
 
     private function buildDeclJurada(Company $c, array $p): array
     {
-        $tpl = $this->tpl('legal/DECLARACION_JURADA_ART_14_PLANTILLA.docx');
+        $tpl = $this->tpl('declaraciones/DECLARACION_JURADA_ART_14_PLANTILLA.docx');
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
@@ -323,7 +351,7 @@ class FormGeneratorService
 
     private function buildCompromisoEtico(Company $c, array $p): array
     {
-        $tpl = $this->tpl('compromiso-etico-de-proveedores.docx');
+        $tpl = $this->tpl('estandar/compromiso-etico-de-proveedores.docx');
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
