@@ -38,7 +38,7 @@ class PollCommand extends Command
 
         $lastPolledAt = Setting::get('last_polled_at');
         $globalFrom = $lastPolledAt
-            ? new \DateTime($lastPolledAt)
+            ? (new \DateTime($lastPolledAt))->modify('-24 hours')
             : new \DateTime('-90 days');
         $to = new \DateTime;
 
