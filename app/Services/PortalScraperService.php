@@ -28,12 +28,13 @@ class PortalScraperService
      * Scrape all open notices across important procedure types.
      * Uses AdvancedSearchAjax per type to bypass the 100-result pagination limit.
      * Each type returns <100 results, giving ~500 total open notices.
-     * The caller filters out already-known process codes.
+     * Filters out notices older than $maxAgeDays to avoid importing stale listings.
      *
      * @return Collection of parsed notice arrays
      */
-    public function scrapeAll(): Collection
+    public function scrapeAll(int $maxAgeDays = 90): Collection
     {
+        $cutoff = now()->subDays($maxAgeDays);
         $allNotices = collect();
         $seenCodes = collect();
 
@@ -49,6 +50,12 @@ class PortalScraperService
 
             foreach ($notices as $notice) {
                 if ($seenCodes->contains($notice['process_code'])) {
+                    continue;
+                }
+
+                // Skip notices older than the cutoff
+                $pubDate = $notice['published_at'] ? new \DateTime($notice['published_at']) : null;
+                if ($pubDate && $pubDate < $cutoff) {
                     continue;
                 }
 
