@@ -8,240 +8,128 @@ use Illuminate\Support\Facades\Log;
 
 class PortalScraperService
 {
-    private const PORTAL_URL = 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index';
-
-    // Pagination via URL params doesn't work (Vortal requires session state).
-    // We get 100 most-recent notices per fetch — run frequently to catch all.
-    private const MAX_PAGES = 1;
+    private const PORTAL_BASE = 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement';
 
     /**
-     * Scrape recent notices from the portal, sorted newest-first.
-     * Stops when notices fall outside the lookback window.
-     *
-     * @return Collection<int, array{
-     *     process_code: string,
-     *     title: string,
-     *     buyer_name: string,
-     *     published_at: string|null,
-     *     tender_deadline: string|null,
-     *     amount_estimated: float|null,
-     *     currency: string,
-     *     notice_uid: string|null,
-     *     portal_url: string|null,
-     * }>
+     * Procedure types worth scraping — high-value procurement modalities.
+     * Each search returns all open notices of that type (typically <100).
+     * We skip Compras Menores / Compras por Debajo del Umbral (low-value, high-volume).
      */
-    public function scrapeRecent(int $hoursBack = 25): Collection
+    private const PROCEDURE_TYPES = [
+        'DGCP-03-ComparacionDePrecios',       // ~97 open
+        'DGCP-05-LicitacionPublicaNacional',   // ~100 open
+        'DGCP-06-LicitacionPublicaInternacional', // ~88 open
+        'DGCP-10-SorteoObras',                 // ~97 open (construction lottery)
+        'DGCP-08-ProcesosExcepcion',           // ~100 open
+        'DGCP-07-LicitacionRestringida',       // ~30 open
+    ];
+
+    /**
+     * Scrape all open notices across important procedure types.
+     * Uses AdvancedSearchAjax per type to bypass the 100-result pagination limit.
+     * Each type returns <100 results, giving ~500 total open notices.
+     * The caller filters out already-known process codes.
+     *
+     * @return Collection of parsed notice arrays
+     */
+    public function scrapeAll(): Collection
     {
-        $cutoff = now()->subHours($hoursBack);
         $allNotices = collect();
+        $seenCodes = collect();
 
-        for ($page = 1; $page <= self::MAX_PAGES; $page++) {
-            Log::debug("[PortalScraper] Fetching page {$page}");
+        foreach (self::PROCEDURE_TYPES as $procedure) {
+            Log::debug("[PortalScraper] Searching procedure: {$procedure}");
 
-            $html = $this->fetchPage($page);
+            $html = $this->advancedSearch($procedure);
             if (! $html) {
-                break;
+                continue;
             }
 
             $notices = $this->parsePage($html);
-            if ($notices->isEmpty()) {
-                break;
-            }
-
-            $recentOnThisPage = 0;
 
             foreach ($notices as $notice) {
-                $pubDate = $notice['published_at'] ? new \DateTime($notice['published_at']) : null;
-
-                if ($pubDate && $pubDate < $cutoff) {
-                    // We've hit notices older than our window — stop entirely
-                    Log::debug("[PortalScraper] Hit cutoff at {$notice['process_code']} published {$notice['published_at']}");
-
-                    return $allNotices;
+                if ($seenCodes->contains($notice['process_code'])) {
+                    continue;
                 }
 
+                $seenCodes->push($notice['process_code']);
                 $allNotices->push($notice);
-                $recentOnThisPage++;
             }
 
-            // If every notice on this page was recent, there might be more on the next page
-            if ($recentOnThisPage < $notices->count()) {
-                break;
-            }
-
-            // Small delay between pages
-            if ($page < self::MAX_PAGES) {
-                usleep(500_000);
-            }
+            // Small delay between searches
+            usleep(500_000);
         }
 
         return $allNotices;
     }
 
     /**
-     * Fetch a single page of the portal listing, sorted by publish date descending.
+     * Execute an AdvancedSearchAjax for a specific procedure type.
+     * Requires two HTTP calls: initial page (to get session cookie + mkey), then AJAX search.
      */
-    private function fetchPage(int $page): ?string
+    private function advancedSearch(string $procedure): ?string
     {
         try {
-            $response = Http::timeout(30)
-                ->withHeaders([
-                    'Accept' => 'text/html',
-                    'Accept-Language' => 'es-DO,es;q=0.9',
-                ])
-                ->get(self::PORTAL_URL, [
-                    'currentPage' => $page,
-                    'orderBy' => 2,    // publish date
-                    'orderDir' => 1,   // descending (newest first)
+            // Step 1: Get session cookie and mkey from initial page load
+            $initResponse = Http::timeout(30)
+                ->withHeaders(['Accept' => 'text/html'])
+                ->get(self::PORTAL_BASE.'/Index');
+
+            if ($initResponse->failed()) {
+                return null;
+            }
+
+            $cookies = $initResponse->cookies();
+            $initHtml = $initResponse->body();
+
+            // Extract mkey from AdvancedSearchAjax JS
+            if (! preg_match('/AdvancedSearchAjax[^;]*mkey=([a-f0-9_]+)/', $initHtml, $m)) {
+                Log::warning('[PortalScraper] Could not extract mkey from initial page');
+
+                return null;
+            }
+            $mkey = $m[1];
+
+            // Build cookie jar for the session
+            $cookieJar = \GuzzleHttp\Cookie\CookieJar::fromArray(
+                ['PublicSessionCookie' => $cookies->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
+                'comunidad.comprasdominicana.gob.do'
+            );
+
+            // Step 2: Execute AdvancedSearchAjax
+            $searchResponse = Http::timeout(30)
+                ->withHeaders(['Accept' => 'text/html'])
+                ->withOptions(['cookies' => $cookieJar])
+                ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
+                    'mkey' => $mkey,
+                    'perspective' => 'All',
+                    'initAction' => 'Index',
+                    'pageNumber' => 0,
+                    'startIndex' => 1,
+                    'endIndex' => 100,
+                    'currentPagingStyle' => 0,
+                    'displayAdvancedParams' => 'true',
+                    'orderParam' => 'RequestOnlinePublishingDateDESC',
+                    'searchExecuted' => 'True',
+                    'procedure' => $procedure,
                 ]);
 
-            if ($response->failed()) {
-                Log::warning("[PortalScraper] HTTP {$response->status()} on page {$page}");
+            if ($searchResponse->failed()) {
+                Log::warning("[PortalScraper] AdvancedSearchAjax failed for {$procedure}");
 
                 return null;
             }
 
-            return $response->body();
+            return $searchResponse->body();
         } catch (\Throwable $e) {
-            Log::error("[PortalScraper] Failed to fetch page {$page}: {$e->getMessage()}");
+            Log::error("[PortalScraper] Search failed for {$procedure}: {$e->getMessage()}");
 
             return null;
         }
     }
 
     /**
-     * Parse the Vortal HTML grid into structured notice data.
-     */
-    private function parsePage(string $html): Collection
-    {
-        $notices = collect();
-
-        // Extract indexed fields from the Vortal grid spans
-        $references = $this->extractSpanValues($html, 'spnMatchingResultReference');
-        $descriptions = $this->extractSpanValues($html, 'spnMatchingResultDescription');
-        $authorities = $this->extractSpanValues($html, 'spnMatchingResultAuthorityName');
-        $publishDates = $this->extractDateValues($html, 'dtmbNationalOfficialPublishingDate');
-        $deadlines = $this->extractDateValues($html, 'dtmbDueDateForReceivingReplies');
-        $amounts = $this->extractAmountValues($html);
-        $noticeUids = $this->extractNoticeUids($html);
-
-        // The maximum index present across all fields
-        $maxIndex = max(
-            $references->keys()->max() ?? -1,
-            $descriptions->keys()->max() ?? -1,
-            0
-        );
-
-        for ($i = 0; $i <= $maxIndex; $i++) {
-            $code = trim($references->get($i, ''));
-            if (empty($code)) {
-                continue;
-            }
-
-            $notices->push([
-                'process_code' => $code,
-                'title' => trim($descriptions->get($i, '')),
-                'buyer_name' => trim($authorities->get($i, '')),
-                'published_at' => $publishDates->get($i),
-                'tender_deadline' => $deadlines->get($i),
-                'amount_estimated' => $amounts->get($i),
-                'currency' => 'DOP',
-                'notice_uid' => $noticeUids->get($i),
-                'portal_url' => $noticeUids->has($i)
-                    ? 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index?noticeUID='.$noticeUids->get($i)
-                    : null,
-            ]);
-        }
-
-        return $notices;
-    }
-
-    /**
-     * Extract span text values by their indexed ID pattern.
-     * e.g., spnMatchingResultReference_0, spnMatchingResultReference_1, ...
-     */
-    private function extractSpanValues(string $html, string $prefix): Collection
-    {
-        $values = collect();
-
-        // Pattern: id="...{prefix}_{index}" class="VortalSpan">TEXT</span>
-        if (preg_match_all(
-            '/'.$prefix.'_(\d+)"[^>]*>([^<]*)</i',
-            $html,
-            $matches,
-            PREG_SET_ORDER
-        )) {
-            foreach ($matches as $match) {
-                $values->put((int) $match[1], html_entity_decode($match[2], ENT_QUOTES, 'UTF-8'));
-            }
-        }
-
-        return $values;
-    }
-
-    /**
-     * Extract date values from Vortal date box spans.
-     * Format in HTML: "25/03/2026 12:45 <font ...>(UTC -4 hours)</font>"
-     */
-    private function extractDateValues(string $html, string $prefix): Collection
-    {
-        $values = collect();
-
-        // The date text is inside a nested span with a title attribute containing timezone info
-        if (preg_match_all(
-            '/'.$prefix.'_(\d+)_txt"[^>]*>\s*<span[^>]*>(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2})/i',
-            $html,
-            $matches,
-            PREG_SET_ORDER
-        )) {
-            foreach ($matches as $match) {
-                $index = (int) $match[1];
-                $dateStr = trim($match[2]); // "25/03/2026 12:45"
-
-                try {
-                    // Parse DD/MM/YYYY HH:MM in AST (UTC-4)
-                    $dt = \DateTime::createFromFormat('d/m/Y H:i', $dateStr, new \DateTimeZone('America/Santo_Domingo'));
-                    if ($dt) {
-                        $values->put($index, $dt->format('Y-m-d H:i:s'));
-                    }
-                } catch (\Throwable) {
-                    // Skip unparseable dates
-                }
-            }
-        }
-
-        return $values;
-    }
-
-    /**
-     * Extract monetary amounts from the VortalNumericSpan elements.
-     * Format: "245,643.9 Dominican Pesos"
-     */
-    private function extractAmountValues(string $html): Collection
-    {
-        $values = collect();
-
-        if (preg_match_all(
-            '/cbxBasePriceValue_(\d+)"[^>]*>([\d,.\s]+)\s*(?:Dominican\s+Pesos|Pesos\s+Dominicanos)/i',
-            $html,
-            $matches,
-            PREG_SET_ORDER
-        )) {
-            foreach ($matches as $match) {
-                $index = (int) $match[1];
-                $cleaned = preg_replace('/[^\d.]/', '', str_replace(',', '', $match[2]));
-                if ($cleaned !== '' && $cleaned !== '0') {
-                    $values->put($index, (float) $cleaned);
-                }
-            }
-        }
-
-        return $values;
-    }
-
-    /**
      * Fetch a notice detail page and extract UNSPSC codes.
-     * Returns the 8-digit UNSPSC codes found on the page.
      */
     public function fetchDetailUnspsc(string $noticeUid): array
     {
@@ -273,9 +161,117 @@ class PortalScraperService
     }
 
     /**
-     * Extract noticeUIDs in order of appearance.
-     * They appear in JavaScript modal openers: noticeUID=' + 'DO1.NTC.1234567'
+     * Parse the Vortal HTML grid into structured notice data.
      */
+    private function parsePage(string $html): Collection
+    {
+        $notices = collect();
+
+        $references = $this->extractSpanValues($html, 'spnMatchingResultReference');
+        $descriptions = $this->extractSpanValues($html, 'spnMatchingResultDescription');
+        $authorities = $this->extractSpanValues($html, 'spnMatchingResultAuthorityName');
+        $publishDates = $this->extractDateValues($html, 'dtmbNationalOfficialPublishingDate');
+        $deadlines = $this->extractDateValues($html, 'dtmbDueDateForReceivingReplies');
+        $amounts = $this->extractAmountValues($html);
+        $noticeUids = $this->extractNoticeUids($html);
+
+        $maxIndex = max(
+            $references->keys()->max() ?? -1,
+            $descriptions->keys()->max() ?? -1,
+            0
+        );
+
+        for ($i = 0; $i <= $maxIndex; $i++) {
+            $code = trim($references->get($i, ''));
+            if (empty($code)) {
+                continue;
+            }
+
+            $notices->push([
+                'process_code' => $code,
+                'title' => trim($descriptions->get($i, '')),
+                'buyer_name' => trim($authorities->get($i, '')),
+                'published_at' => $publishDates->get($i),
+                'tender_deadline' => $deadlines->get($i),
+                'amount_estimated' => $amounts->get($i),
+                'currency' => 'DOP',
+                'notice_uid' => $noticeUids->get($i),
+                'portal_url' => $noticeUids->has($i)
+                    ? 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index?noticeUID='.$noticeUids->get($i)
+                    : null,
+            ]);
+        }
+
+        return $notices;
+    }
+
+    private function extractSpanValues(string $html, string $prefix): Collection
+    {
+        $values = collect();
+
+        if (preg_match_all(
+            '/'.$prefix.'_(\d+)"[^>]*>([^<]*)</i',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $match) {
+                $values->put((int) $match[1], html_entity_decode($match[2], ENT_QUOTES, 'UTF-8'));
+            }
+        }
+
+        return $values;
+    }
+
+    private function extractDateValues(string $html, string $prefix): Collection
+    {
+        $values = collect();
+
+        if (preg_match_all(
+            '/'.$prefix.'_(\d+)_txt"[^>]*>\s*<span[^>]*>(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2})/i',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $match) {
+                $index = (int) $match[1];
+                $dateStr = trim($match[2]);
+
+                try {
+                    $dt = \DateTime::createFromFormat('d/m/Y H:i', $dateStr, new \DateTimeZone('America/Santo_Domingo'));
+                    if ($dt) {
+                        $values->put($index, $dt->format('Y-m-d H:i:s'));
+                    }
+                } catch (\Throwable) {
+                }
+            }
+        }
+
+        return $values;
+    }
+
+    private function extractAmountValues(string $html): Collection
+    {
+        $values = collect();
+
+        if (preg_match_all(
+            '/cbxBasePriceValue_(\d+)"[^>]*>([\d,.\s]+)\s*(?:Dominican\s+Pesos|Pesos\s+Dominicanos)/i',
+            $html,
+            $matches,
+            PREG_SET_ORDER
+        )) {
+            foreach ($matches as $match) {
+                $index = (int) $match[1];
+                $cleaned = preg_replace('/[^\d.]/', '', str_replace(',', '', $match[2]));
+                if ($cleaned !== '' && $cleaned !== '0') {
+                    $values->put($index, (float) $cleaned);
+                }
+            }
+        }
+
+        return $values;
+    }
+
     private function extractNoticeUids(string $html): Collection
     {
         $values = collect();

@@ -18,17 +18,17 @@ class ScrapeCommand extends Command
 
     public function handle(PortalScraperService $scraper): int
     {
-        $this->info('Scraping portal for recent notices...');
+        $this->info('Scraping portal for open notices...');
 
-        $notices = $scraper->scrapeRecent(25);
+        $notices = $scraper->scrapeAll();
 
         if ($notices->isEmpty()) {
-            $this->info('No recent notices found on portal.');
+            $this->info('No notices found on portal.');
 
             return self::SUCCESS;
         }
 
-        $this->info("Found {$notices->count()} notice(s) published in the last 25 hours.");
+        $this->info("Found {$notices->count()} open notice(s) across all procedure types.");
 
         // Filter to notices not already in DB
         $existingCodes = Bid::whereIn('process_code', $notices->pluck('process_code')->all())
