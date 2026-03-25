@@ -136,6 +136,7 @@ class PollCommand extends Command
                 $this->cleanup($api);
                 $this->refreshAllBidStatuses($api);
                 $this->backfillMissingData($api);
+                $this->enrichPortalBids($api);
                 $this->checkWatchedBids($api);
             }
 
@@ -236,6 +237,7 @@ class PollCommand extends Command
             $this->cleanup($api);
             $this->refreshAllBidStatuses($api);
             $this->backfillMissingData($api);
+            $this->enrichPortalBids($api);
             $this->checkWatchedBids($api);
         }
 
@@ -399,6 +401,94 @@ class PollCommand extends Command
                 $filled = array_diff(array_keys($updates), ['raw_data']);
                 $this->progress("  [BACKFILL] {$bid->process_code}: ".implode(', ', $filled), 'info');
             }
+        }
+    }
+
+    /**
+     * Enrich portal-scraped bids with full API data once they appear in the open data API.
+     * Updates raw_data, procurement_method, mipymes flags, and matched_rubros.
+     */
+    private function enrichPortalBids(DgcpApiClient $api): void
+    {
+        $bids = Bid::where('raw_data->source', 'portal_scrape')
+            ->orderBy('created_at', 'asc')
+            ->limit(self::BACKFILL_BATCH_SIZE)
+            ->get();
+
+        if ($bids->isEmpty()) {
+            return;
+        }
+
+        $this->progress("Enriqueciendo {$bids->count()} convocatoria(s) del portal...", 'info');
+        $enriched = 0;
+
+        foreach ($bids as $bid) {
+            try {
+                $process = $api->fetchProcessByCode($bid->process_code);
+            } catch (\Throwable) {
+                continue;
+            }
+
+            if (! $process) {
+                continue; // Not yet in API — try again next cycle
+            }
+
+            // Full enrichment from API
+            $updates = [
+                'raw_data' => $process, // Replaces portal_scrape marker with real API data
+                'ocid' => $process['ocid'] ?? $bid->ocid,
+                'title' => $process['titulo'] ?? $bid->title,
+                'buyer_name' => $process['unidad_compra'] ?? $bid->buyer_name,
+                'buyer_code' => $process['codigo_unidad_compra'] ?? $bid->buyer_code,
+                'procurement_method' => $process['modalidad'] ?? $bid->procurement_method,
+                'status' => $process['estado_proceso'] ?? $bid->status,
+                'mipymes' => filter_var($process['dirigido_mipymes'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'mipymes_mujeres' => filter_var($process['dirigido_mipymes_mujeres'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'secp_url' => isset($process['url'])
+                    ? preg_replace('#([^:])//+#', '$1/', $process['url'])
+                    : $bid->secp_url,
+            ];
+
+            if (! $bid->amount_estimated && ($process['monto_estimado'] ?? null)) {
+                $updates['amount_estimated'] = $this->parseAmount($process['monto_estimado']);
+            }
+            if (! $bid->tender_deadline && ($process['fecha_fin_recepcion_ofertas'] ?? null)) {
+                $updates['tender_deadline'] = $this->parseDate($process['fecha_fin_recepcion_ofertas']);
+            }
+            if (! $bid->published_at && ($process['fecha_publicacion'] ?? null)) {
+                $updates['published_at'] = $this->parseDate($process['fecha_publicacion']);
+            }
+
+            // Try to match rubros via articles
+            try {
+                $articles = $api->fetchProcessArticles($bid->process_code);
+                $activeRubros = \App\Models\Rubro::where('active', true)->get();
+                $matchedRubros = collect();
+
+                foreach ($articles as $article) {
+                    foreach ($activeRubros as $rubro) {
+                        $articleCode = (string) ($article[$rubro->level] ?? '');
+                        if ($articleCode === $rubro->code && ! $matchedRubros->contains('code', $rubro->code)) {
+                            $matchedRubros->push(['code' => $rubro->code, 'name' => $rubro->name]);
+                        }
+                    }
+                }
+
+                if ($matchedRubros->isNotEmpty()) {
+                    $updates['matched_rubros'] = $matchedRubros->values()->all();
+                    $this->progress("  [RUBROS] {$bid->process_code}: ".$matchedRubros->pluck('name')->join(', '), 'match');
+                }
+            } catch (\Throwable) {
+                // Articles not available yet — keep portal marker
+            }
+
+            $bid->update($updates);
+            $enriched++;
+            $this->progress("  [ENRIQUECIDO] {$bid->process_code}", 'info');
+        }
+
+        if ($enriched > 0) {
+            $this->progress("  {$enriched} convocatoria(s) enriquecida(s) con datos de API.", 'info');
         }
     }
 

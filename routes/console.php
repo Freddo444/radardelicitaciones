@@ -38,6 +38,12 @@ Schedule::call(function () {
     }
 })->hourly()->appendOutputTo(storage_path('logs/secp-digest.log'));
 
+Schedule::command('secp:scrape')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/secp-scrape.log'));
+
 Schedule::command('secp:sync-providers')
     ->weekly()
     ->withoutOverlapping()
