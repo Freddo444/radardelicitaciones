@@ -136,6 +136,7 @@ class ScrapeCommand extends Command
                 continue;
             }
 
+            try {
             $bid = Bid::create([
                 'process_code' => $notice['process_code'],
                 'ocid' => 'ocds-6550wx-'.$notice['process_code'],
@@ -175,6 +176,11 @@ class ScrapeCommand extends Command
                 $notified++;
             } else {
                 $bid->update(['notified_at' => now()]);
+            }
+            } catch (\Illuminate\Database\QueryException $e) {
+                // Unique constraint violation — poll already saved this bid
+                $this->line("  SKIP {$notice['process_code']} — already saved by poll");
+                continue;
             }
 
             // Small delay between detail page fetches
