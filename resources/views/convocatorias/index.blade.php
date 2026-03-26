@@ -87,7 +87,15 @@
                     <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 <h3 class="mt-2 text-sm font-semibold text-gray-900">Sin convocatorias</h3>
-                <p class="mt-1 text-sm text-gray-500">Ejecuta el sondeo desde el dashboard para comenzar.</p>
+                <p class="mt-1 text-sm text-gray-500">
+                    @if(request('tab') === 'recomendadas')
+                        No se encontraron convocatorias que coincidan con tus palabras clave o rubros activos.
+                    @elseif(request('tab') === 'guardadas')
+                        No tienes convocatorias guardadas. Marca alguna con la estrella para verla aquí.
+                    @else
+                        Ejecuta el sondeo desde el dashboard para comenzar.
+                    @endif
+                </p>
             </div>
         @else
             <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
@@ -95,12 +103,12 @@
                     <table class="min-w-full divide-y divide-gray-300">
                         <thead>
                             <tr>
-                                <th class="w-8 py-3.5 pl-4 pr-1 sm:pl-0"></th>
+                                <th class="w-8 py-3.5 pl-3 pr-1 sm:pl-0"></th>
                                 @php
                                     $currentSort = request('sort', 'published_at');
                                     $currentDir  = request('dir', 'desc');
                                 @endphp
-                                <th class="py-3.5 pl-2 pr-3 text-left text-sm font-semibold text-gray-900">
+                                <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                                     <a href="{{ route('convocatorias.index', array_merge(request()->all(), ['sort' => 'title', 'dir' => $currentSort === 'title' && $currentDir === 'asc' ? 'desc' : 'asc'])) }}"
                                        class="group inline-flex items-center gap-1">
                                         Proceso
@@ -171,7 +179,7 @@
                             @endphp
                             <tr class="cursor-pointer hover:bg-gray-50" @click="openDrawer({{ $bid->id }})">
                                 {{-- Bookmark --}}
-                                <td class="py-4 pl-4 pr-1 sm:pl-0" @click.stop>
+                                <td class="py-4 pl-3 pr-1 sm:pl-0" @click.stop>
                                     <button @click="toggleBookmark({{ $bid->id }}, $event)"
                                             class="text-gray-300 hover:text-yellow-500 transition-colors"
                                             :class="bookmarks[{{ $bid->id }}] && 'text-yellow-500'">
@@ -181,7 +189,7 @@
                                     </button>
                                 </td>
                                 {{-- Title --}}
-                                <td class="py-4 pl-2 pr-3">
+                                <td class="px-3 py-4">
                                     <div class="text-sm font-medium text-gray-900">{{ $bid->title }}</div>
                                     <div class="mt-0.5 flex items-center gap-2">
                                         <span class="text-xs text-gray-500 font-mono">{{ $bid->process_code }}</span>
@@ -849,6 +857,11 @@ function convocatorias() {
                 const json = await res.json();
                 if (this.bid && this.bid.id === bidId) {
                     this.bid.is_watched = json.watched;
+                    // Watching auto-activates bookmark
+                    if (json.bookmarked !== undefined) {
+                        this.bid.is_bookmarked = json.bookmarked;
+                        this.bookmarks[bidId] = json.bookmarked;
+                    }
                 }
             } catch (e) {
                 console.error('Watch toggle error:', e);

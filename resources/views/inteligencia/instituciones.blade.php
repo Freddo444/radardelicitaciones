@@ -46,8 +46,8 @@
     </form>
 
     {{-- Table --}}
-    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-        <div class="overflow-x-auto">
+    <div class="mt-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="table-scroll-x rounded-lg">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -132,17 +132,22 @@
                             <td class="whitespace-nowrap px-4 py-3 text-sm">
                                 <span class="font-mono text-xs text-sky-600">{{ $inst->code }}</span>
                             </td>
+                            @php
+                                $validEmail = $inst->email && !str_contains(strtoupper($inst->email), 'CORREOINVALIDO');
+                                $validNotifEmail = $inst->notification_email && $inst->notification_email !== $inst->email && !str_contains(strtoupper($inst->notification_email), 'CORREOINVALIDO');
+                                $validPhone = $inst->phone && !preg_match('/^\(0{3}\)0{3}-0{4}$/', $inst->phone);
+                            @endphp
                             <td class="max-w-[200px] px-4 py-3 text-sm text-gray-500">
-                                @if($inst->email)
+                                @if($validEmail)
                                     <div class="truncate text-xs" title="{{ $inst->email }}">{{ $inst->email }}</div>
                                 @endif
-                                @if($inst->notification_email && $inst->notification_email !== $inst->email)
+                                @if($validNotifEmail)
                                     <div class="truncate text-xs text-gray-400" title="{{ $inst->notification_email }}">{{ $inst->notification_email }}</div>
                                 @endif
-                                @if($inst->phone)
+                                @if($validPhone)
                                     <div class="text-xs text-gray-400">{{ $inst->phone }}</div>
                                 @endif
-                                @if(!$inst->email && !$inst->phone)
+                                @if(!$validEmail && !$validPhone)
                                     <span class="text-xs text-gray-400">—</span>
                                 @endif
                             </td>

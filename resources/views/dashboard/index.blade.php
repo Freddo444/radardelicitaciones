@@ -168,7 +168,7 @@
                             default                            => 'bg-gray-100 text-gray-600 ring-gray-500/10',
                         };
                     @endphp
-                    <li class="flex items-start justify-between gap-x-4 px-5 py-4">
+                    <li class="flex items-start justify-between gap-x-4 px-6 py-4">
                         <div class="min-w-0 flex-1">
                             <div class="flex items-start gap-x-2">
                                 <p class="text-sm font-semibold text-gray-900 line-clamp-1">{{ $bid->title }}</p>
@@ -282,18 +282,22 @@
                     <a href="{{ route('personal.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
                         <dt class="text-xs text-gray-500">Personal activo</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['personnel'] }}</dd>
+                        @if($vaultStats['personnel'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
                     <a href="{{ route('proyectos.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
                         <dt class="text-xs text-gray-500">Proyectos</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['projects'] }}</dd>
+                        @if($vaultStats['projects'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
                     <a href="{{ route('documentos.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
                         <dt class="text-xs text-gray-500">Documentos</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['documents'] }}</dd>
+                        @if($vaultStats['documents'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
                     <a href="{{ route('financiero.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
                         <dt class="text-xs text-gray-500">Años fiscales</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['financials'] }}</dd>
+                        @if($vaultStats['financials'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
                 </dl>
             </div>

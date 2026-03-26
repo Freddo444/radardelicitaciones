@@ -185,8 +185,8 @@
     @endif
 
     {{-- Table --}}
-    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-        <div class="overflow-x-auto">
+    <div class="mt-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="table-scroll-x rounded-lg">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

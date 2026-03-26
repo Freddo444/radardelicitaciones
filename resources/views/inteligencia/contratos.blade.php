@@ -23,9 +23,9 @@
     <form method="GET" action="{{ route('inteligencia.contratos') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {{-- Search --}}
-            <div class="sm:col-span-2">
+            <div class="sm:col-span-2 lg:col-span-1">
                 <label for="q" class="block text-xs font-medium text-gray-700">Buscar</label>
-                <input type="text" name="q" id="q" value="{{ request('q') }}" placeholder="Proveedor, institución, código de proceso o contrato..."
+                <input type="text" name="q" id="q" value="{{ request('q') }}" placeholder="Proveedor, institución, código..."
                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm">
             </div>
 
@@ -196,8 +196,8 @@
     @endif
 
     {{-- Table --}}
-    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-        <div class="overflow-x-auto">
+    <div class="mt-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="table-scroll-x rounded-lg">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>

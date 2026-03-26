@@ -1,7 +1,7 @@
 {{-- Brand --}}
 <div class="flex h-16 shrink-0 items-center" :class="sidebarCollapsed ? 'justify-center' : 'gap-x-3'">
     <img src="/images/monochromatic.svg" alt="Alzare" class="h-8 w-auto brightness-0 invert">
-    <div class="sidebar-brand-text leading-tight">
+    <div class="sidebar-brand-text leading-tight" x-show="!sidebarCollapsed" x-cloak>
         <p class="text-sm font-bold text-white">Grupo Alzare</p>
         <p class="text-xs text-blue-300">SECP Monitor</p>
     </div>

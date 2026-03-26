@@ -15,14 +15,12 @@ class SendDigestCommand extends Command
 {
     protected $signature = 'secp:send-digest';
 
-    protected $description = 'Send a digest email/Telegram with all bids notified since last digest';
+    protected $description = 'Send a periodic digest email/Telegram summarizing new bids found since the last digest';
 
     public function handle(TelegramService $telegram): int
     {
-        $mode = Setting::get('notification_mode', 'instant');
-
-        if ($mode !== 'digest') {
-            $this->info('Notification mode is not "digest". Skipping.');
+        if (Setting::get('digest_enabled') !== '1') {
+            $this->info('Digest is disabled. Skipping.');
 
             return self::SUCCESS;
         }
@@ -30,9 +28,9 @@ class SendDigestCommand extends Command
         $lastDigestAt = Setting::get('last_digest_at');
         $since = $lastDigestAt ? new \DateTime($lastDigestAt) : new \DateTime('-24 hours');
 
-        // Get bids that were notified (have notified_at) since the last digest
-        $bids = Bid::where('notified_at', '>=', $since)
-            ->orderByDesc('notified_at')
+        // Get bids discovered since the last digest
+        $bids = Bid::where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
             ->get();
 
         if ($bids->isEmpty()) {

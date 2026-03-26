@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ config('app.name') }} — Iniciar sesión</title>
+    <title>{{ config('app.name') }} — Restablecer contraseña</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full">
@@ -20,8 +20,8 @@
                 <path d="M335.768738,770.680176 C391.892914,745.178894 447.769379,720.039795 503.398285,694.364380 C544.356567,675.460083 585.948059,657.845215 625.416016,635.828857 C628.033691,634.368652 629.780884,634.012329 631.216919,637.362610 C643.084900,665.051025 655.063049,692.692200 666.984314,720.357788 C667.234314,720.937866 667.203491,721.639038 667.302429,722.275818 C665.512634,723.762512 664.033020,722.364136 662.602356,721.900879 C636.330750,713.393494 610.053955,704.900269 583.850586,696.186462 C580.015625,694.911194 577.005676,695.277649 573.559937,697.254700 C540.052734,716.479797 506.311096,735.276245 471.709167,752.489441 C438.159180,769.179199 403.901489,784.301208 369.435516,798.972351 C359.022156,803.405090 348.658783,807.955933 338.293701,812.500977 C336.288391,813.380188 334.313568,814.053345 332.067657,814.051880 C303.915466,814.033630 275.763214,814.067444 247.610977,814.070740 C246.340454,814.070923 244.966522,814.321655 243.094757,812.614380 C274.202850,798.528809 304.808838,784.670532 335.768738,770.680176z"/>
                 <path d="M566.409119,856.500000 C563.341370,857.288818 560.847351,858.853027 557.327515,858.449341 C557.327515,815.891541 557.327515,773.401001 557.327515,729.788818 C624.850464,751.552002 691.861816,773.150269 758.873169,794.748596 C758.884338,795.259644 758.895508,795.770691 758.906677,796.281738 C694.867859,816.318787 630.829041,836.355774 566.409119,856.500000z"/>
             </svg>
-            <h2 class="mt-4 text-center text-2xl/9 font-bold tracking-tight text-gray-900">SECP Monitor</h2>
-            <p class="mt-1 text-center text-sm text-gray-500">Inicia sesión para continuar</p>
+            <h2 class="mt-4 text-center text-2xl/9 font-bold tracking-tight text-gray-900">Restablecer contraseña</h2>
+            <p class="mt-1 text-center text-sm text-gray-500">Ingresa tu correo y te enviaremos un enlace para crear una nueva contraseña.</p>
         </div>
 
         @if(session('status'))
@@ -30,54 +30,34 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('auth.login') }}" class="space-y-6">
+        @if($errors->any())
+        <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            {{ $errors->first() }}
+        </div>
+        @endif
+
+        <form method="POST" action="{{ route('password.email') }}" class="space-y-6">
             @csrf
 
-            @if($errors->any())
-            <div class="rounded-md bg-red-50 p-3 text-sm text-red-700">
-                {{ $errors->first() }}
-            </div>
-            @endif
-
             <div>
-                <div class="col-span-2">
-                    <input id="email" type="email" name="email" required
-                           value="{{ old('email') }}"
-                           placeholder="Correo electrónico"
-                           autocomplete="email"
-                           class="block w-full rounded-t-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
-                </div>
-                <div class="-mt-px">
-                    <input id="password" type="password" name="password" required
-                           placeholder="Contraseña"
-                           autocomplete="current-password"
-                           class="block w-full rounded-b-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:relative focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <div class="flex gap-3">
-                    <div class="flex h-6 shrink-0 items-center">
-                        <div class="group grid size-4 grid-cols-1">
-                            <input id="remember" type="checkbox" name="remember"
-                                   class="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-blue-600 checked:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"/>
-                            <svg viewBox="0 0 14 14" fill="none" class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white">
-                                <path d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-0 group-has-checked:opacity-100"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <label for="remember" class="block text-sm/6 text-gray-900">Recordarme</label>
-                </div>
-                <a href="{{ route('password.request') }}" class="text-sm font-medium text-blue-600 hover:text-blue-500">
-                    ¿Olvidaste tu contraseña?
-                </a>
+                <input id="email" type="email" name="email" required
+                       value="{{ old('email') }}"
+                       placeholder="Correo electrónico"
+                       autocomplete="email"
+                       class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
             </div>
 
             <button type="submit"
                     class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-                Iniciar sesión
+                Enviar enlace
             </button>
         </form>
+
+        <p class="text-center text-sm text-gray-500">
+            <a href="{{ route('login') }}" class="font-semibold text-blue-600 hover:text-blue-500">
+                &larr; Volver al inicio de sesión
+            </a>
+        </p>
 
     </div>
 </div>

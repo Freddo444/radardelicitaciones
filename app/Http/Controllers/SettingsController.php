@@ -24,7 +24,7 @@ class SettingsController extends Controller
             'max_amount_filter' => Setting::get('max_amount_filter', '0'),
             'max_amount_value' => Setting::get('max_amount_value', '0'),
             'max_amount_currency' => Setting::get('max_amount_currency', 'DOP'),
-            'notification_mode' => Setting::get('notification_mode', 'instant'),
+            'digest_enabled' => Setting::get('digest_enabled', '0'),
             'digest_frequency' => Setting::get('digest_frequency', 'daily_9am'),
             'catalog_item_count' => Setting::get('catalog_item_count'),
             'catalog_last_imported_at' => Setting::get('catalog_last_imported_at'),
@@ -52,17 +52,19 @@ class SettingsController extends Controller
             'excluded_modalities.*' => 'string',
         ]);
 
-        Setting::set('notification_mode', $request->input('notification_mode', 'instant'));
+        Setting::set('digest_enabled', $request->has('digest_enabled') ? '1' : '0');
         Setting::set('digest_frequency', $request->input('digest_frequency', 'daily_9am'));
         Setting::set('notification_email', $request->notification_email);
         Setting::set('telegram_bot_token', $request->telegram_bot_token);
         Setting::set('telegram_chat_id', $request->telegram_chat_id);
         Setting::set('poll_interval_minutes', $request->poll_interval_minutes);
-        Setting::set('min_amount_filter', $request->has('min_amount_filter') ? '1' : '0');
-        Setting::set('min_amount_value', $request->min_amount_value ?? '0');
+        $minVal = $request->min_amount_value ?? '0';
+        Setting::set('min_amount_filter', ((float) $minVal > 0) ? '1' : '0');
+        Setting::set('min_amount_value', $minVal);
         Setting::set('min_amount_currency', $request->min_amount_currency);
-        Setting::set('max_amount_filter', $request->has('max_amount_filter') ? '1' : '0');
-        Setting::set('max_amount_value', $request->max_amount_value ?? '0');
+        $maxVal = $request->max_amount_value ?? '0';
+        Setting::set('max_amount_filter', ((float) $maxVal > 0) ? '1' : '0');
+        Setting::set('max_amount_value', $maxVal);
         Setting::set('max_amount_currency', $request->max_amount_currency);
         Setting::set('open_deadline_filter', $request->has('open_deadline_filter') ? '1' : '0');
         Setting::set('excluded_modalities', json_encode($request->input('excluded_modalities', [])));

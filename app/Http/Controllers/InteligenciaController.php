@@ -72,7 +72,7 @@ class InteligenciaController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'award_date';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $articles = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
+        $articles = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
         $hasFilters = $request->hasAny(['q', 'familia', 'clase', 'subclase', 'institucion', 'proveedor', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
         $totalCount = Cache::remember('intel.adjudicados.count', self::CACHE_TTL, fn () => AwardedArticle::count());
@@ -369,7 +369,7 @@ class InteligenciaController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'contract_date';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $contracts = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
+        $contracts = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
         $hasFilters = $request->hasAny(['q', 'institucion', 'proveedor', 'estado', 'monto_min', 'monto_max', 'fecha_desde', 'fecha_hasta']);
         $totalCount = Cache::remember('intel.contratos.count', self::CACHE_TTL, fn () => Contract::count());
@@ -493,7 +493,7 @@ class InteligenciaController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'razon_social';
         $dir = $request->input('dir') === 'desc' ? 'desc' : 'asc';
 
-        $providers = $query->orderBy($sort, $dir)->simplePaginate(self::PER_PAGE)->withQueryString();
+        $providers = $query->orderBy($sort, $dir)->paginate(self::PER_PAGE)->withQueryString();
 
         $totalCount = Cache::remember('intel.proveedores.count', self::CACHE_TTL, fn () => Provider::count());
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Exceptions\DgcpApiException;
 use App\Jobs\SendBidNotification;
+use App\Jobs\SendWatchedBidChangeNotification;
 use App\Models\Bid;
 use App\Models\BidWatch;
 use App\Models\InAppNotification;
@@ -133,11 +134,11 @@ class PollCommand extends Command
             $this->progress('Sin procesos nuevos. Sondeo completo.', 'success');
             if (! $this->option('dry-run')) {
                 Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
+                $this->checkWatchedBids($api);
                 $this->cleanup($api);
                 $this->refreshAllBidStatuses($api);
                 $this->backfillMissingData($api);
                 $this->enrichPortalBids($api);
-                $this->checkWatchedBids($api);
             }
 
             return self::SUCCESS;
@@ -234,11 +235,11 @@ class PollCommand extends Command
 
         if (! $this->option('dry-run')) {
             Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
+            $this->checkWatchedBids($api);
             $this->cleanup($api);
             $this->refreshAllBidStatuses($api);
             $this->backfillMissingData($api);
             $this->enrichPortalBids($api);
-            $this->checkWatchedBids($api);
         }
 
         $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Guardados: {$saved} | Notificados: {$notified}";
@@ -310,7 +311,6 @@ class PollCommand extends Command
             if ($newStatus && $newStatus !== $bid->status) {
                 $bid->update([
                     'status' => $newStatus,
-                    'last_known_status' => $newStatus,
                     'raw_data' => $process,
                 ]);
                 $updated++;
@@ -338,6 +338,8 @@ class PollCommand extends Command
             })->orWhereIn('status', $closedStatuses);
         })
             ->whereDoesntHave('offers')
+            ->whereDoesntHave('watches')
+            ->where('is_bookmarked', false)
             ->delete();
 
         if ($deleted > 0) {
@@ -462,7 +464,7 @@ class PollCommand extends Command
             // Try to match rubros via articles
             try {
                 $articles = $api->fetchProcessArticles($bid->process_code);
-                $activeRubros = \App\Models\Rubro::where('active', true)->get();
+                $activeRubros = Rubro::where('active', true)->get();
                 $matchedRubros = collect();
 
                 foreach ($articles as $article) {
@@ -523,6 +525,20 @@ class PollCommand extends Command
                 $changes[] = "Estado: {$bid->last_known_status} → {$newStatus}";
             }
 
+            // Check deadline change
+            $newDeadline = $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null);
+            if ($bid->tender_deadline && $newDeadline && $newDeadline->format('Y-m-d H:i') !== $bid->tender_deadline->format('Y-m-d H:i')) {
+                $changes[] = "Plazo: {$bid->tender_deadline->format('d/m/Y H:i')} → {$newDeadline->format('d/m/Y H:i')}";
+            }
+
+            // Check amount change
+            $newAmount = $this->parseAmount($process['monto_estimado'] ?? null);
+            if ($bid->amount_estimated && $newAmount && abs($newAmount - $bid->amount_estimated) > 0.01) {
+                $oldFormatted = number_format($bid->amount_estimated, 2);
+                $newFormatted = number_format($newAmount, 2);
+                $changes[] = "Monto: {$oldFormatted} → {$newFormatted}";
+            }
+
             // Check document count change
             try {
                 $docs = $api->fetchDocuments($bid->process_code);
@@ -543,16 +559,22 @@ class PollCommand extends Command
                 $changes[] = 'Enmienda publicada';
             }
 
-            // Backfill missing dates/amounts regardless of changes
+            // Check procurement method change
+            $newMethod = $process['modalidad'] ?? null;
+            if ($newMethod && $bid->procurement_method && $newMethod !== $bid->procurement_method) {
+                $changes[] = "Modalidad: {$bid->procurement_method} → {$newMethod}";
+            }
+
+            // Backfill missing dates/amounts (not counted as "changes")
             $backfill = [];
-            if (! $bid->tender_deadline && ($process['fecha_fin_recepcion_ofertas'] ?? null)) {
-                $backfill['tender_deadline'] = $this->parseDate($process['fecha_fin_recepcion_ofertas']);
+            if (! $bid->tender_deadline && $newDeadline) {
+                $backfill['tender_deadline'] = $newDeadline;
             }
             if (! $bid->published_at && ($process['fecha_publicacion'] ?? null)) {
                 $backfill['published_at'] = $this->parseDate($process['fecha_publicacion']);
             }
-            if (! $bid->amount_estimated && ($process['monto_estimado'] ?? null)) {
-                $backfill['amount_estimated'] = $this->parseAmount($process['monto_estimado']);
+            if (! $bid->amount_estimated && $newAmount) {
+                $backfill['amount_estimated'] = $newAmount;
             }
 
             if (! empty($backfill)) {
@@ -571,10 +593,13 @@ class PollCommand extends Command
                 'status' => $newStatus ?? $bid->status,
                 'last_known_status' => $newStatus ?? $bid->status,
                 'last_known_doc_count' => $newDocCount,
+                'tender_deadline' => $newDeadline ?? $bid->tender_deadline,
+                'amount_estimated' => $newAmount ?? $bid->amount_estimated,
+                'procurement_method' => $newMethod ?? $bid->procurement_method,
                 'raw_data' => $process,
             ]);
 
-            // Notify all watchers
+            // Notify all watchers: in-app + email + telegram
             $watcherUserIds = BidWatch::where('bid_id', $bid->id)->pluck('user_id');
             $changeText = implode(', ', $changes);
 
@@ -591,6 +616,9 @@ class PollCommand extends Command
                     ],
                 ]);
             }
+
+            // Dispatch email + telegram for watched bid change
+            SendWatchedBidChangeNotification::dispatch($bid, $changes);
         }
     }
 

@@ -208,8 +208,8 @@
     @endif
 
     {{-- Table --}}
-    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-        <div class="overflow-x-auto">
+    <div class="mt-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="table-scroll-x rounded-lg">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -354,7 +354,9 @@
                             <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-500">
                                 @if($acq->start_date)
                                     {{ $acq->start_date->format('d/m/Y') }}
-                                    @if($acq->start_date->isFuture())
+                                    @if($acq->start_date->year > now()->year + 5 || $acq->start_date->year < 2015)
+                                        <span class="ml-1 text-xs text-red-400">Fecha inválida</span>
+                                    @elseif($acq->start_date->isFuture())
                                         <span class="ml-1 text-xs text-amber-600">{{ $acq->start_date->diffForHumans() }}</span>
                                     @endif
                                 @else

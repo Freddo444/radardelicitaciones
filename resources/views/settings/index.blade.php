@@ -132,7 +132,7 @@
                 {{-- Email --}}
                 <div id="email">
                     <h2 class="text-base/7 font-semibold text-gray-900">Email</h2>
-                    <p class="mt-1 text-sm/6 text-gray-500">Correo electrónico donde se recibirán las alertas de nuevas convocatorias.</p>
+                    <p class="mt-1 text-sm/6 text-gray-500">Correo electrónico donde se recibirán alertas cuando una convocatoria vigilada cambie.</p>
 
                     <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
                         <div class="py-6 sm:flex sm:items-center">
@@ -158,16 +158,20 @@
                 {{-- Telegram --}}
                 <div id="telegram">
                     <h2 class="text-base/7 font-semibold text-gray-900">Telegram</h2>
-                    <p class="mt-1 text-sm/6 text-gray-500">Bot de Telegram para recibir alertas instantáneas en tu móvil. Crea un bot en @BotFather y obtén tu Chat ID con @userinfobot.</p>
+                    <p class="mt-1 text-sm/6 text-gray-500">Bot de Telegram para recibir alertas de convocatorias vigiladas. Crea un bot en @BotFather y obtén tu Chat ID con @userinfobot.</p>
 
                     <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
                         <div class="py-6 sm:flex sm:items-center">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Bot Token</dt>
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <input type="text" name="telegram_bot_token" id="telegram_bot_token"
-                                       value="{{ $settings['telegram_bot_token'] }}"
-                                       placeholder="123456789:ABC-..."
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                                <div x-data="{ showToken: false }" class="flex items-center gap-2">
+                                    <input :type="showToken ? 'text' : 'password'" name="telegram_bot_token" id="telegram_bot_token"
+                                           value="{{ $settings['telegram_bot_token'] }}"
+                                           placeholder="123456789:ABC-..."
+                                           class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                                    <button type="button" @click="showToken = !showToken"
+                                            class="text-xs text-gray-500 hover:text-gray-700" x-text="showToken ? 'Ocultar' : 'Mostrar'"></button>
+                                </div>
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
@@ -193,41 +197,50 @@
                 {{-- Notificaciones --}}
                 <div id="notificaciones">
                     <h2 class="text-base/7 font-semibold text-gray-900">Notificaciones</h2>
-                    <p class="mt-1 text-sm/6 text-gray-500">Elige si las alertas se envían de inmediato o agrupadas en un resumen periódico.</p>
+                    <p class="mt-1 text-sm/6 text-gray-500">Cómo se entregan las alertas según el tipo de evento.</p>
 
                     <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
                         <div class="py-6 sm:flex sm:items-start">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Modo de envío</dt>
-                            <dd class="mt-2 sm:mt-0 sm:flex-auto">
-                                <fieldset>
-                                    <div class="space-y-3">
-                                        <label class="flex items-center gap-x-3">
-                                            <input type="radio" name="notification_mode" value="instant"
-                                                   {{ ($settings['notification_mode'] ?? 'instant') === 'instant' ? 'checked' : '' }}
-                                                   class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-blue-600 checked:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"/>
-                                            <span class="text-sm/6 text-gray-900">Instantáneo — cada convocatoria se envía al detectarse</span>
-                                        </label>
-                                        <label class="flex items-center gap-x-3">
-                                            <input type="radio" name="notification_mode" value="digest"
-                                                   {{ ($settings['notification_mode'] ?? 'instant') === 'digest' ? 'checked' : '' }}
-                                                   class="relative size-4 appearance-none rounded-full border border-gray-300 bg-white before:absolute before:inset-1 before:rounded-full before:bg-white checked:border-blue-600 checked:bg-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"/>
-                                            <span class="text-sm/6 text-gray-900">Resumen (digest) — agrupa varias convocatorias en un solo envío</span>
-                                        </label>
-                                    </div>
-                                </fieldset>
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Nuevas convocatorias</dt>
+                            <dd class="mt-1 flex justify-between gap-x-6 sm:mt-0 sm:flex-auto">
+                                <div>
+                                    <div class="text-gray-900">Solo campana (in-app)</div>
+                                    <p class="mt-1 text-xs text-gray-500">Todas las convocatorias que pasen los filtros aparecen en la campana de notificaciones.</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 h-fit">Autom&aacute;tico</span>
                             </dd>
                         </div>
-                        <div class="py-6 sm:flex sm:items-center">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Frecuencia del resumen</dt>
-                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <select name="digest_frequency"
-                                        class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
-                                    <option value="hourly" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'hourly' ? 'selected' : '' }}>Cada hora</option>
-                                    <option value="every_2h" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'every_2h' ? 'selected' : '' }}>Cada 2 horas</option>
-                                    <option value="twice_daily" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'twice_daily' ? 'selected' : '' }}>Dos veces al día (9am y 3pm)</option>
-                                    <option value="daily_9am" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'daily_9am' ? 'selected' : '' }}>Diario a las 9:00 AM</option>
-                                </select>
-                                <p class="mt-2 text-xs text-gray-500">Solo aplica cuando el modo es "Resumen".</p>
+                        <div class="py-6 sm:flex sm:items-start">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Convocatorias vigiladas</dt>
+                            <dd class="mt-1 flex justify-between gap-x-6 sm:mt-0 sm:flex-auto">
+                                <div>
+                                    <div class="text-gray-900">Campana + Email + Telegram</div>
+                                    <p class="mt-1 text-xs text-gray-500">Al vigilar una convocatoria con el bot&oacute;n <span class="font-medium">Notificar</span>, recibe alertas por todos los canales cuando cambie estado, plazo, monto, documentos o enmiendas.</p>
+                                </div>
+                                <span class="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20 h-fit whitespace-nowrap">Por convocatoria</span>
+                            </dd>
+                        </div>
+                        <div class="py-6 sm:flex sm:items-start">
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
+                                Resumen peri&oacute;dico
+                                <p class="mt-1 text-xs font-normal text-gray-500">Env&iacute;a un resumen por email y Telegram con todas las convocatorias nuevas encontradas.</p>
+                            </dt>
+                            <dd class="mt-2 sm:mt-0 sm:flex-auto">
+                                <div class="flex items-center gap-x-4">
+                                    <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
+                                        <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
+                                        <input type="checkbox" name="digest_enabled" aria-label="Activar resumen periódico"
+                                               {{ ($settings['digest_enabled'] ?? '0') === '1' ? 'checked' : '' }}
+                                               class="absolute inset-0 size-full appearance-none focus:outline-hidden"/>
+                                    </div>
+                                    <select name="digest_frequency"
+                                            class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                        <option value="hourly" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'hourly' ? 'selected' : '' }}>Cada hora</option>
+                                        <option value="every_2h" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'every_2h' ? 'selected' : '' }}>Cada 2 horas</option>
+                                        <option value="twice_daily" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'twice_daily' ? 'selected' : '' }}>Dos veces al d&iacute;a (9am y 3pm)</option>
+                                        <option value="daily_9am" {{ ($settings['digest_frequency'] ?? 'daily_9am') === 'daily_9am' ? 'selected' : '' }}>Diario a las 9:00 AM</option>
+                                    </select>
+                                </div>
                             </dd>
                         </div>
                     </dl>
@@ -240,25 +253,12 @@
 
                     <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
 
-                        {{-- Min amount toggle --}}
-                        <div class="py-6 sm:flex sm:items-start">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
-                                Filtro por monto mínimo
-                                <p class="mt-1 text-xs font-normal text-gray-500">Solo notificar si el monto estimado supera el umbral.</p>
-                            </dt>
-                            <dd class="mt-2 sm:mt-1 sm:flex-auto">
-                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
-                                    <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
-                                    <input type="checkbox" name="min_amount_filter" aria-label="Filtro por monto mínimo"
-                                           {{ $settings['min_amount_filter'] === '1' ? 'checked' : '' }}
-                                           class="absolute inset-0 size-full appearance-none focus:outline-hidden"/>
-                                </div>
-                            </dd>
-                        </div>
-
                         {{-- Min amount value --}}
                         <div class="py-6 sm:flex sm:items-center">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Monto mínimo</dt>
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
+                                Monto mínimo
+                                <p class="mt-1 text-xs font-normal text-gray-500">Solo mostrar convocatorias que superen este monto. Deja en 0 para desactivar.</p>
+                            </dt>
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
                                 <input type="number" name="min_amount_value" id="min_amount_value"
                                        value="{{ $settings['min_amount_value'] }}" min="0" step="1000"
@@ -271,25 +271,12 @@
                             </dd>
                         </div>
 
-                        {{-- Max amount toggle --}}
-                        <div class="py-6 sm:flex sm:items-start">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
-                                Filtro por monto máximo
-                                <p class="mt-1 text-xs font-normal text-gray-500">Solo notificar si el monto estimado no supera el umbral.</p>
-                            </dt>
-                            <dd class="mt-2 sm:mt-1 sm:flex-auto">
-                                <div class="group relative inline-flex w-8 shrink-0 rounded-full bg-gray-200 p-px inset-ring inset-ring-gray-900/5 outline-offset-2 outline-blue-600 transition-colors duration-200 ease-in-out has-checked:bg-blue-600 has-focus-visible:outline-2">
-                                    <span class="size-4 rounded-full bg-white shadow-xs ring-1 ring-gray-900/5 transition-transform duration-200 ease-in-out group-has-checked:translate-x-3.5"></span>
-                                    <input type="checkbox" name="max_amount_filter" aria-label="Filtro por monto máximo"
-                                           {{ $settings['max_amount_filter'] === '1' ? 'checked' : '' }}
-                                           class="absolute inset-0 size-full appearance-none focus:outline-hidden"/>
-                                </div>
-                            </dd>
-                        </div>
-
                         {{-- Max amount value --}}
                         <div class="py-6 sm:flex sm:items-center">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Monto máximo</dt>
+                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
+                                Monto máximo
+                                <p class="mt-1 text-xs font-normal text-gray-500">Solo mostrar convocatorias por debajo de este monto. Deja en 0 para desactivar.</p>
+                            </dt>
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
                                 <input type="number" name="max_amount_value" id="max_amount_value"
                                        value="{{ $settings['max_amount_value'] }}" min="0" step="1000"

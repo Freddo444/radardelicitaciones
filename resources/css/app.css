@@ -14,6 +14,18 @@
 .sidebar-collapsed .sidebar-brand-text { display: none; }
 .sidebar-collapsed .sidebar-company-name { display: none; }
 
+/* Table horizontal scroll — always-visible thin scrollbar + fade indicator */
+.table-scroll-x {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db #f3f4f6;
+    -webkit-overflow-scrolling: touch;
+}
+.table-scroll-x::-webkit-scrollbar { height: 6px; }
+.table-scroll-x::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.table-scroll-x::-webkit-scrollbar-track { background: #f3f4f6; }
+
+
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';

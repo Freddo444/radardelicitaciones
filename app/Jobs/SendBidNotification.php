@@ -2,17 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Mail\BidNotificationMail;
 use App\Models\Bid;
 use App\Models\InAppNotification;
-use App\Models\NotificationLog;
-use App\Models\Setting;
 use App\Models\User;
-use App\Services\TelegramService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class SendBidNotification implements ShouldQueue
 {
@@ -24,103 +18,15 @@ class SendBidNotification implements ShouldQueue
 
     public function __construct(public Bid $bid) {}
 
-    public function handle(TelegramService $telegram): void
+    /**
+     * New rubro matches only get in-app bell notifications.
+     * Email + Telegram are reserved for explicitly watched bids (via SendWatchedBidChangeNotification).
+     */
+    public function handle(): void
     {
-        $mode = Setting::get('notification_mode', 'instant');
-
-        if ($mode === 'instant') {
-            $this->sendEmail();
-            $this->sendTelegram($telegram);
-        }
-        // In digest mode, email/telegram are batched by secp:send-digest
-
         $this->createInAppNotification();
 
         $this->bid->update(['notified_at' => now()]);
-    }
-
-    private function sendEmail(): void
-    {
-        $recipient = Setting::get('notification_email');
-
-        if (empty($recipient)) {
-            Log::warning("[SECP] Email notification skipped — no recipient configured for bid {$this->bid->process_code}");
-
-            return;
-        }
-
-        try {
-            Mail::to($recipient)->send(new BidNotificationMail($this->bid));
-
-            NotificationLog::create([
-                'bid_id' => $this->bid->id,
-                'channel' => 'email',
-                'status' => 'sent',
-                'created_at' => now(),
-            ]);
-
-            Log::info("[SECP] Email sent for bid {$this->bid->process_code} to {$recipient}");
-        } catch (\Throwable $e) {
-            NotificationLog::create([
-                'bid_id' => $this->bid->id,
-                'channel' => 'email',
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-                'created_at' => now(),
-            ]);
-
-            Log::error("[SECP] Email failed for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
-        }
-    }
-
-    private function sendTelegram(TelegramService $telegram): void
-    {
-        if (! $telegram->isConfigured()) {
-            return;
-        }
-
-        $rubros = collect($this->bid->matched_rubros ?? [])
-            ->map(fn ($r) => "<code>{$r['code']}</code> {$r['name']}")
-            ->join("\n");
-
-        $amount = $this->bid->amount_estimated
-            ? ($this->bid->currency ?? 'DOP').' '.number_format($this->bid->amount_estimated, 2)
-            : 'N/D';
-
-        $deadline = $this->bid->tender_deadline
-            ? $this->bid->tender_deadline->format('d/m/Y H:i')
-            : 'N/D';
-
-        $text = "🔔 <b>Nueva Convocatoria SECP</b>\n\n"
-            ."📋 <b>{$this->bid->title}</b>\n"
-            ."🏢 {$this->bid->buyer_name}\n"
-            ."💰 {$amount}\n"
-            ."📅 Cierre: {$deadline}\n"
-            ."🏷 Rubros:\n{$rubros}\n\n"
-            ."🔗 <a href=\"{$this->bid->secp_url}\">Ver en SECP</a>";
-
-        try {
-            $sent = $telegram->sendMessage($text);
-
-            NotificationLog::create([
-                'bid_id' => $this->bid->id,
-                'channel' => 'telegram',
-                'status' => $sent ? 'sent' : 'failed',
-                'created_at' => now(),
-            ]);
-
-            Log::info('[SECP] Telegram '.($sent ? 'sent' : 'failed')." for bid {$this->bid->process_code}");
-        } catch (\Throwable $e) {
-            NotificationLog::create([
-                'bid_id' => $this->bid->id,
-                'channel' => 'telegram',
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-                'created_at' => now(),
-            ]);
-
-            Log::error("[SECP] Telegram exception for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
-        }
     }
 
     private function createInAppNotification(): void

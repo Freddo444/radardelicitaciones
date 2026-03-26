@@ -103,9 +103,11 @@
                                 {{-- Detalle --}}
                                 <td class="px-3 py-4 text-sm text-gray-500">
                                     @if($log->error_message)
-                                        <span class="max-w-xs truncate block" title="{{ $log->error_message }}">
+                                        <span class="max-w-xs truncate block text-red-600" title="{{ $log->error_message }}">
                                             {{ Str::limit($log->error_message, 80) }}
                                         </span>
+                                    @elseif($log->status === 'sent')
+                                        <span class="text-green-600 text-xs">Entregado</span>
                                     @else
                                         <span class="text-gray-300">—</span>
                                     @endif

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -98,7 +99,7 @@ class PortalScraperService
             $mkey = $m[1];
 
             // Build cookie jar for the session
-            $cookieJar = \GuzzleHttp\Cookie\CookieJar::fromArray(
+            $cookieJar = CookieJar::fromArray(
                 ['PublicSessionCookie' => $cookies->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
                 'comunidad.comprasdominicana.gob.do'
             );

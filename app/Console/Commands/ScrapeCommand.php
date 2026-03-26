@@ -8,6 +8,7 @@ use App\Models\Rubro;
 use App\Models\Setting;
 use App\Services\PortalScraperService;
 use Illuminate\Console\Command;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 
 class ScrapeCommand extends Command
@@ -59,7 +60,7 @@ class ScrapeCommand extends Command
             'familia' => $activeRubros->where('level', 'familia')->pluck('name', 'code'),    // first 6 digits
         ];
 
-        $this->info("Checking detail pages for UNSPSC rubro matches...");
+        $this->info('Checking detail pages for UNSPSC rubro matches...');
 
         $saved = 0;
         $notified = 0;
@@ -81,6 +82,7 @@ class ScrapeCommand extends Command
 
             if (empty($unspscCodes)) {
                 $this->line("  SKIP {$notice['process_code']} — no UNSPSC codes found");
+
                 continue;
             }
 
@@ -91,12 +93,14 @@ class ScrapeCommand extends Command
                 // Check exact match (subclase level = full 8-digit code)
                 if ($rubrosByLevel['subclase']->has($code)) {
                     $matchedRubros->push(['code' => $code, 'name' => $rubrosByLevel['subclase']->get($code)]);
+
                     continue;
                 }
 
                 // Check clase level (8-digit code match)
                 if ($rubrosByLevel['clase']->has($code)) {
                     $matchedRubros->push(['code' => $code, 'name' => $rubrosByLevel['clase']->get($code)]);
+
                     continue;
                 }
 
@@ -124,62 +128,65 @@ class ScrapeCommand extends Command
 
             if ($matchedRubros->isEmpty()) {
                 if ($this->option('dry-run')) {
-                    $this->line("  SKIP {$notice['process_code']} — UNSPSC [".implode(', ', $unspscCodes)."] no rubro match");
+                    $this->line("  SKIP {$notice['process_code']} — UNSPSC [".implode(', ', $unspscCodes).'] no rubro match');
                 }
+
                 continue;
             }
 
             if ($this->option('dry-run')) {
                 $this->line("[DRY] {$notice['process_code']} — {$notice['title']}");
                 $this->line("      {$notice['buyer_name']} | ".($notice['amount_estimated'] ? number_format($notice['amount_estimated'], 2).' DOP' : 'N/A'));
-                $this->line("      Rubros: ".$matchedRubros->pluck('name')->join(', '));
+                $this->line('      Rubros: '.$matchedRubros->pluck('name')->join(', '));
+
                 continue;
             }
 
             try {
-            $bid = Bid::create([
-                'process_code' => $notice['process_code'],
-                'ocid' => 'ocds-6550wx-'.$notice['process_code'],
-                'title' => $notice['title'] ?: $notice['process_code'],
-                'buyer_name' => $notice['buyer_name'],
-                'status' => 'Proceso publicado',
-                'amount_estimated' => $notice['amount_estimated'],
-                'currency' => $notice['currency'],
-                'published_at' => $notice['published_at'],
-                'tender_deadline' => $notice['tender_deadline'],
-                'matched_rubros' => $matchedRubros->all(),
-                'secp_url' => $notice['portal_url'],
-                'raw_data' => ['source' => 'portal_scrape', 'notice_uid' => $notice['notice_uid'], 'unspsc' => $unspscCodes],
-                'is_relevant' => Bid::computeRelevance($notice['title'] ?? ''),
-            ]);
+                $bid = Bid::create([
+                    'process_code' => $notice['process_code'],
+                    'ocid' => 'ocds-6550wx-'.$notice['process_code'],
+                    'title' => $notice['title'] ?: $notice['process_code'],
+                    'buyer_name' => $notice['buyer_name'],
+                    'status' => 'Proceso publicado',
+                    'amount_estimated' => $notice['amount_estimated'],
+                    'currency' => $notice['currency'],
+                    'published_at' => $notice['published_at'],
+                    'tender_deadline' => $notice['tender_deadline'],
+                    'matched_rubros' => $matchedRubros->all(),
+                    'secp_url' => $notice['portal_url'],
+                    'raw_data' => ['source' => 'portal_scrape', 'notice_uid' => $notice['notice_uid'], 'unspsc' => $unspscCodes],
+                    'is_relevant' => Bid::computeRelevance($notice['title'] ?? ''),
+                ]);
 
-            $saved++;
-            $this->info("[SAVED] {$notice['process_code']} — {$notice['title']}");
-            $this->info("        Rubros: ".$matchedRubros->pluck('name')->join(', '));
+                $saved++;
+                $this->info("[SAVED] {$notice['process_code']} — {$notice['title']}");
+                $this->info('        Rubros: '.$matchedRubros->pluck('name')->join(', '));
 
-            // Apply notification filters
-            $amount = $bid->amount_estimated;
-            $shouldNotify = true;
+                // Apply notification filters
+                $amount = $bid->amount_estimated;
+                $shouldNotify = true;
 
-            if ($minEnabled && $amount !== null && $amount < $minValue) {
-                $shouldNotify = false;
-            }
-            if ($shouldNotify && $maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
-                $shouldNotify = false;
-            }
-            if ($shouldNotify && $openDeadlineEnabled && $bid->tender_deadline && $bid->tender_deadline < now()) {
-                $shouldNotify = false;
-            }
+                if ($minEnabled && $amount !== null && $amount < $minValue) {
+                    $shouldNotify = false;
+                }
+                if ($shouldNotify && $maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
+                    $shouldNotify = false;
+                }
+                if ($shouldNotify && $openDeadlineEnabled && $bid->tender_deadline && $bid->tender_deadline < now()) {
+                    $shouldNotify = false;
+                }
 
-            if ($shouldNotify) {
-                SendBidNotification::dispatch($bid);
-                $notified++;
-            } else {
-                $bid->update(['notified_at' => now()]);
-            }
-            } catch (\Illuminate\Database\QueryException $e) {
+                if ($shouldNotify) {
+                    SendBidNotification::dispatch($bid);
+                    $notified++;
+                } else {
+                    $bid->update(['notified_at' => now()]);
+                }
+            } catch (QueryException $e) {
                 // Unique constraint violation — poll already saved this bid
                 $this->line("  SKIP {$notice['process_code']} — already saved by poll");
+
                 continue;
             }
 

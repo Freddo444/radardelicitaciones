@@ -179,6 +179,11 @@ class ConvocatoriasController extends Controller
         } else {
             BidWatch::create(['bid_id' => $bid->id, 'user_id' => auth()->id()]);
 
+            // Watching auto-activates bookmark
+            if (! $bid->is_bookmarked) {
+                $bid->update(['is_bookmarked' => true]);
+            }
+
             // Snapshot current state for change detection
             if (! $bid->last_known_status) {
                 $bid->update([
@@ -190,7 +195,7 @@ class ConvocatoriasController extends Controller
             $watched = true;
         }
 
-        return response()->json(['watched' => $watched]);
+        return response()->json(['watched' => $watched, 'bookmarked' => $bid->is_bookmarked]);
     }
 
     /**
@@ -280,7 +285,9 @@ class ConvocatoriasController extends Controller
             'telefono' => $raw['telefono'] ?? $raw['telefono_contacto'] ?? null,
             'modalidad' => $bid->procurement_method,
             'objeto' => $raw['tipo_objeto'] ?? $raw['objeto_compra'] ?? null,
-            'duracion_contrato' => $raw['duracion_contrato'] ?? null,
+            'duracion_contrato' => isset($raw['duracion_contrato'])
+                ? str_replace(['dias', 'anos'], ['días', 'años'], preg_replace('/(\d+)\s*(?=[a-záéíóú])/iu', '$1 ', $raw['duracion_contrato']))
+                : null,
             'proveedores_notificados' => $raw['proveedores_notificados'] ?? null,
         ];
     }

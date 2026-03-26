@@ -86,8 +86,11 @@
                           x-text="unreadCount > 9 ? '9+' : unreadCount"></span>
                 </button>
 
+                {{-- Backdrop --}}
+                <div x-show="open" x-cloak @click="open = false" class="fixed inset-0 z-40"></div>
+
                 {{-- Dropdown panel --}}
-                <div x-show="open" x-cloak @click.away="open = false"
+                <div x-show="open" x-cloak
                      x-transition:enter="transition ease-out duration-100"
                      x-transition:enter-start="opacity-0 scale-95"
                      x-transition:enter-end="opacity-100 scale-100"
@@ -164,7 +167,10 @@
                     </span>
                 </button>
                 <el-menu anchor="bottom end" popover
-                         class="w-36 origin-top-right rounded-md bg-white py-2 shadow-lg outline outline-gray-900/5 transition transition-discrete [--anchor-gap:--spacing(2.5)] data-closed:scale-95 data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in">
+                         class="w-44 origin-top-right rounded-md bg-white py-2 shadow-lg outline outline-gray-900/5 transition transition-discrete [--anchor-gap:--spacing(2.5)] data-closed:scale-95 data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in">
+                    <a href="{{ route('empresa.index') }}" class="block px-3 py-1 text-sm/6 text-gray-900 hover:bg-gray-50">Mi perfil</a>
+                    <a href="{{ route('settings.index') }}" class="block px-3 py-1 text-sm/6 text-gray-900 hover:bg-gray-50">Configuración</a>
+                    <div class="my-1 border-t border-gray-100"></div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="block w-full px-3 py-1 text-left text-sm/6 text-gray-900 hover:bg-gray-50">

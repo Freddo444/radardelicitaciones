@@ -15,10 +15,9 @@ Schedule::command('secp:poll')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-poll.log'));
 
-// Digest notifications — frequency driven by settings
+// Periodic digest — summarizes new bids via email/Telegram
 Schedule::call(function () {
-    $mode = Setting::get('notification_mode', 'instant');
-    if ($mode !== 'digest') {
+    if (Setting::get('digest_enabled') !== '1') {
         return;
     }
 

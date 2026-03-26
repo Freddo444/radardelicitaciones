@@ -80,8 +80,8 @@
     </form>
 
     {{-- Table --}}
-    <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 shadow-sm">
-        <div class="overflow-x-auto">
+    <div class="mt-6 rounded-lg border border-gray-200 shadow-sm">
+        <div class="table-scroll-x rounded-lg">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -181,7 +181,9 @@
                                 @endif
                             </a>
                         </th>
-                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">Badges</th>
+                        @if($providers->contains(fn($p) => $p->is_mipyme))
+                        <th class="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">MIPYME</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200 bg-white">
@@ -238,15 +240,17 @@
                                     <span class="text-xs text-gray-400">—</span>
                                 @endif
                             </td>
+                            @if($providers->contains(fn($p) => $p->is_mipyme))
                             <td class="whitespace-nowrap px-4 py-3 text-center text-xs">
                                 @if($prov->is_mipyme)
                                     <span class="inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium text-purple-700">MIPYME</span>
                                 @endif
                             </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-4 py-12 text-center text-sm text-gray-500">
+                            <td colspan="99" class="px-4 py-12 text-center text-sm text-gray-500">
                                 @if($totalCount === 0)
                                     <div class="mx-auto max-w-sm">
                                         <svg class="mx-auto size-12 text-gray-300" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24">
