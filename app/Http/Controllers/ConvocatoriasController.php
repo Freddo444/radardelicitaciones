@@ -7,6 +7,7 @@ use App\Models\BidWatch;
 use App\Services\DgcpApiClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
 class ConvocatoriasController extends Controller
@@ -20,6 +21,14 @@ class ConvocatoriasController extends Controller
             $query->where('is_bookmarked', true);
         } elseif ($request->input('tab') === 'recomendadas') {
             $query->relevant();
+        }
+
+        // Hide expired bids by default (unless bookmarked tab or explicitly showing all)
+        if ($request->input('tab') !== 'guardadas' && ! $request->has('vigentes')) {
+            $query->where(function ($q) {
+                $q->whereNull('tender_deadline')
+                    ->orWhere('tender_deadline', '>=', now());
+            });
         }
 
         // Search
@@ -92,7 +101,7 @@ class ConvocatoriasController extends Controller
                 'secp_url' => $bid->secp_url,
                 'procurement_method' => $bid->procurement_method,
                 'is_bookmarked' => $bid->is_bookmarked,
-                'is_watched' => BidWatch::where('bid_id', $bid->id)->where('user_id', auth()->id())->exists(),
+                'is_watched' => BidWatch::where('bid_id', $bid->id)->where('user_id', Auth::id())->exists(),
                 'mipymes' => $bid->mipymes,
                 'mipymes_mujeres' => $bid->mipymes_mujeres,
                 'matched_rubros' => $bid->matched_rubros ?? [],
@@ -171,13 +180,13 @@ class ConvocatoriasController extends Controller
      */
     public function watch(Bid $bid)
     {
-        $existing = BidWatch::where('bid_id', $bid->id)->where('user_id', auth()->id())->first();
+        $existing = BidWatch::where('bid_id', $bid->id)->where('user_id', Auth::id())->first();
 
         if ($existing) {
             $existing->delete();
             $watched = false;
         } else {
-            BidWatch::create(['bid_id' => $bid->id, 'user_id' => auth()->id()]);
+            BidWatch::create(['bid_id' => $bid->id, 'user_id' => Auth::id()]);
 
             // Watching auto-activates bookmark
             if (! $bid->is_bookmarked) {
