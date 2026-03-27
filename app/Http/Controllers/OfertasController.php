@@ -20,7 +20,9 @@ use App\Models\OfferRequirementItem;
 use App\Models\OfferSnapshot;
 use App\Models\Personnel;
 use App\Models\Project;
+use App\Jobs\ParsePliegoJob;
 use App\Services\FormGeneratorService;
+use App\Services\DgcpApiClient;
 use App\Services\GeminiService;
 use App\Services\OfferAssemblyService;
 use Illuminate\Http\Request;
@@ -114,7 +116,7 @@ class OfertasController extends Controller
 
     public function destroy(Offer $oferta)
     {
-        abort_unless($oferta->estado === 'borrador', 403, 'Solo se puede eliminar una oferta en borrador.');
+        abort_unless(in_array($oferta->estado, ['borrador', 'en_preparacion']), 403, 'Solo se puede eliminar una oferta en borrador o en preparación.');
         $oferta->delete();
 
         return redirect()->route('ofertas.index')->with('success', 'Oferta eliminada.');
@@ -211,6 +213,56 @@ class OfertasController extends Controller
 
         // Drop listo → en_preparacion if user edited after marking listo (requirements not changed here, just verifying)
         return back()->with('success', 'Extracción verificada.');
+    }
+
+    /**
+     * Fetch documents from the DGCP API for this offer's process code.
+     */
+    public function apiDocuments(Offer $oferta, DgcpApiClient $api)
+    {
+        if (! $oferta->proceso_codigo) {
+            return response()->json(['docs' => []]);
+        }
+
+        try {
+            $docs = $api->fetchDocuments($oferta->proceso_codigo);
+        } catch (\Throwable) {
+            $docs = [];
+        }
+
+        return response()->json(['docs' => $docs]);
+    }
+
+    /**
+     * Download a document from the DGCP API and send it to Gemini for analysis.
+     */
+    public function parseFromApi(Request $request, Offer $oferta)
+    {
+        abort_unless($oferta->isEditable(), 403, 'La oferta está bloqueada.');
+
+        $request->validate([
+            'url' => 'required|url',
+            'filename' => 'required|string|max:255',
+        ]);
+
+        ParsePliegoJob::dispatch($oferta, $request->url, $request->filename);
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function parseStatus(Offer $oferta)
+    {
+        $attempt = $oferta->parseAttempts()->latest()->first();
+
+        if (! $attempt) {
+            return response()->json(['status' => 'none']);
+        }
+
+        return response()->json([
+            'status' => $attempt->status,
+            'failure_reason' => $attempt->failure_reason,
+            'confidence_score' => $attempt->confidence_score,
+        ]);
     }
 
     // ── Requirements ──────────────────────────────────────────────────

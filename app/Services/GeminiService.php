@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BidDocument;
 use App\Models\Offer;
 use App\Models\OfferParseAttempt;
+use App\Models\OfferEvent;
 use App\Models\OfferRequirement;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,7 @@ class GeminiService
 {
     private string $apiKey;
 
-    private string $model = 'gemini-2.0-flash';
+    private string $model = 'gemini-2.5-flash';
 
     private string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -49,14 +50,14 @@ PROMPT;
      * Fetch pliego PDF from DGCP URL, store locally, create parse attempt, and trigger parse.
      * Returns the OfferParseAttempt record.
      */
-    public function fetchAndParse(Offer $offer, string $pdfUrl, string $originalFilename): OfferParseAttempt
+    public function fetchAndParse(Offer $offer, string $pdfUrl, string $originalFilename, ?int $userId = null): OfferParseAttempt
     {
         // Download PDF
         $attempt = OfferParseAttempt::create([
             'offer_id' => $offer->id,
             'status' => 'pending',
             'parser_version' => $this->parserVersion,
-            'triggered_by' => Auth::id(),
+            'triggered_by' => $userId ?? Auth::id(),
         ]);
 
         try {

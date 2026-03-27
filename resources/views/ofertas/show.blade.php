@@ -184,12 +184,172 @@
         </div>
         @endif
 
-        {{-- Upload pliego --}}
+        {{-- Fetch pliego from API --}}
+        @if($oferta->isEditable() && $oferta->proceso_codigo)
+        <div x-data="{
+            docs: [],
+            loading: false,
+            loaded: false,
+            parsing: false,
+            step: 0,
+            steps: [
+                'Enviando solicitud...',
+                'Descargando PDF del portal...',
+                'Enviando a Gemini AI...',
+                'Analizando pliego de condiciones...',
+                'Extrayendo requisitos...',
+                'Procesando resultados...',
+            ],
+            progress: 0,
+            failed: false,
+            failReason: '',
+            pollTimer: null,
+            stepTimer: null,
+            async fetchDocs() {
+                this.loading = true;
+                try {
+                    const res = await fetch('{{ route('ofertas.api-docs', $oferta) }}');
+                    const json = await res.json();
+                    this.docs = json.docs || [];
+                } catch (e) {
+                    console.error(e);
+                }
+                this.loading = false;
+                this.loaded = true;
+            },
+            async parseDoc(url, filename) {
+                if (this.parsing) return;
+                this.parsing = true;
+                this.step = 0;
+                this.progress = 5;
+                this.failed = false;
+                this.failReason = '';
+
+                // Animate steps progressively
+                this.stepTimer = setInterval(() => {
+                    if (this.step < this.steps.length - 1) {
+                        this.step++;
+                        this.progress = Math.min(90, 5 + (this.step / this.steps.length) * 85);
+                    }
+                }, 8000);
+
+                try {
+                    const res = await fetch('{{ route('ofertas.parse-from-api', $oferta) }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                        body: JSON.stringify({ url, filename })
+                    });
+                    if (!res.ok) throw new Error('Error al iniciar análisis');
+
+                    // Poll for completion
+                    this.pollTimer = setInterval(async () => {
+                        try {
+                            const sr = await fetch('{{ route('ofertas.parse-status', $oferta) }}');
+                            const data = await sr.json();
+                            if (data.status === 'running') {
+                                this.step = Math.max(this.step, 3);
+                                this.progress = Math.max(this.progress, 50);
+                            } else if (data.status === 'parsed' || data.status === 'needs_review' || data.status === 'verified') {
+                                this.progress = 100;
+                                clearInterval(this.pollTimer);
+                                clearInterval(this.stepTimer);
+                                setTimeout(() => window.location.reload(), 600);
+                            } else if (data.status === 'failed') {
+                                clearInterval(this.pollTimer);
+                                clearInterval(this.stepTimer);
+                                this.failed = true;
+                                this.failReason = data.failure_reason || 'Error desconocido';
+                                this.parsing = false;
+                            }
+                        } catch (e) { /* keep polling */ }
+                    }, 3000);
+                } catch (e) {
+                    clearInterval(this.stepTimer);
+                    this.failed = true;
+                    this.failReason = e.message;
+                    this.parsing = false;
+                }
+            }
+        }" class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-900">Documentos del proceso</h2>
+                    <p class="mt-0.5 text-xs text-gray-500">Selecciona el pliego de la API para analizarlo con Gemini.</p>
+                </div>
+                <button @click="fetchDocs()" x-show="!loaded && !parsing" :disabled="loading"
+                        class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50">
+                    <span x-show="!loading">Cargar documentos</span>
+                    <span x-show="loading" x-cloak>Cargando...</span>
+                </button>
+            </div>
+
+            {{-- Progress bar --}}
+            <template x-if="parsing">
+                <div class="px-6 py-6">
+                    <div class="flex items-center gap-3 mb-3">
+                        <svg class="animate-spin size-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-900" x-text="steps[step]"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-700 ease-out"
+                             :style="'width: ' + progress + '%'"></div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500">Esto puede tomar hasta un minuto...</p>
+                </div>
+            </template>
+
+            {{-- Error state --}}
+            <template x-if="failed">
+                <div class="px-6 py-4">
+                    <div class="rounded-lg bg-red-50 p-4">
+                        <div class="flex">
+                            <svg class="size-5 text-red-400 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clip-rule="evenodd"/>
+                            </svg>
+                            <div class="ml-3">
+                                <p class="text-sm font-medium text-red-800" x-text="failReason"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            {{-- Document list --}}
+            <template x-if="loaded && !parsing">
+                <div class="px-6 py-4">
+                    <template x-if="docs.length === 0">
+                        <p class="text-sm text-gray-500">No se encontraron documentos en la API para este proceso.</p>
+                    </template>
+                    <ul class="divide-y divide-gray-100">
+                        <template x-for="(doc, i) in docs" :key="i">
+                            <li class="flex items-center justify-between py-3 gap-x-4">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm font-medium text-gray-900 truncate" x-text="doc.nombre_documento || doc.tipo_documento || 'Documento'"></p>
+                                    <p class="text-xs text-gray-500" x-text="(doc.tipo_documento || '') + (doc.fecha_carga_archivo ? ' — ' + doc.fecha_carga_archivo : '')"></p>
+                                </div>
+                                <template x-if="doc.url_documento">
+                                    <button @click="parseDoc(doc.url_documento, (doc.nombre_documento || 'pliego.pdf'))"
+                                            class="shrink-0 rounded-md bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20 hover:bg-blue-100">
+                                        Analizar
+                                    </button>
+                                </template>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </template>
+        </div>
+        @endif
+
+        {{-- Manual upload fallback --}}
         @if($oferta->isEditable())
         <div class="rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-200 px-6 py-4">
-                <h2 class="text-sm font-semibold text-gray-900">{{ $activeParse ? 'Re-subir pliego' : 'Subir pliego' }}</h2>
-                <p class="mt-0.5 text-xs text-gray-500">PDF hasta 50 MB. Se analizará automáticamente con Gemini.</p>
+                <h2 class="text-sm font-semibold text-gray-900">{{ $activeParse ? 'Re-subir pliego manualmente' : 'Subir pliego manualmente' }}</h2>
+                <p class="mt-0.5 text-xs text-gray-500">Si el documento no aparece en la API, sube el PDF directamente.</p>
             </div>
             <div class="px-6 py-5">
                 <form method="POST" action="{{ route('ofertas.pliego.upload', $oferta) }}" enctype="multipart/form-data">
@@ -890,15 +1050,15 @@
         @endif
 
         {{-- Danger zone --}}
-        @if($oferta->estado === 'borrador')
+        @if(in_array($oferta->estado, ['borrador', 'en_preparacion']))
         <div class="rounded-xl border border-red-200 bg-red-50 p-5">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="text-sm font-semibold text-red-800">Zona peligrosa</h3>
-                    <p class="mt-0.5 text-xs text-red-600">Las ofertas solo pueden eliminarse en estado Borrador.</p>
+                    <p class="mt-0.5 text-xs text-red-600">Eliminar esta oferta y todos sus datos asociados.</p>
                 </div>
                 <form method="POST" action="{{ route('ofertas.destroy', $oferta) }}"
-                      onsubmit="return confirm('¿Eliminar esta oferta permanentemente? No hay vuelta atrás.')">
+                      onsubmit="return confirm('¿Eliminar esta oferta permanentemente? Se perderán el análisis del pliego, checklist y todos los datos asociados.')">
                     @csrf @method('DELETE')
                     <button type="submit"
                             class="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-500">

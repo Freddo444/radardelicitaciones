@@ -161,6 +161,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/ofertas/{oferta}/parse', [OfertasController::class, 'triggerParse'])->name('ofertas.parse');
     Route::post('/ofertas/{oferta}/parse/{attempt}/verify', [OfertasController::class, 'verifyParse'])->name('ofertas.parse.verify');
     Route::post('/ofertas/{oferta}/pliego', [OfertasController::class, 'uploadPliego'])->name('ofertas.pliego.upload');
+    Route::get('/ofertas/{oferta}/api-docs', [OfertasController::class, 'apiDocuments'])->name('ofertas.api-docs');
+    Route::post('/ofertas/{oferta}/parse-from-api', [OfertasController::class, 'parseFromApi'])->name('ofertas.parse-from-api');
+    Route::get('/ofertas/{oferta}/parse-status', [OfertasController::class, 'parseStatus'])->name('ofertas.parse-status');
 
     // Requirements
     Route::post('/ofertas/{oferta}/requirements', [OfertasController::class, 'storeRequirement'])->name('ofertas.requirements.store');
