@@ -4,8 +4,8 @@ namespace App\Services;
 
 use App\Models\BidDocument;
 use App\Models\Offer;
-use App\Models\OfferParseAttempt;
 use App\Models\OfferEvent;
+use App\Models\OfferParseAttempt;
 use App\Models\OfferRequirement;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
