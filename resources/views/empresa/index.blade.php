@@ -14,23 +14,10 @@
     {{-- RPE / CPA expiry warnings --}}
     @if($company->exists)
         @php
-            $rpeDays = $company->rpeExpiryDays();
             $cpaDays = $company->cpaExpiryDays();
         @endphp
-        @if($rpeDays !== null && $rpeDays <= 30)
-            <div class="mt-6 rounded-md {{ $rpeDays < 0 ? 'bg-red-50' : 'bg-yellow-50' }} p-4">
-                <p class="text-sm font-medium {{ $rpeDays < 0 ? 'text-red-800' : 'text-yellow-800' }}">
-                    @if($rpeDays < 0)
-                        RPE vencido hace {{ abs($rpeDays) }} días.
-                    @else
-                        RPE vence en {{ $rpeDays }} día{{ $rpeDays !== 1 ? 's' : '' }}.
-                    @endif
-                    Número: {{ $company->rpe_numero ?? 'N/D' }} — Vence: {{ $company->rpe_vence?->format('d/m/Y') }}
-                </p>
-            </div>
-        @endif
         @if($cpaDays !== null && $cpaDays <= 30)
-            <div class="mt-3 rounded-md {{ $cpaDays < 0 ? 'bg-red-50' : 'bg-yellow-50' }} p-4">
+            <div class="mt-6 rounded-md {{ $cpaDays < 0 ? 'bg-red-50' : 'bg-yellow-50' }} p-4">
                 <p class="text-sm font-medium {{ $cpaDays < 0 ? 'text-red-800' : 'text-yellow-800' }}">
                     @if($cpaDays < 0)
                         CPA vencido hace {{ abs($cpaDays) }} días.
@@ -174,7 +161,7 @@
         <div class="rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-200 px-6 py-4">
                 <h2 class="text-sm font-semibold text-gray-900">Habilitaciones</h2>
-                <p class="mt-0.5 text-xs text-gray-500">RPE y CPA — requeridos en la mayoría de las licitaciones.</p>
+                <p class="mt-0.5 text-xs text-gray-500">RPE, Registro Mercantil y CPA — requeridos en la mayoría de las licitaciones.</p>
             </div>
             <div class="grid grid-cols-1 gap-x-6 gap-y-5 px-6 py-6 sm:grid-cols-2">
 
@@ -186,10 +173,10 @@
                 </div>
 
                 <div>
-                    <label for="rpe_vence" class="block text-sm font-medium text-gray-900">RPE — fecha de vencimiento</label>
-                    <input type="date" id="rpe_vence" name="rpe_vence"
-                           value="{{ old('rpe_vence', $company->rpe_vence?->format('Y-m-d')) }}"
-                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
+                    <label for="registro_mercantil" class="block text-sm font-medium text-gray-900">No. Registro Mercantil</label>
+                    <input type="text" id="registro_mercantil" name="registro_mercantil" maxlength="50"
+                           value="{{ old('registro_mercantil', $company->registro_mercantil) }}"
+                           class="mt-1.5 w-full rounded-md bg-white px-3 py-2 text-sm font-mono text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                 </div>
 
                 <div>

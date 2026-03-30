@@ -465,21 +465,31 @@
                         </td>
                         @if($oferta->isEditable())
                         <td class="py-4 pl-3 pr-4 text-right sm:pr-6">
-                            <div class="flex items-center justify-end gap-x-3">
-                                <button type="button"
+                            <div class="flex items-center justify-end gap-x-2">
+                                <button type="button" title="Asignar"
                                         onclick="openAssignItemDrawer({{ $req->id }}, {{ json_encode(mb_substr($req->descripcion, 0, 60)) }})"
-                                        class="text-xs font-medium text-blue-600 hover:text-blue-500">
-                                    Asignar
+                                        class="text-gray-400 hover:text-blue-600">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                        <path d="M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Z"/>
+                                        <path d="M11.603 7.963a.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865Z"/>
+                                    </svg>
                                 </button>
-                                <button type="button"
+                                <button type="button" title="Editar"
                                         onclick="openEditReqDrawer({{ $req->id }}, {{ json_encode($req->descripcion) }}, {{ json_encode($req->tipo) }}, {{ json_encode($req->estado) }}, {{ json_encode($req->notes) }}, {{ json_encode($req->acceptance_reason) }})"
-                                        class="text-xs font-medium text-gray-600 hover:text-gray-900">
-                                    Editar
+                                        class="text-gray-400 hover:text-gray-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                        <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z"/>
+                                        <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z"/>
+                                    </svg>
                                 </button>
                                 <form method="POST" action="{{ route('ofertas.requirements.destroy', [$oferta, $req]) }}"
                                       onsubmit="return confirm('¿Eliminar este requisito?')">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="text-xs font-medium text-red-500 hover:text-red-700">Eliminar</button>
+                                    <button type="submit" title="Eliminar" class="text-gray-400 hover:text-red-500">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                            <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </button>
                                 </form>
                             </div>
                         </td>
@@ -817,18 +827,24 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-x-2">
-                        <a href="{{ route('ofertas.generated.download', [$oferta, $file]) }}"
-                           class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                            <svg viewBox="0 0 20 20" fill="currentColor" class="-ml-0.5 size-4 text-gray-400">
+                        <a href="{{ route('ofertas.generated.view', [$oferta, $file]) }}" target="_blank" title="Ver PDF"
+                           class="inline-flex items-center rounded-md bg-white px-2 py-1.5 text-sm text-gray-600 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/>
+                                <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41ZM14 10a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" clip-rule="evenodd"/>
+                            </svg>
+                        </a>
+                        <a href="{{ route('ofertas.generated.download', [$oferta, $file]) }}" title="Descargar DOCX"
+                           class="inline-flex items-center rounded-md bg-white px-2 py-1.5 text-sm text-gray-600 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            <svg viewBox="0 0 20 20" fill="currentColor" class="size-4">
                                 <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/>
                                 <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/>
                             </svg>
-                            Descargar
                         </a>
                         <form method="POST" action="{{ route('ofertas.generated.destroy', [$oferta, $file]) }}"
                               onsubmit="return confirm('¿Eliminar este formulario generado?')">
                             @csrf @method('DELETE')
-                            <button type="submit" class="inline-flex items-center rounded-md bg-white px-2 py-1.5 text-sm text-red-500 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-red-50 hover:text-red-700">
+                            <button type="submit" title="Eliminar" class="inline-flex items-center rounded-md bg-white px-2 py-1.5 text-sm text-gray-400 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-red-50 hover:text-red-500">
                                 <svg viewBox="0 0 20 20" fill="currentColor" class="size-4">
                                     <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.519.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 1 .7.8l-.35 5.25a.75.75 0 0 1-1.497-.1l.35-5.25a.75.75 0 0 1 .797-.7Zm3.64.7a.75.75 0 0 0-1.497.1l.35 5.25a.75.75 0 0 0 1.497-.1l-.35-5.25Z" clip-rule="evenodd"/>
                                 </svg>

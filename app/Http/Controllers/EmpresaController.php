@@ -32,7 +32,7 @@ class EmpresaController extends Controller
             'rep_legal_nacionalidad' => 'nullable|string|max:100',
             'rep_legal_estado_civil' => 'nullable|string|max:50',
             'rpe_numero' => 'nullable|string|max:50',
-            'rpe_vence' => 'nullable|date',
+            'registro_mercantil' => 'nullable|string|max:50',
             'cpa_numero' => 'nullable|string|max:50',
             'cpa_vence' => 'nullable|date',
         ]);

@@ -23,7 +23,7 @@ class Company extends Model
         'rep_legal_nacionalidad',
         'rep_legal_estado_civil',
         'rpe_numero',
-        'rpe_vence',
+        'registro_mercantil',
         'cpa_numero',
         'cpa_vence',
         'firma_path',
@@ -32,7 +32,6 @@ class Company extends Model
     ];
 
     protected $casts = [
-        'rpe_vence' => 'date',
         'cpa_vence' => 'date',
     ];
 
@@ -45,12 +44,6 @@ class Company extends Model
     public function vaultDocuments(): HasMany
     {
         return $this->hasMany(VaultDocument::class);
-    }
-
-    // Days until expiry, null if no date set
-    public function rpeExpiryDays(): ?int
-    {
-        return $this->rpe_vence ? (int) now()->diffInDays($this->rpe_vence, false) : null;
     }
 
     public function cpaExpiryDays(): ?int

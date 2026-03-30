@@ -525,6 +525,36 @@ class OfertasController extends Controller
         ]);
     }
 
+    public function viewGeneratedFile(Offer $oferta, OfferGeneratedFile $file)
+    {
+        abort_unless($file->offer_id === $oferta->id, 403);
+        $docxPath = storage_path('app/'.$file->path);
+        abort_unless(file_exists($docxPath), 404);
+
+        $pdfDir = storage_path('app/generated/pdf_cache');
+        if (! is_dir($pdfDir)) {
+            mkdir($pdfDir, 0755, true);
+        }
+
+        $pdfPath = $pdfDir.'/'.pathinfo($file->path, PATHINFO_FILENAME).'.pdf';
+
+        // Convert if PDF doesn't exist or is older than the docx
+        if (! file_exists($pdfPath) || filemtime($pdfPath) < filemtime($docxPath)) {
+            $cmd = sprintf(
+                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg($pdfDir),
+                escapeshellarg($docxPath)
+            );
+            exec($cmd, $output, $exitCode);
+            abort_if($exitCode !== 0 || ! file_exists($pdfPath), 500, 'Error al convertir a PDF.');
+        }
+
+        return response()->file($pdfPath, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline',
+        ]);
+    }
+
     public function deleteGeneratedFile(Offer $oferta, OfferGeneratedFile $file)
     {
         abort_unless($file->offer_id === $oferta->id, 403);

@@ -194,6 +194,7 @@ Route::middleware('auth')->group(function () {
     // Form generation within offer context
     Route::post('/ofertas/{oferta}/generate-form', [OfertasController::class, 'generateForm'])->name('ofertas.generate.form');
     Route::get('/ofertas/{oferta}/generated/{file}/download', [OfertasController::class, 'downloadGeneratedFile'])->name('ofertas.generated.download');
+    Route::get('/ofertas/{oferta}/generated/{file}/view', [OfertasController::class, 'viewGeneratedFile'])->name('ofertas.generated.view');
     Route::delete('/ofertas/{oferta}/generated/{file}', [OfertasController::class, 'deleteGeneratedFile'])->name('ofertas.generated.destroy');
 
     // Formularios / Form Generator (M7)
