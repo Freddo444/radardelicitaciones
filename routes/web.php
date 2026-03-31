@@ -44,7 +44,10 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
     Route::get('/registro', [RegisterController::class, 'show'])->name('register.show');
-    Route::post('/registro', [RegisterController::class, 'store'])->name('register.store');
+    Route::post('/registro/crear-orden', [RegisterController::class, 'createOrder'])->name('register.create-order');
+    Route::get('/registro/paypal-return', [RegisterController::class, 'paypalReturn'])->name('register.paypal-return');
+    Route::get('/registro/completar', [RegisterController::class, 'showComplete'])->name('register.complete');
+    Route::post('/registro/completar', [RegisterController::class, 'store'])->name('register.store');
 
     Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
@@ -65,8 +68,6 @@ Route::middleware('auth')->group(function () {
     // Billing
     Route::get('/facturacion', [SubscriptionController::class, 'index'])->name('billing.index');
     Route::delete('/facturacion/cancelar', [SubscriptionController::class, 'cancel'])->name('billing.cancel');
-    Route::post('/paypal/create-order', [PayPalController::class, 'createOrder'])->name('paypal.create-order');
-    Route::post('/paypal/capture-order', [PayPalController::class, 'captureOrder'])->name('paypal.capture-order');
     Route::get('/paypal/return', [PayPalController::class, 'return'])->name('paypal.return');
     Route::get('/paypal/cancel', [PayPalController::class, 'cancel'])->name('paypal.cancel');
     Route::post('/azul/pagar', [AzulController::class, 'createPayment'])->name('azul.create-payment');

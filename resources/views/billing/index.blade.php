@@ -68,44 +68,26 @@
             </div>
         </div>
 
-        {{-- Payment methods --}}
+        {{-- Subscription info --}}
+        @if($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal')
+        <div class="mt-8 rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
+            <h2 class="text-lg font-semibold text-gray-900">Método de pago</h2>
+            <div class="mt-3 flex items-center gap-3">
+                <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">PayPal</span>
+                <span class="text-sm text-gray-500">Cobro automático mensual</span>
+            </div>
+        </div>
+        @endif
+
+        {{-- Pending/past due — redirect to register to subscribe --}}
         @if($subscription->isPending() || $subscription->isPastDue())
         <div class="mt-8 rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
-            <h2 class="text-lg font-semibold text-gray-900">Realizar pago</h2>
-            <p class="mt-1 text-sm text-gray-500">Selecciona un metodo de pago para activar tu suscripcion.</p>
-
-            <div class="mt-6 space-y-4">
-                {{-- PayPal --}}
-                <div x-data="paypalPayment()" class="rounded-md border border-gray-200 p-4">
-                    <h3 class="font-medium text-gray-900">PayPal</h3>
-                    <p class="mt-1 text-sm text-gray-500">Paga con tu cuenta PayPal o tarjeta de credito.</p>
-                    <button @click="pay()" :disabled="loading"
-                            class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50">
-                        <span x-show="!loading">Pagar con PayPal</span>
-                        <span x-show="loading">Procesando...</span>
-                    </button>
-                    <p x-show="error" class="mt-2 text-sm text-red-600" x-text="error"></p>
-                </div>
-
-                {{-- Azul --}}
-                <div class="rounded-md border border-gray-200 p-4 opacity-60">
-                    <h3 class="font-medium text-gray-900">Azul</h3>
-                    <p class="mt-1 text-sm text-gray-500">Tarjeta de credito/debito local — proximamente.</p>
-                    <button disabled class="mt-3 inline-flex items-center rounded-md bg-gray-300 px-4 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed">
-                        Proximamente
-                    </button>
-                </div>
-
-                {{-- Bank transfer --}}
-                <div class="rounded-md border border-gray-200 p-4">
-                    <h3 class="font-medium text-gray-900">Transferencia bancaria</h3>
-                    <p class="mt-1 text-sm text-gray-500">Realiza una transferencia y sube el comprobante.</p>
-                    <a href="{{ route('billing.bank-transfer') }}"
-                       class="mt-3 inline-flex items-center rounded-md bg-gray-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-700">
-                        Ver instrucciones
-                    </a>
-                </div>
-            </div>
+            <h2 class="text-lg font-semibold text-gray-900">Activar suscripción</h2>
+            <p class="mt-1 text-sm text-gray-500">Tu suscripción requiere pago para activarse.</p>
+            <a href="{{ route('register.show') }}"
+               class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+                Ir a pagar
+            </a>
         </div>
         @endif
 
@@ -176,38 +158,6 @@
 
     </div>
 </div>
-
-<script>
-function paypalPayment() {
-    return {
-        loading: false,
-        error: null,
-        async pay() {
-            this.loading = true;
-            this.error = null;
-            try {
-                const res = await fetch('{{ route("paypal.create-order") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    },
-                });
-                const data = await res.json();
-                if (data.approve_url) {
-                    window.location.href = data.approve_url;
-                } else {
-                    this.error = data.error || 'Error al crear la orden de PayPal.';
-                }
-            } catch (e) {
-                this.error = 'Error de conexion.';
-            } finally {
-                this.loading = false;
-            }
-        }
-    }
-}
-</script>
 
 </body>
 </html>
