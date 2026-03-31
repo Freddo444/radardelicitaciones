@@ -20,6 +20,7 @@ use App\Http\Controllers\FormulariosController;
 use App\Http\Controllers\InteligenciaController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LogsController;
+use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfertasController;
 use App\Http\Controllers\PasswordResetController;
@@ -33,6 +34,10 @@ use App\Http\Controllers\RubrosController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TableroController;
 use Illuminate\Support\Facades\Route;
+
+// ── Marketing (public) ───────────────────────────────────────────────
+Route::get('/', [MarketingController::class, 'landing'])->name('landing');
+Route::get('/precios', [MarketingController::class, 'pricing'])->name('pricing');
 
 // ── Auth (guest only) ────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -85,7 +90,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'tenant', 'subscription.active'])->group(function () {
 
     // Dashboard
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Convocatorias
     Route::get('/convocatorias', [ConvocatoriasController::class, 'index'])->name('convocatorias.index');

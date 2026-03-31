@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title', 'Radar de Licitaciones — Monitoreo de licitaciones públicas RD')</title>
+    <meta name="description" content="@yield('description', 'Monitoreo en tiempo real de licitaciones de la DGCP, análisis de pliegos con IA y herramientas para preparar ofertas ganadoras.')">
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css'])
+    <style>
+        :root {
+            --radar-dark: #020617;
+            --radar-blue: #1e3a5f;
+            --radar-green: #10b981;
+        }
+        body { font-family: 'DM Sans', system-ui, sans-serif; }
+        .font-display { font-family: 'Sora', system-ui, sans-serif; }
+
+        /* Radar sweep animation */
+        @keyframes sweep {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .radar-sweep {
+            animation: sweep 4s linear infinite;
+        }
+
+        /* Live pulse dot */
+        @keyframes pulse-ring {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2.2); opacity: 0; }
+        }
+        .live-dot::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 9999px;
+            border: 2px solid #10b981;
+            animation: pulse-ring 2s ease-out infinite;
+        }
+
+        /* Floating notification cards */
+        @keyframes float-1 {
+            0%, 100% { opacity: 0; transform: translateY(10px); }
+            15%, 85% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes float-2 {
+            0%, 100% { opacity: 0; transform: translateY(10px); }
+            15%, 85% { opacity: 1; transform: translateY(0); }
+        }
+        .float-card-1 { animation: float-1 5s ease-in-out infinite; }
+        .float-card-2 { animation: float-2 5s ease-in-out 2.5s infinite; opacity: 0; }
+        .float-card-3 { animation: float-1 6s ease-in-out 1.2s infinite; opacity: 0; }
+
+        /* Scroll reveal */
+        [data-animate] {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.7s cubic-bezier(.22,.61,.36,1), transform 0.7s cubic-bezier(.22,.61,.36,1);
+        }
+        [data-animate].is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        [data-animate][data-delay="1"] { transition-delay: 0.1s; }
+        [data-animate][data-delay="2"] { transition-delay: 0.2s; }
+        [data-animate][data-delay="3"] { transition-delay: 0.3s; }
+        [data-animate][data-delay="4"] { transition-delay: 0.4s; }
+
+        /* Gradient text */
+        .text-gradient {
+            background: linear-gradient(135deg, #60a5fa 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-white text-gray-700 antialiased">
+
+{{-- Navbar --}}
+<nav x-data="{ scrolled: false, open: false }"
+     @scroll.window="scrolled = window.scrollY > 50"
+     class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
+     :class="scrolled ? 'bg-white/95 backdrop-blur-md shadow-sm' : '@yield('navBg', 'bg-transparent')'">
+    <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <a href="/" class="flex items-center gap-2">
+            <img src="/images/LOGO.png" alt="Radar de Licitaciones" class="h-9 w-auto rounded">
+            <span class="font-display text-lg font-bold hidden sm:inline"
+                  :class="scrolled ? 'text-gray-900' : '@yield('logoText', 'text-white')'">Radar de Licitaciones</span>
+        </a>
+
+        <div class="hidden md:flex items-center gap-8">
+            <a href="/" class="text-sm font-medium transition-colors"
+               :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Inicio</a>
+            <a href="/precios" class="text-sm font-medium transition-colors"
+               :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Precios</a>
+            <a href="/login" class="text-sm font-medium transition-colors"
+               :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Iniciar sesión</a>
+            <a href="/registro"
+               class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-400">
+                Crear cuenta
+            </a>
+        </div>
+
+        {{-- Mobile hamburger --}}
+        <button @click="open = !open" class="md:hidden -m-2 p-2"
+                :class="scrolled ? 'text-gray-700' : '@yield('logoText', 'text-white')'">
+            <svg class="size-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path x-show="!open" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path x-show="open" x-cloak d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </div>
+
+    {{-- Mobile menu --}}
+    <div x-show="open" x-cloak x-transition.opacity class="md:hidden bg-white border-t shadow-lg">
+        <div class="px-4 py-4 space-y-2">
+            <a href="/" class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Inicio</a>
+            <a href="/precios" class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Precios</a>
+            <a href="/login" class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Iniciar sesión</a>
+            <a href="/registro" class="block rounded-lg bg-emerald-500 px-3 py-2.5 text-center text-sm font-semibold text-white">Crear cuenta</a>
+        </div>
+    </div>
+</nav>
+
+@yield('content')
+
+{{-- Footer --}}
+<footer class="relative z-10 bg-slate-950 text-slate-400">
+    <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div>
+                <img src="/images/LOGO.png" alt="Radar de Licitaciones" class="h-10 w-auto rounded">
+                <p class="mt-4 text-sm leading-6">Monitoreo inteligente de licitaciones públicas de la República Dominicana.</p>
+            </div>
+            <div>
+                <h4 class="font-display text-sm font-semibold text-white">Plataforma</h4>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li><a href="/precios" class="hover:text-white transition-colors">Precios</a></li>
+                    <li><a href="/registro" class="hover:text-white transition-colors">Crear cuenta</a></li>
+                    <li><a href="/login" class="hover:text-white transition-colors">Iniciar sesión</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-display text-sm font-semibold text-white">Contacto</h4>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li>info@radardelicitaciones.com</li>
+                    <li>Santo Domingo, República Dominicana</li>
+                </ul>
+            </div>
+        </div>
+        <div class="mt-12 border-t border-slate-800 pt-8 text-center text-xs">
+            &copy; {{ date('Y') }} Radar de Licitaciones. Todos los derechos reservados.
+        </div>
+    </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+            if (e.isIntersecting) { e.target.classList.add('is-visible'); observer.unobserve(e.target); }
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el));
+});
+</script>
+</body>
+</html>

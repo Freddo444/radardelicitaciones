@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ config('app.name') }} — Registro</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16.png">
+    <link rel="shortcut icon" href="/favicon.ico">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full">
@@ -12,8 +16,8 @@
     <div class="w-full max-w-sm space-y-8">
 
         <div>
-            <h2 class="text-center text-2xl/9 font-bold tracking-tight text-gray-900">Radar de Licitaciones</h2>
-            <p class="mt-1 text-center text-sm text-gray-500">Crea tu cuenta para comenzar</p>
+            <img src="/images/LOGO.png" alt="Radar de Licitaciones" class="mx-auto -mb-4 w-72 object-contain">
+            <p class="text-center text-sm text-gray-500">Crea tu cuenta para comenzar</p>
         </div>
 
         @if($errors->any())
