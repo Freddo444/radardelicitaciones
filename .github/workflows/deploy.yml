@@ -32,14 +32,14 @@ jobs:
             git config --global --add safe.directory "$DEPLOY_PATH"
 
             # 1. Take ownership so secp can do git pull + npm
-            echo "$SUDO_PASS" | sudo -S chown -R secp:secp "$DEPLOY_PATH"
+            echo "$SUDO_PASS" | sudo -S chown -R radar:radar "$DEPLOY_PATH"
 
             cd "$DEPLOY_PATH"
 
             # 2. Pull latest code
-            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/SECPMonitor.git
+            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/radardelicitaciones.git
             git pull origin main
-            git remote set-url origin https://github.com/Freddo444/SECPMonitor.git
+            git remote set-url origin https://github.com/Freddo444/radardelicitaciones.git
 
             # 3. Install JS dependencies and build assets
             npm ci --no-audit
@@ -47,7 +47,7 @@ jobs:
 
             # 4. Give www-data ownership of app files (not node_modules, not .git, not public/build)
             echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH"
-            echo "$SUDO_PASS" | sudo -S chown -R secp:secp "$DEPLOY_PATH/.git" "$DEPLOY_PATH/node_modules" "$DEPLOY_PATH/public/build"
+            echo "$SUDO_PASS" | sudo -S chown -R radar:radar "$DEPLOY_PATH/.git" "$DEPLOY_PATH/node_modules" "$DEPLOY_PATH/public/build"
 
             # 5. Fix file permissions: 644 for files, 755 for dirs, 775 for writable dirs
             echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
@@ -69,6 +69,6 @@ jobs:
             "
 
             # 7. Restart supervisor worker
-            echo "$SUDO_PASS" | sudo -S supervisorctl restart secp-worker:* 2>/dev/null || true
+            echo "$SUDO_PASS" | sudo -S supervisorctl restart radar-worker:* 2>/dev/null || true
 
             echo 'Deployment complete.'
