@@ -1,5 +1,5 @@
 <x-mail::message>
-# Resumen SECP — {{ $bids->count() }} convocatoria(s)
+# Resumen — {{ $bids->count() }} convocatoria(s)
 
 Se encontraron nuevas convocatorias que coinciden con sus rubros monitoreados.
 
@@ -19,5 +19,5 @@ Se encontraron nuevas convocatorias que coinciden con sus rubros monitoreados.
 
 @endforeach
 
-*Monitor SECP — Notificación de resumen*
+*Radar de Licitaciones — Notificación de resumen*
 </x-mail::message>

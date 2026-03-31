@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Mail\DigestNotificationMail;
 use App\Models\Bid;
+use App\Models\Company;
 use App\Models\NotificationLog;
 use App\Models\Setting;
 use App\Services\TelegramService;
@@ -15,46 +16,78 @@ class SendDigestCommand extends Command
 {
     protected $signature = 'secp:send-digest';
 
-    protected $description = 'Send a periodic digest email/Telegram summarizing new bids found since the last digest';
+    protected $description = 'Send a periodic digest email/Telegram summarizing new bids found since the last digest, per company';
 
     public function handle(TelegramService $telegram): int
     {
-        if (Setting::get('digest_enabled') !== '1') {
-            $this->info('Digest is disabled. Skipping.');
+        $companies = Company::all();
+
+        if ($companies->isEmpty()) {
+            $this->info('No companies found. Skipping digest.');
 
             return self::SUCCESS;
         }
 
-        $lastDigestAt = Setting::get('last_digest_at');
-        $since = $lastDigestAt ? new \DateTime($lastDigestAt) : new \DateTime('-24 hours');
+        $sent = 0;
 
-        // Get bids discovered since the last digest
-        $bids = Bid::where('created_at', '>=', $since)
-            ->orderByDesc('created_at')
-            ->get();
+        foreach ($companies as $company) {
+            $cid = $company->id;
 
-        if ($bids->isEmpty()) {
-            $this->info('No new bids since last digest.');
+            if (Setting::get('digest_enabled', '0', $cid) !== '1') {
+                continue;
+            }
 
-            return self::SUCCESS;
+            // Check frequency
+            $freq = Setting::get('digest_frequency', 'daily_9am', $cid);
+            $hour = (int) now()->format('G');
+
+            $shouldRun = match ($freq) {
+                'hourly' => true,
+                'every_2h' => $hour % 2 === 0,
+                'twice_daily' => in_array($hour, [9, 15]),
+                'daily_9am' => $hour === 9,
+                default => $hour === 9,
+            };
+
+            if (! $shouldRun) {
+                continue;
+            }
+
+            $lastDigestAt = Setting::get('last_digest_at', null, $cid);
+            $since = $lastDigestAt ? new \DateTime($lastDigestAt) : new \DateTime('-24 hours');
+
+            // Get company-scoped bids since last digest
+            $bids = Bid::forCompany($cid)
+                ->where('bids.created_at', '>=', $since)
+                ->orderByDesc('bids.created_at')
+                ->get();
+
+            if ($bids->isEmpty()) {
+                continue;
+            }
+
+            $this->info("Company #{$cid} ({$company->razon_social}): sending digest with {$bids->count()} bid(s)...");
+
+            $this->sendDigestEmail($bids, $cid);
+            $this->sendDigestTelegram($telegram, $bids, $cid);
+
+            Setting::set('last_digest_at', now()->toDateTimeString(), $cid);
+            $sent++;
         }
 
-        $this->info("Sending digest with {$bids->count()} bid(s)...");
-
-        $this->sendDigestEmail($bids);
-        $this->sendDigestTelegram($telegram, $bids);
-
-        Setting::set('last_digest_at', now()->toDateTimeString());
-
-        $this->info('Digest sent.');
-        Log::info("[SendDigest] Sent digest with {$bids->count()} bid(s).");
+        if ($sent > 0) {
+            $this->info("Digest sent to {$sent} company/ies.");
+            Log::info("[SendDigest] Sent digest to {$sent} companies.");
+        } else {
+            $this->info('No digests to send.');
+        }
 
         return self::SUCCESS;
     }
 
-    private function sendDigestEmail($bids): void
+    private function sendDigestEmail($bids, int $companyId): void
     {
-        $recipient = Setting::get('notification_email');
+        $recipient = Setting::get('notification_email', null, $companyId);
 
         if (empty($recipient)) {
             return;
@@ -64,6 +97,7 @@ class SendDigestCommand extends Command
             Mail::to($recipient)->send(new DigestNotificationMail($bids));
 
             NotificationLog::create([
+                'company_id' => $companyId,
                 'bid_id' => $bids->first()->id,
                 'channel' => 'email',
                 'status' => 'sent',
@@ -71,9 +105,10 @@ class SendDigestCommand extends Command
                 'created_at' => now(),
             ]);
 
-            $this->info("Digest email sent to {$recipient}.");
+            $this->info("  Digest email sent to {$recipient}.");
         } catch (\Throwable $e) {
             NotificationLog::create([
+                'company_id' => $companyId,
                 'bid_id' => $bids->first()->id,
                 'channel' => 'email',
                 'status' => 'failed',
@@ -81,17 +116,17 @@ class SendDigestCommand extends Command
                 'created_at' => now(),
             ]);
 
-            Log::error("[SendDigest] Email failed: {$e->getMessage()}");
+            Log::error("[SendDigest] Email failed for company {$companyId}: {$e->getMessage()}");
         }
     }
 
-    private function sendDigestTelegram(TelegramService $telegram, $bids): void
+    private function sendDigestTelegram(TelegramService $telegram, $bids, int $companyId): void
     {
-        if (! $telegram->isConfigured()) {
+        if (! $telegram->isConfigured($companyId)) {
             return;
         }
 
-        $lines = ["📬 <b>Resumen SECP — {$bids->count()} convocatoria(s)</b>\n"];
+        $lines = ["📬 <b>Resumen — {$bids->count()} convocatoria(s)</b>\n"];
 
         foreach ($bids->take(10) as $bid) {
             $amount = $bid->amount_estimated
@@ -113,10 +148,10 @@ class SendDigestCommand extends Command
         $text = implode("\n", $lines);
 
         try {
-            $telegram->sendMessage($text);
-            $this->info('Digest Telegram sent.');
+            $telegram->sendMessage($text, $companyId);
+            $this->info('  Digest Telegram sent.');
         } catch (\Throwable $e) {
-            Log::error("[SendDigest] Telegram failed: {$e->getMessage()}");
+            Log::error("[SendDigest] Telegram failed for company {$companyId}: {$e->getMessage()}");
         }
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\FinancialRecord;
 use App\Models\OfferFinancial;
 use Illuminate\Http\Request;
@@ -13,7 +12,7 @@ class FinancieroController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         $records = FinancialRecord::where('company_id', $company->id)
             ->orderByDesc('anio_fiscal')
@@ -24,7 +23,7 @@ class FinancieroController extends Controller
 
     public function create()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         // Suggest next year to add
         $latest = FinancialRecord::where('company_id', $company->id)->max('anio_fiscal');
@@ -40,7 +39,7 @@ class FinancieroController extends Controller
             'currency' => 'required|in:DOP,USD',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         $record = FinancialRecord::firstOrCreate(
             ['company_id' => $company->id, 'anio_fiscal' => $data['anio_fiscal']],
@@ -52,14 +51,14 @@ class FinancieroController extends Controller
 
     public function show(FinancialRecord $financiero)
     {
-        abort_unless($financiero->company_id === Company::instance()->id, 403);
+        abort_unless($financiero->company_id === currentCompany()->id, 403);
 
         return view('financiero.show', compact('financiero'));
     }
 
     public function update(Request $request, FinancialRecord $financiero)
     {
-        abort_unless($financiero->company_id === Company::instance()->id, 403);
+        abort_unless($financiero->company_id === currentCompany()->id, 403);
 
         $data = $request->validate([
             'currency' => 'required|in:DOP,USD',
@@ -87,7 +86,7 @@ class FinancieroController extends Controller
 
     public function uploadDocument(Request $request, FinancialRecord $financiero)
     {
-        abort_unless($financiero->company_id === Company::instance()->id, 403);
+        abort_unless($financiero->company_id === currentCompany()->id, 403);
 
         $request->validate([
             'tipo' => 'required|in:ir2,estado_financiero',
@@ -113,7 +112,7 @@ class FinancieroController extends Controller
 
     public function downloadDocument(FinancialRecord $financiero, string $tipo)
     {
-        abort_unless($financiero->company_id === Company::instance()->id, 403);
+        abort_unless($financiero->company_id === currentCompany()->id, 403);
         abort_unless(in_array($tipo, ['ir2', 'estado_financiero']), 404);
 
         $path = $financiero->{"path_{$tipo}"};
@@ -126,7 +125,7 @@ class FinancieroController extends Controller
 
     public function destroy(FinancialRecord $financiero)
     {
-        abort_unless($financiero->company_id === Company::instance()->id, 403);
+        abort_unless($financiero->company_id === currentCompany()->id, 403);
 
         $activeRef = OfferFinancial::where('financial_record_id', $financiero->id)
             ->whereHas('offer', fn ($q) => $q->whereIn('estado', ['borrador', 'en_preparacion', 'listo']))

@@ -1,9 +1,8 @@
 {{-- Brand --}}
 <div class="flex h-16 shrink-0 items-center" :class="sidebarCollapsed ? 'justify-center' : 'gap-x-3'">
-    <img src="/images/monochromatic.svg" alt="Alzare" class="h-8 w-auto brightness-0 invert">
+    <img src="/images/android-chrome-192x192.png" alt="Radar de Licitaciones" class="h-8 w-auto rounded">
     <div class="sidebar-brand-text leading-tight" x-show="!sidebarCollapsed" x-cloak>
-        <p class="text-sm font-bold text-white">Grupo Alzare</p>
-        <p class="text-xs text-blue-300">SECP Monitor</p>
+        <p class="text-sm font-bold text-white">Radar de Licitaciones</p>
     </div>
 </div>
 
@@ -221,7 +220,7 @@
             <div class="sidebar-section-title text-xs/6 font-semibold text-blue-200">Empresa activa</div>
             <ul role="list" class="-mx-2 mt-2 space-y-1" :class="sidebarCollapsed && 'mt-0'">
                 <li>
-                    @php $empresa = \App\Models\Company::instance(); @endphp
+                    @php $empresa = currentCompany(); @endphp
                     <a href="{{ route('empresa.index') }}" title="{{ $empresa->razon_social ?? 'Sin configurar' }}"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-blue-200 hover:bg-blue-900 hover:text-white">
                         <span class="flex size-6 shrink-0 items-center justify-center rounded-lg border border-blue-400 bg-blue-700 text-[0.625rem] font-medium text-white">
@@ -246,12 +245,11 @@
                         <span class="sidebar-label">Registros</span>
                     </a>
                 </li>
-                @if(auth()->user()?->isAdmin())
                 <li>
-                    <a href="{{ route('users.index') }}" title="Usuarios"
-                       class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('users.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
+                    <a href="{{ route('company-users.index') }}" title="Usuarios"
+                       class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('company-users.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
-                             class="size-6 shrink-0 {{ request()->routeIs('users.*') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
+                             class="size-6 shrink-0 {{ request()->routeIs('company-users.*') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
                             <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span class="sidebar-label">Usuarios</span>
@@ -268,7 +266,6 @@
                         <span class="sidebar-label">Configuración</span>
                     </a>
                 </li>
-                @endif
             </ul>
         </li>
 

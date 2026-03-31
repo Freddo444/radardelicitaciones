@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OfferParseAttempt extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
-        'offer_id', 'bid_document_id', 'status', 'confidence_score',
+        'company_id', 'offer_id', 'bid_document_id', 'status', 'confidence_score',
         'parser_version', 'raw_extraction', 'parsed_json', 'failure_reason',
         'human_verified_at', 'human_verified_by', 'triggered_by',
     ];

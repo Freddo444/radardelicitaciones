@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Offer extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'bid_id',
         'proceso_codigo', 'proceso_nombre', 'entidad_nombre', 'fecha_limite',
@@ -40,11 +43,6 @@ class Offer extends Model
     ];
 
     // ── Relations ────────────────────────────────────────────────────
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     public function bid(): BelongsTo
     {

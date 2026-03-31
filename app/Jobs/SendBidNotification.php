@@ -3,8 +3,9 @@
 namespace App\Jobs;
 
 use App\Models\Bid;
+use App\Models\Company;
+use App\Models\CompanyBid;
 use App\Models\InAppNotification;
-use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -16,37 +17,43 @@ class SendBidNotification implements ShouldQueue
 
     public int $backoff = 60;
 
-    public function __construct(public Bid $bid) {}
+    public function __construct(
+        public Bid $bid,
+        public Company $company,
+    ) {}
 
-    /**
-     * New rubro matches only get in-app bell notifications.
-     * Email + Telegram are reserved for explicitly watched bids (via SendWatchedBidChangeNotification).
-     */
     public function handle(): void
     {
-        $this->createInAppNotification();
+        $this->createInAppNotifications();
 
-        $this->bid->update(['notified_at' => now()]);
+        // Mark as notified on the company_bid pivot
+        CompanyBid::where('bid_id', $this->bid->id)
+            ->where('company_id', $this->company->id)
+            ->update(['notified_at' => now()]);
     }
 
-    private function createInAppNotification(): void
+    private function createInAppNotifications(): void
     {
+        $pivot = CompanyBid::where('bid_id', $this->bid->id)
+            ->where('company_id', $this->company->id)
+            ->first();
+
+        $rubros = collect($pivot?->matched_rubros ?? [])
+            ->pluck('name')
+            ->join(', ');
+
         $amount = $this->bid->amount_estimated
             ? ($this->bid->currency ?? 'DOP').' '.number_format($this->bid->amount_estimated, 2)
             : null;
-
-        $rubros = collect($this->bid->matched_rubros ?? [])
-            ->pluck('name')
-            ->join(', ');
 
         $body = $this->bid->buyer_name ?? '';
         if ($amount) {
             $body .= " — {$amount}";
         }
 
-        // Create for all users
-        foreach (User::all() as $user) {
+        foreach ($this->company->users as $user) {
             InAppNotification::create([
+                'company_id' => $this->company->id,
                 'user_id' => $user->id,
                 'bid_id' => $this->bid->id,
                 'type' => 'new_match',

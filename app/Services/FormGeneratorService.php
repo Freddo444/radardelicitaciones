@@ -32,7 +32,7 @@ class FormGeneratorService
         ?int $offerId = null,
         ?int $supersedes = null
     ): OfferGeneratedFile {
-        $company = Company::instance();
+        $company = currentCompany();
 
         // Forms with dedicated builders (special data processing)
         $result = match ($formCode) {
@@ -88,7 +88,7 @@ class FormGeneratorService
         ?int $offerId = null,
         ?int $prellenadoPackageId = null
     ): OfferGeneratedFile {
-        $company = Company::instance();
+        $company = currentCompany();
         $tpl = $this->tpl($relativePath);
         $this->set($tpl, $this->companyTokens($company), $this->processTokens($params));
 

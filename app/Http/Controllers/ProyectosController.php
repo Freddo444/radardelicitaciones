@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\OfferProject;
 use App\Models\Project;
 use App\Models\ProjectDocument;
@@ -14,7 +13,7 @@ class ProyectosController extends Controller
 {
     public function index(Request $request)
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         $query = Project::where('company_id', $company->id)
             ->orderBy('fecha_inicio', 'desc');
@@ -47,7 +46,7 @@ class ProyectosController extends Controller
             'cliente' => 'required|string|max:255',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         $project = Project::create(array_merge($data, [
             'company_id' => $company->id,

@@ -25,12 +25,12 @@ class ResetPasswordNotification extends Notification
         ], false));
 
         return (new MailMessage)
-            ->subject('Restablecer contraseña — SECP Monitor')
+            ->subject('Restablecer contraseña — Radar de Licitaciones')
             ->greeting('Hola '.($notifiable->name ?? '').',')
             ->line('Recibimos una solicitud para restablecer la contraseña de tu cuenta.')
             ->action('Restablecer contraseña', $url)
             ->line('Este enlace expira en 60 minutos.')
             ->line('Si no solicitaste este cambio, puedes ignorar este correo.')
-            ->salutation('— SECP Monitor');
+            ->salutation('— Radar de Licitaciones');
     }
 }

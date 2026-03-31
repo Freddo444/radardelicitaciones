@@ -6,27 +6,29 @@ use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
 {
-    public $incrementing = false;
-
     public $timestamps = false;
 
-    protected $primaryKey = 'key';
+    protected $fillable = ['company_id', 'key', 'value', 'updated_at'];
 
-    protected $keyType = 'string';
-
-    protected $fillable = ['key', 'value', 'updated_at'];
-
-    public static function get(string $key, mixed $default = null): mixed
+    /**
+     * Get a setting value. Pass companyId for per-company settings, null for system-wide.
+     */
+    public static function get(string $key, mixed $default = null, ?int $companyId = null): mixed
     {
-        $row = static::find($key);
+        $row = static::where('key', $key)
+            ->where('company_id', $companyId)
+            ->first();
 
         return $row ? $row->value : $default;
     }
 
-    public static function set(string $key, mixed $value): void
+    /**
+     * Set a setting value. Pass companyId for per-company settings, null for system-wide.
+     */
+    public static function set(string $key, mixed $value, ?int $companyId = null): void
     {
         static::updateOrCreate(
-            ['key' => $key],
+            ['company_id' => $companyId, 'key' => $key],
             ['value' => $value, 'updated_at' => now()]
         );
     }

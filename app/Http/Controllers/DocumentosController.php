@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\VaultDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -12,7 +11,7 @@ class DocumentosController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         // If no company profile yet, redirect
         if (! $company->exists) {
@@ -55,7 +54,7 @@ class DocumentosController extends Controller
             'internal_only' => 'boolean',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
         $file = $request->file('file');
         $ext = $file->getClientOriginalExtension();
         $stored = $file->storeAs(

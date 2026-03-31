@@ -9,7 +9,7 @@
 <body class="h-full">
     <main class="grid min-h-full place-items-center bg-white px-6 py-24 sm:py-32 lg:px-8">
         <div class="text-center">
-            <img src="/images/logo Grupo Alzare.png" alt="Grupo Alzare" class="mx-auto mb-8 h-12 w-auto">
+            <img src="/images/android-chrome-192x192.png" alt="Radar de Licitaciones" class="mx-auto mb-8 h-12 w-auto">
             <p class="text-base font-semibold text-blue-600">@yield('code')</p>
             <h1 class="mt-4 text-5xl font-semibold tracking-tight text-gray-900 sm:text-7xl">@yield('heading')</h1>
             <p class="mt-6 text-lg/8 text-gray-600">@yield('message')</p>

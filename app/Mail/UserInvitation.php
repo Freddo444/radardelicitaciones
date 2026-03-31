@@ -21,7 +21,7 @@ class UserInvitation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Invitación a SECP Monitor',
+            subject: 'Invitación a Radar de Licitaciones',
         );
     }
 

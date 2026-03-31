@@ -85,7 +85,7 @@ class CalendarController extends Controller
         $lines = [
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//SECP Monitor//ES',
+            'PRODID:-//Radar de Licitaciones//ES',
             'CALSCALE:GREGORIAN',
             'METHOD:PUBLISH',
             'BEGIN:VEVENT',

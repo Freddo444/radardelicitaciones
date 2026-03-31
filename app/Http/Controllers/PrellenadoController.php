@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bid;
-use App\Models\Company;
 use App\Models\Equipment;
 use App\Models\Personnel;
 use App\Models\PrellenadoPackage;
@@ -89,7 +88,7 @@ class PrellenadoController extends Controller
 
     public function show(Bid $bid)
     {
-        $company = Company::instance();
+        $company = currentCompany();
         $personnel = Personnel::where('company_id', $company->id)->where('active', true)->orderBy('nombre')->get();
         $equipment = Equipment::where('company_id', $company->id)->where('active', true)->orderBy('descripcion')->get();
         $projects = Project::where('company_id', $company->id)->orderByDesc('fecha_inicio')->get();

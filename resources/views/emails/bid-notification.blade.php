@@ -1,5 +1,5 @@
 <x-mail::message>
-# Nueva Convocatoria SECP
+# Nueva Convocatoria
 
 Se encontró una nueva convocatoria que coincide con sus rubros monitoreados.
 
@@ -28,5 +28,5 @@ Ver en Portal SECP
 
 ---
 
-*Monitor SECP — Notificación automática*
+*Radar de Licitaciones — Notificación automática*
 </x-mail::message>

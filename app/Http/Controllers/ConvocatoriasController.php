@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bid;
 use App\Models\BidWatch;
+use App\Models\CompanyBid;
 use App\Services\DgcpApiClient;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -14,11 +15,12 @@ class ConvocatoriasController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Bid::filtered();
+        $companyId = currentCompany()->id;
+        $query = Bid::forCompany($companyId)->filtered($companyId);
 
         // Tab filter
         if ($request->input('tab') === 'guardadas') {
-            $query->where('is_bookmarked', true);
+            $query->where('company_bid.is_bookmarked', true);
         } elseif ($request->input('tab') === 'recomendadas') {
             $query->relevant();
         }
@@ -26,35 +28,35 @@ class ConvocatoriasController extends Controller
         // Hide expired bids by default (unless bookmarked tab or explicitly showing all)
         if ($request->input('tab') !== 'guardadas' && ! $request->has('vigentes')) {
             $query->where(function ($q) {
-                $q->whereNull('tender_deadline')
-                    ->orWhere('tender_deadline', '>=', now());
+                $q->whereNull('bids.tender_deadline')
+                    ->orWhere('bids.tender_deadline', '>=', now());
             });
         }
 
         // Search
         if ($search = $request->input('q')) {
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                    ->orWhere('buyer_name', 'like', "%{$search}%")
-                    ->orWhere('process_code', 'like', "%{$search}%");
+                $q->where('bids.title', 'like', "%{$search}%")
+                    ->orWhere('bids.buyer_name', 'like', "%{$search}%")
+                    ->orWhere('bids.process_code', 'like', "%{$search}%");
             });
         }
 
         // Status filter
         if ($status = $request->input('estado')) {
-            $query->where('status', $status);
+            $query->where('bids.status', $status);
         }
 
         // Method filter
         if ($method = $request->input('modalidad')) {
-            $query->where('procurement_method', $method);
+            $query->where('bids.procurement_method', $method);
         }
 
         // Only open deadlines
         if ($request->boolean('vigentes')) {
             $query->where(function ($q) {
-                $q->whereNull('tender_deadline')
-                    ->orWhere('tender_deadline', '>=', now());
+                $q->whereNull('bids.tender_deadline')
+                    ->orWhere('bids.tender_deadline', '>=', now());
             });
         }
 
@@ -63,14 +65,14 @@ class ConvocatoriasController extends Controller
         $sort = in_array($request->input('sort'), $sortable) ? $request->input('sort') : 'published_at';
         $dir = $request->input('dir') === 'asc' ? 'asc' : 'desc';
 
-        $bids = $query->orderBy($sort, $dir)->paginate(25)->withQueryString();
+        $bids = $query->orderBy("bids.{$sort}", $dir)->paginate(25)->withQueryString();
 
-        // For filter dropdowns
+        // For filter dropdowns (global — all bids)
         $statuses = Bid::select('status')->distinct()->whereNotNull('status')->orderBy('status')->pluck('status');
         $methods = Bid::select('procurement_method')->distinct()->whereNotNull('procurement_method')->orderBy('procurement_method')->pluck('procurement_method');
 
-        $bookmarkCount = Bid::filtered()->where('is_bookmarked', true)->count();
-        $relevantCount = Bid::filtered()->relevant()->count();
+        $bookmarkCount = Bid::forCompany($companyId)->filtered($companyId)->where('company_bid.is_bookmarked', true)->count();
+        $relevantCount = Bid::forCompany($companyId)->filtered($companyId)->relevant()->count();
 
         return view('convocatorias.index', compact('bids', 'statuses', 'methods', 'bookmarkCount', 'relevantCount'));
     }
@@ -80,6 +82,9 @@ class ConvocatoriasController extends Controller
      */
     public function detail(Bid $bid)
     {
+        $companyId = currentCompany()->id;
+        $pivot = CompanyBid::where('bid_id', $bid->id)->where('company_id', $companyId)->first();
+
         // Build cronograma from raw_data date fields
         $cronograma = $this->buildCronograma($bid);
 
@@ -100,11 +105,11 @@ class ConvocatoriasController extends Controller
                 'tender_deadline_past' => $bid->tender_deadline?->isPast() ?? false,
                 'secp_url' => $bid->secp_url,
                 'procurement_method' => $bid->procurement_method,
-                'is_bookmarked' => $bid->is_bookmarked,
+                'is_bookmarked' => (bool) $pivot?->is_bookmarked,
                 'is_watched' => BidWatch::where('bid_id', $bid->id)->where('user_id', Auth::id())->exists(),
                 'mipymes' => $bid->mipymes,
                 'mipymes_mujeres' => $bid->mipymes_mujeres,
-                'matched_rubros' => $bid->matched_rubros ?? [],
+                'matched_rubros' => $pivot?->matched_rubros ?? [],
                 'has_offer' => $bid->offers()->exists(),
                 'offer_id' => $bid->offers()->first()?->id,
                 'on_tablero' => $bid->offers()->exists(),
@@ -170,9 +175,14 @@ class ConvocatoriasController extends Controller
      */
     public function bookmark(Bid $bid)
     {
-        $bid->update(['is_bookmarked' => ! $bid->is_bookmarked]);
+        $companyId = currentCompany()->id;
+        $pivot = CompanyBid::firstOrCreate(
+            ['bid_id' => $bid->id, 'company_id' => $companyId],
+            ['first_matched_at' => now()]
+        );
+        $pivot->update(['is_bookmarked' => ! $pivot->is_bookmarked]);
 
-        return response()->json(['bookmarked' => $bid->is_bookmarked]);
+        return response()->json(['bookmarked' => (bool) $pivot->is_bookmarked]);
     }
 
     /**
@@ -180,17 +190,22 @@ class ConvocatoriasController extends Controller
      */
     public function watch(Bid $bid)
     {
+        $companyId = currentCompany()->id;
         $existing = BidWatch::where('bid_id', $bid->id)->where('user_id', Auth::id())->first();
 
         if ($existing) {
             $existing->delete();
             $watched = false;
         } else {
-            BidWatch::create(['bid_id' => $bid->id, 'user_id' => Auth::id()]);
+            BidWatch::create(['bid_id' => $bid->id, 'user_id' => Auth::id(), 'company_id' => $companyId]);
 
-            // Watching auto-activates bookmark
-            if (! $bid->is_bookmarked) {
-                $bid->update(['is_bookmarked' => true]);
+            // Watching auto-activates bookmark on company_bid pivot
+            $pivot = CompanyBid::firstOrCreate(
+                ['bid_id' => $bid->id, 'company_id' => $companyId],
+                ['first_matched_at' => now()]
+            );
+            if (! $pivot->is_bookmarked) {
+                $pivot->update(['is_bookmarked' => true]);
             }
 
             // Snapshot current state for change detection
@@ -204,7 +219,9 @@ class ConvocatoriasController extends Controller
             $watched = true;
         }
 
-        return response()->json(['watched' => $watched, 'bookmarked' => $bid->is_bookmarked]);
+        $pivotBookmarked = CompanyBid::where('bid_id', $bid->id)->where('company_id', $companyId)->value('is_bookmarked');
+
+        return response()->json(['watched' => $watched, 'bookmarked' => (bool) $pivotBookmarked]);
     }
 
     /**

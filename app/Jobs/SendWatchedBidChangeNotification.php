@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Mail\BidChangeNotificationMail;
 use App\Models\Bid;
+use App\Models\Company;
 use App\Models\NotificationLog;
 use App\Models\Setting;
 use App\Services\TelegramService;
@@ -23,12 +24,9 @@ class SendWatchedBidChangeNotification implements ShouldQueue
     public function __construct(
         public Bid $bid,
         public array $changes,
+        public Company $company,
     ) {}
 
-    /**
-     * Send email + Telegram for a watched bid that has changed.
-     * This only fires for bids explicitly watched via the bell button.
-     */
     public function handle(TelegramService $telegram): void
     {
         $this->sendEmail();
@@ -37,10 +35,10 @@ class SendWatchedBidChangeNotification implements ShouldQueue
 
     private function sendEmail(): void
     {
-        $recipient = Setting::get('notification_email');
+        $recipient = Setting::get('notification_email', null, $this->company->id);
 
         if (empty($recipient)) {
-            Log::warning("[SECP] Watch change email skipped — no recipient configured for bid {$this->bid->process_code}");
+            Log::warning("[SECP] Watch change email skipped — no recipient configured for company {$this->company->id}, bid {$this->bid->process_code}");
 
             return;
         }
@@ -49,6 +47,7 @@ class SendWatchedBidChangeNotification implements ShouldQueue
             Mail::to($recipient)->send(new BidChangeNotificationMail($this->bid, $this->changes));
 
             NotificationLog::create([
+                'company_id' => $this->company->id,
                 'bid_id' => $this->bid->id,
                 'channel' => 'email',
                 'status' => 'sent',
@@ -56,9 +55,10 @@ class SendWatchedBidChangeNotification implements ShouldQueue
                 'created_at' => now(),
             ]);
 
-            Log::info("[SECP] Watch change email sent for bid {$this->bid->process_code} to {$recipient}");
+            Log::info("[SECP] Watch change email sent for bid {$this->bid->process_code} to {$recipient} (company {$this->company->id})");
         } catch (\Throwable $e) {
             NotificationLog::create([
+                'company_id' => $this->company->id,
                 'bid_id' => $this->bid->id,
                 'channel' => 'email',
                 'status' => 'failed',
@@ -66,13 +66,13 @@ class SendWatchedBidChangeNotification implements ShouldQueue
                 'created_at' => now(),
             ]);
 
-            Log::error("[SECP] Watch change email failed for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
+            Log::error("[SECP] Watch change email failed for bid {$this->bid->process_code} (company {$this->company->id})", ['error' => $e->getMessage()]);
         }
     }
 
     private function sendTelegram(TelegramService $telegram): void
     {
-        if (! $telegram->isConfigured()) {
+        if (! $telegram->isConfigured($this->company->id)) {
             return;
         }
 
@@ -97,19 +97,19 @@ class SendWatchedBidChangeNotification implements ShouldQueue
             ."🔗 <a href=\"{$this->bid->secp_url}\">Ver en SECP</a>";
 
         try {
-            $sent = $telegram->sendMessage($text);
+            $sent = $telegram->sendMessage($text, $this->company->id);
 
             NotificationLog::create([
+                'company_id' => $this->company->id,
                 'bid_id' => $this->bid->id,
                 'channel' => 'telegram',
                 'status' => $sent ? 'sent' : 'failed',
                 'error_message' => 'Cambio: '.implode(', ', $this->changes),
                 'created_at' => now(),
             ]);
-
-            Log::info('[SECP] Watch change Telegram '.($sent ? 'sent' : 'failed')." for bid {$this->bid->process_code}");
         } catch (\Throwable $e) {
             NotificationLog::create([
+                'company_id' => $this->company->id,
                 'bid_id' => $this->bid->id,
                 'channel' => 'telegram',
                 'status' => 'failed',
@@ -117,7 +117,7 @@ class SendWatchedBidChangeNotification implements ShouldQueue
                 'created_at' => now(),
             ]);
 
-            Log::error("[SECP] Watch change Telegram exception for bid {$this->bid->process_code}", ['error' => $e->getMessage()]);
+            Log::error("[SECP] Watch change Telegram exception for bid {$this->bid->process_code} (company {$this->company->id})", ['error' => $e->getMessage()]);
         }
     }
 }

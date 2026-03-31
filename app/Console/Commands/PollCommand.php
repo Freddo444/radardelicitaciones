@@ -7,9 +7,11 @@ use App\Jobs\SendBidNotification;
 use App\Jobs\SendWatchedBidChangeNotification;
 use App\Models\Bid;
 use App\Models\BidWatch;
+use App\Models\Company;
+use App\Models\CompanyBid;
 use App\Models\InAppNotification;
-use App\Models\Rubro;
 use App\Models\Setting;
+use App\Services\BidMatchingService;
 use App\Services\DgcpApiClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -26,7 +28,7 @@ class PollCommand extends Command
 
     private array $logBuffer = [];
 
-    public function handle(DgcpApiClient $api): int
+    public function handle(DgcpApiClient $api, BidMatchingService $matcher): int
     {
         $this->resetStaleLock();
 
@@ -37,7 +39,7 @@ class PollCommand extends Command
         $this->progress('Iniciando sondeo...', 'info');
 
         try {
-            return $this->runPoll($api);
+            return $this->runPoll($api, $matcher);
         } catch (\Throwable $e) {
             $this->progress("Error fatal: {$e->getMessage()}", 'error');
             Log::error('[SECP] Poll crashed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
@@ -51,15 +53,19 @@ class PollCommand extends Command
         }
     }
 
-    private function runPoll(DgcpApiClient $api): int
+    private function runPoll(DgcpApiClient $api, BidMatchingService $matcher): int
     {
-        $activeRubros = Rubro::where('active', true)->get();
+        // Aggregate rubros across all companies, deduplicating by code
+        $rubroMap = $matcher->aggregateRubros();
 
-        if ($activeRubros->isEmpty()) {
-            $this->progress('No hay rubros activos configurados. Abortando.', 'warn');
+        if (empty($rubroMap)) {
+            $this->progress('No hay rubros activos en ninguna empresa. Abortando.', 'warn');
 
             return self::SUCCESS;
         }
+
+        $companyCount = count(array_unique(array_merge(...array_column($rubroMap, 'company_ids'))));
+        $this->progress(count($rubroMap)." rubro(s) únicos activo(s) de {$companyCount} empresa(s).", 'info');
 
         $lastPolledAt = Setting::get('last_polled_at');
         $globalFrom = $lastPolledAt
@@ -68,55 +74,56 @@ class PollCommand extends Command
         $to = new \DateTime;
 
         $this->progress("Ventana global: {$globalFrom->format('Y-m-d H:i')} → {$to->format('Y-m-d H:i')}", 'info');
-        $this->progress($activeRubros->count().' rubro(s) activo(s) a procesar.', 'info');
 
         $matchesByProcess = collect();
         $firstArticleByProcess = collect();
         $rubroIndex = 0;
+        $totalRubros = count($rubroMap);
 
-        foreach ($activeRubros as $rubro) {
+        foreach ($rubroMap as $code => $entry) {
             $rubroIndex++;
 
-            // New rubros get 90-day backfill; existing ones use global window
-            $rubroFrom = $rubro->first_polled_at ? $globalFrom : new \DateTime('-90 days');
-            $isNewRubro = ! $rubro->first_polled_at;
+            // New rubros (never polled) get 90-day backfill; existing ones use global window
+            $isNew = $entry['first_polled_at'] === null;
+            $rubroFrom = $isNew ? new \DateTime('-90 days') : $globalFrom;
 
-            $label = "[{$rubroIndex}/{$activeRubros->count()}] Buscando: {$rubro->code} — {$rubro->name}";
-            if ($isNewRubro) {
+            $label = "[{$rubroIndex}/{$totalRubros}] Buscando: {$code} — {$entry['name']}";
+            $label .= ' ['.count($entry['company_ids']).' empresa(s)]';
+            if ($isNew) {
                 $label .= ' [NUEVO — backfill 90d]';
             }
             $this->progress($label, 'info');
 
             try {
-                $articles = $api->fetchArticlesSince($rubro->code, $rubro->level, $rubroFrom);
+                $articles = $api->fetchArticlesSince($code, $entry['level'], $rubroFrom);
             } catch (DgcpApiException $e) {
-                $this->progress("  Error en {$rubro->code}: {$e->getMessage()}", 'warn');
-                Log::warning("[SECP] fetchArticlesSince failed for {$rubro->code}", ['error' => $e->getMessage()]);
+                $this->progress("  Error en {$code}: {$e->getMessage()}", 'warn');
+                Log::warning("[SECP] fetchArticlesSince failed for {$code}", ['error' => $e->getMessage()]);
 
                 continue;
             }
 
-            // Mark rubro as polled
-            if ($isNewRubro) {
-                $rubro->update(['first_polled_at' => now()]);
+            // Mark all instances of this rubro code as polled
+            if ($isNew) {
+                $matcher->markRubrosPolled($code);
             }
 
             $this->progress("  → {$articles->count()} artículo(s) encontrado(s).", 'info');
 
             foreach ($articles as $article) {
-                $code = $article['codigo_proceso'] ?? '';
-                if (empty($code)) {
+                $processCode = $article['codigo_proceso'] ?? '';
+                if (empty($processCode)) {
                     continue;
                 }
 
-                if (! $matchesByProcess->has($code)) {
-                    $matchesByProcess->put($code, collect());
-                    $firstArticleByProcess->put($code, $article);
+                if (! $matchesByProcess->has($processCode)) {
+                    $matchesByProcess->put($processCode, collect());
+                    $firstArticleByProcess->put($processCode, $article);
                 }
 
-                $existing = $matchesByProcess->get($code);
-                if (! $existing->contains('code', $rubro->code)) {
-                    $existing->push(['code' => $rubro->code, 'name' => $rubro->name]);
+                $existing = $matchesByProcess->get($processCode);
+                if (! $existing->contains('code', $code)) {
+                    $existing->push(['code' => $code, 'name' => $entry['name']]);
                 }
             }
         }
@@ -130,6 +137,12 @@ class PollCommand extends Command
 
         $this->progress("{$newMatches->count()} proceso(s) nuevos (no almacenados previamente).", 'info');
 
+        // Fan out existing (already-stored) bids to companies that didn't have them yet
+        $existingMatches = $matchesByProcess->filter(fn ($rubros, $code) => $knownCodes->contains($code));
+        if ($existingMatches->isNotEmpty()) {
+            $this->fanOutExistingBids($existingMatches, $rubroMap, $matcher);
+        }
+
         if ($newMatches->isEmpty()) {
             $this->progress('Sin procesos nuevos. Sondeo completo.', 'success');
             if (! $this->option('dry-run')) {
@@ -138,19 +151,11 @@ class PollCommand extends Command
                 $this->cleanup($api);
                 $this->refreshAllBidStatuses($api);
                 $this->backfillMissingData($api);
-                $this->enrichPortalBids($api);
+                $this->enrichPortalBids($api, $matcher);
             }
 
             return self::SUCCESS;
         }
-
-        // Load notification filters (bids are always saved; filters only gate notifications)
-        $minEnabled = Setting::get('min_amount_filter') === '1';
-        $minValue = (float) (Setting::get('min_amount_value') ?? 0);
-        $maxEnabled = Setting::get('max_amount_filter') === '1';
-        $maxValue = (float) (Setting::get('max_amount_value') ?? 0);
-        $excluded = json_decode(Setting::get('excluded_modalities', '[]'), true) ?: [];
-        $openDeadlineEnabled = Setting::get('open_deadline_filter') === '1';
 
         $this->progress('Obteniendo detalles de '.$newMatches->count().' proceso(s)...', 'info');
 
@@ -173,7 +178,7 @@ class PollCommand extends Command
                 continue;
             }
 
-            // Always save the bid
+            // Create global bid record
             $bid = Bid::create([
                 'process_code' => $processCode,
                 'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
@@ -186,50 +191,33 @@ class PollCommand extends Command
                 'currency' => $process['divisa'] ?? 'DOP',
                 'published_at' => $this->parseDate($process['fecha_publicacion'] ?? $firstArticle['fecha_publicacion'] ?? null),
                 'tender_deadline' => $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null),
-                'matched_rubros' => $matchedRubros->values()->all(),
                 'secp_url' => isset($process['url']) ? preg_replace('#([^:])//+#', '$1/', $process['url']) : "https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index?q={$processCode}",
                 'raw_data' => $process ?? $firstArticle,
                 'mipymes' => filter_var($process['dirigido_mipymes'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'mipymes_mujeres' => filter_var($process['dirigido_mipymes_mujeres'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'is_relevant' => Bid::computeRelevance($process['titulo'] ?? $firstArticle['descripcion_articulo'] ?? ''),
             ]);
 
             $saved++;
-            $this->progress("[GUARDADO] {$processCode} — ".$matchedRubros->pluck('name')->join(', ').($bid->is_relevant ? ' [RELEVANTE]' : ''), 'match');
 
-            // Apply filters only for notification
-            $amount = $bid->amount_estimated;
-            $modality = $bid->procurement_method;
-            $shouldNotify = true;
+            // Fan out to matching companies
+            $companyIds = $matcher->fanOutToCompanies($bid, $matchedRubros->values()->all(), $rubroMap);
 
-            if ($minEnabled && $amount !== null && $amount < $minValue) {
-                $this->progress("  [SIN NOTIFICAR] monto {$amount} por debajo del mínimo {$minValue}", 'warn');
-                $shouldNotify = false;
-            }
+            $this->progress("[GUARDADO] {$processCode} — ".$matchedRubros->pluck('name')->join(', ').' ['.count($companyIds).' empresa(s)]', 'match');
 
-            if ($shouldNotify && $maxEnabled && $maxValue > 0 && $amount !== null && $amount > $maxValue) {
-                $this->progress("  [SIN NOTIFICAR] monto {$amount} por encima del máximo {$maxValue}", 'warn');
-                $shouldNotify = false;
-            }
-
-            if ($shouldNotify && $modality && in_array($modality, $excluded)) {
-                $this->progress("  [SIN NOTIFICAR] modalidad '{$modality}' excluida", 'warn');
-                $shouldNotify = false;
-            }
-
-            if ($shouldNotify && $openDeadlineEnabled) {
-                if ($bid->tender_deadline && $bid->tender_deadline < now()) {
-                    $this->progress("  [SIN NOTIFICAR] plazo vencido ({$bid->tender_deadline->format('Y-m-d H:i')})", 'warn');
-                    $shouldNotify = false;
+            // Per-company notification dispatch
+            foreach ($companyIds as $companyId) {
+                if ($matcher->shouldNotify($bid, $companyId)) {
+                    $company = Company::find($companyId);
+                    if ($company) {
+                        SendBidNotification::dispatch($bid, $company);
+                        $notified++;
+                    }
+                } else {
+                    // Mark as notified so it doesn't appear as missed
+                    CompanyBid::where('bid_id', $bid->id)
+                        ->where('company_id', $companyId)
+                        ->update(['notified_at' => now()]);
                 }
-            }
-
-            if ($shouldNotify) {
-                SendBidNotification::dispatch($bid);
-                $notified++;
-            } else {
-                // Mark as "notified" so it doesn't appear as a missed notification
-                $bid->update(['notified_at' => now()]);
             }
         }
 
@@ -239,7 +227,7 @@ class PollCommand extends Command
             $this->cleanup($api);
             $this->refreshAllBidStatuses($api);
             $this->backfillMissingData($api);
-            $this->enrichPortalBids($api);
+            $this->enrichPortalBids($api, $matcher);
         }
 
         $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Guardados: {$saved} | Notificados: {$notified}";
@@ -250,9 +238,66 @@ class PollCommand extends Command
     }
 
     /**
-     * If poll_status has been 'running' for longer than STALE_LOCK_MINUTES, reset it.
-     * Prevents a crashed poll from permanently blocking future polls.
+     * For bids already in DB, create company_bid pivots for any companies that don't have them yet.
      */
+    private function fanOutExistingBids($existingMatches, array $rubroMap, BidMatchingService $matcher): void
+    {
+        $bids = Bid::whereIn('process_code', $existingMatches->keys()->all())
+            ->get()
+            ->keyBy('process_code');
+
+        $newPivots = 0;
+
+        foreach ($existingMatches as $processCode => $matchedRubros) {
+            $bid = $bids->get($processCode);
+            if (! $bid) {
+                continue;
+            }
+
+            // Determine which companies should have this bid
+            $companyIds = [];
+            foreach ($matchedRubros as $match) {
+                $code = $match['code'];
+                if (isset($rubroMap[$code])) {
+                    foreach ($rubroMap[$code]['company_ids'] as $cid) {
+                        $companyIds[$cid] = true;
+                    }
+                }
+            }
+
+            // Check which companies already have this bid
+            $existingCompanyIds = CompanyBid::where('bid_id', $bid->id)
+                ->whereIn('company_id', array_keys($companyIds))
+                ->pluck('company_id')
+                ->all();
+
+            $missingCompanyIds = array_diff(array_keys($companyIds), $existingCompanyIds);
+
+            foreach ($missingCompanyIds as $companyId) {
+                // Build per-company matched rubros
+                $companyRubros = [];
+                foreach ($matchedRubros as $match) {
+                    if (isset($rubroMap[$match['code']]) && in_array($companyId, $rubroMap[$match['code']]['company_ids'])) {
+                        $companyRubros[] = $match;
+                    }
+                }
+
+                CompanyBid::create([
+                    'company_id' => $companyId,
+                    'bid_id' => $bid->id,
+                    'matched_rubros' => $companyRubros,
+                    'is_relevant' => Bid::computeRelevance($bid->title ?? '', $companyId),
+                    'first_matched_at' => now(),
+                ]);
+                $newPivots++;
+            }
+        }
+
+        if ($newPivots > 0) {
+            $this->progress("  {$newPivots} nueva(s) vinculación(es) empresa-convocatoria creada(s) para procesos existentes.", 'info');
+        }
+    }
+
     private function resetStaleLock(): void
     {
         if (Setting::get('poll_status') !== 'running') {
@@ -275,10 +320,6 @@ class PollCommand extends Command
         }
     }
 
-    /**
-     * Refresh status for all active bids (not just watched ones).
-     * Processes bids that haven't been checked recently, up to 30 per cycle.
-     */
     private function refreshAllBidStatuses(DgcpApiClient $api): void
     {
         $bids = Bid::whereNotNull('status')
@@ -339,7 +380,7 @@ class PollCommand extends Command
         })
             ->whereDoesntHave('offers')
             ->whereDoesntHave('watches')
-            ->where('is_bookmarked', false)
+            ->whereDoesntHave('companies', fn ($q) => $q->where('company_bid.is_bookmarked', true))
             ->delete();
 
         if ($deleted > 0) {
@@ -348,10 +389,6 @@ class PollCommand extends Command
         }
     }
 
-    /**
-     * Re-fetch process details for bids missing critical fields.
-     * Processes up to BACKFILL_BATCH_SIZE per poll cycle.
-     */
     private function backfillMissingData(DgcpApiClient $api): void
     {
         $bids = Bid::where(function ($q) {
@@ -395,10 +432,9 @@ class PollCommand extends Command
                 $updates['status'] = $process['estado_proceso'];
             }
 
-            // Always refresh raw_data with latest
             $updates['raw_data'] = $process;
 
-            if (count($updates) > 1) { // >1 because raw_data is always there
+            if (count($updates) > 1) {
                 $bid->update($updates);
                 $filled = array_diff(array_keys($updates), ['raw_data']);
                 $this->progress("  [BACKFILL] {$bid->process_code}: ".implode(', ', $filled), 'info');
@@ -406,11 +442,7 @@ class PollCommand extends Command
         }
     }
 
-    /**
-     * Enrich portal-scraped bids with full API data once they appear in the open data API.
-     * Updates raw_data, procurement_method, mipymes flags, and matched_rubros.
-     */
-    private function enrichPortalBids(DgcpApiClient $api): void
+    private function enrichPortalBids(DgcpApiClient $api, BidMatchingService $matcher): void
     {
         $bids = Bid::where('raw_data->source', 'portal_scrape')
             ->orderBy('created_at', 'asc')
@@ -420,6 +452,8 @@ class PollCommand extends Command
         if ($bids->isEmpty()) {
             return;
         }
+
+        $rubroMap = $matcher->aggregateRubros();
 
         $this->progress("Enriqueciendo {$bids->count()} convocatoria(s) del portal...", 'info');
         $enriched = 0;
@@ -432,12 +466,11 @@ class PollCommand extends Command
             }
 
             if (! $process) {
-                continue; // Not yet in API — try again next cycle
+                continue;
             }
 
-            // Full enrichment from API
             $updates = [
-                'raw_data' => $process, // Replaces portal_scrape marker with real API data
+                'raw_data' => $process,
                 'ocid' => $process['ocid'] ?? $bid->ocid,
                 'title' => $process['titulo'] ?? $bid->title,
                 'buyer_name' => $process['unidad_compra'] ?? $bid->buyer_name,
@@ -461,27 +494,26 @@ class PollCommand extends Command
                 $updates['published_at'] = $this->parseDate($process['fecha_publicacion']);
             }
 
-            // Try to match rubros via articles
+            // Try to match rubros via articles and fan out to companies
             try {
                 $articles = $api->fetchProcessArticles($bid->process_code);
-                $activeRubros = Rubro::where('active', true)->get();
                 $matchedRubros = collect();
 
                 foreach ($articles as $article) {
-                    foreach ($activeRubros as $rubro) {
-                        $articleCode = (string) ($article[$rubro->level] ?? '');
-                        if ($articleCode === $rubro->code && ! $matchedRubros->contains('code', $rubro->code)) {
-                            $matchedRubros->push(['code' => $rubro->code, 'name' => $rubro->name]);
+                    foreach ($rubroMap as $code => $entry) {
+                        $articleCode = (string) ($article[$entry['level']] ?? '');
+                        if ($articleCode === $code && ! $matchedRubros->contains('code', $code)) {
+                            $matchedRubros->push(['code' => $code, 'name' => $entry['name']]);
                         }
                     }
                 }
 
                 if ($matchedRubros->isNotEmpty()) {
-                    $updates['matched_rubros'] = $matchedRubros->values()->all();
+                    $matcher->fanOutToCompanies($bid, $matchedRubros->values()->all(), $rubroMap);
                     $this->progress("  [RUBROS] {$bid->process_code}: ".$matchedRubros->pluck('name')->join(', '), 'match');
                 }
             } catch (\Throwable) {
-                // Articles not available yet — keep portal marker
+                // Articles not available yet
             }
 
             $bid->update($updates);
@@ -496,7 +528,11 @@ class PollCommand extends Command
 
     private function checkWatchedBids(DgcpApiClient $api): void
     {
-        $watchedBidIds = BidWatch::select('bid_id')->distinct()->pluck('bid_id');
+        $watchedBidIds = BidWatch::withoutGlobalScopes()
+            ->select('bid_id')
+            ->distinct()
+            ->pluck('bid_id');
+
         if ($watchedBidIds->isEmpty()) {
             return;
         }
@@ -519,19 +555,16 @@ class PollCommand extends Command
 
             $changes = [];
 
-            // Check status change
             $newStatus = $process['estado_proceso'] ?? null;
             if ($newStatus && $bid->last_known_status && $newStatus !== $bid->last_known_status) {
                 $changes[] = "Estado: {$bid->last_known_status} → {$newStatus}";
             }
 
-            // Check deadline change
             $newDeadline = $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null);
             if ($bid->tender_deadline && $newDeadline && $newDeadline->format('Y-m-d H:i') !== $bid->tender_deadline->format('Y-m-d H:i')) {
                 $changes[] = "Plazo: {$bid->tender_deadline->format('d/m/Y H:i')} → {$newDeadline->format('d/m/Y H:i')}";
             }
 
-            // Check amount change
             $newAmount = $this->parseAmount($process['monto_estimado'] ?? null);
             if ($bid->amount_estimated && $newAmount && abs($newAmount - $bid->amount_estimated) > 0.01) {
                 $oldFormatted = number_format($bid->amount_estimated, 2);
@@ -539,7 +572,6 @@ class PollCommand extends Command
                 $changes[] = "Monto: {$oldFormatted} → {$newFormatted}";
             }
 
-            // Check document count change
             try {
                 $docs = $api->fetchDocuments($bid->process_code);
                 $newDocCount = count($docs);
@@ -552,20 +584,18 @@ class PollCommand extends Command
                 $changes[] = "{$diff} documento(s) nuevo(s)";
             }
 
-            // Check amendment date change
             $newEnmienda = $process['fecha_enmienda'] ?? null;
             $oldEnmienda = $bid->raw_data['fecha_enmienda'] ?? null;
             if ($newEnmienda && $newEnmienda !== $oldEnmienda) {
                 $changes[] = 'Enmienda publicada';
             }
 
-            // Check procurement method change
             $newMethod = $process['modalidad'] ?? null;
             if ($newMethod && $bid->procurement_method && $newMethod !== $bid->procurement_method) {
                 $changes[] = "Modalidad: {$bid->procurement_method} → {$newMethod}";
             }
 
-            // Backfill missing dates/amounts (not counted as "changes")
+            // Backfill missing dates/amounts
             $backfill = [];
             if (! $bid->tender_deadline && $newDeadline) {
                 $backfill['tender_deadline'] = $newDeadline;
@@ -588,7 +618,6 @@ class PollCommand extends Command
 
             $this->progress("  [CAMBIO] {$bid->process_code}: ".implode(', ', $changes), 'match');
 
-            // Update bid with new state
             $bid->update([
                 'status' => $newStatus ?? $bid->status,
                 'last_known_status' => $newStatus ?? $bid->status,
@@ -599,39 +628,47 @@ class PollCommand extends Command
                 'raw_data' => $process,
             ]);
 
-            // Notify all watchers: in-app + email + telegram
-            $watcherUserIds = BidWatch::where('bid_id', $bid->id)->pluck('user_id');
+            // Notify watchers per-company
+            $watches = BidWatch::withoutGlobalScopes()
+                ->where('bid_id', $bid->id)
+                ->get();
+
+            // Group watchers by company
+            $watchersByCompany = $watches->groupBy('company_id');
             $changeText = implode(', ', $changes);
 
-            foreach ($watcherUserIds as $userId) {
-                InAppNotification::create([
-                    'user_id' => $userId,
-                    'bid_id' => $bid->id,
-                    'type' => 'status_changed',
-                    'title' => $bid->title,
-                    'body' => $changeText,
-                    'data' => [
-                        'process_code' => $bid->process_code,
-                        'changes' => $changes,
-                    ],
-                ]);
-            }
+            foreach ($watchersByCompany as $companyId => $companyWatches) {
+                // In-app notifications for each watcher in this company
+                foreach ($companyWatches as $watch) {
+                    InAppNotification::create([
+                        'company_id' => $companyId,
+                        'user_id' => $watch->user_id,
+                        'bid_id' => $bid->id,
+                        'type' => 'status_changed',
+                        'title' => $bid->title,
+                        'body' => $changeText,
+                        'data' => [
+                            'process_code' => $bid->process_code,
+                            'changes' => $changes,
+                        ],
+                    ]);
+                }
 
-            // Dispatch email + telegram for watched bid change
-            SendWatchedBidChangeNotification::dispatch($bid, $changes);
+                // Email + Telegram per-company
+                $company = Company::find($companyId);
+                if ($company) {
+                    SendWatchedBidChangeNotification::dispatch($bid, $changes, $company);
+                }
+            }
         }
     }
 
-    /**
-     * Buffer log lines in memory, flush to DB periodically and on completion.
-     */
     private function progress(string $message, string $type = 'info'): void
     {
         $this->line($message);
 
         $this->logBuffer[] = ['time' => now()->format('H:i:s'), 'msg' => $message, 'type' => $type];
 
-        // Flush every 20 lines to keep the frontend updated without per-line DB writes
         if (count($this->logBuffer) >= 20) {
             $this->flushLog();
         }

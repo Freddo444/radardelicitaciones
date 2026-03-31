@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use Illuminate\Http\Request;
 
 class EmpresaController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         return view('empresa.index', compact('company'));
     }
@@ -37,7 +36,7 @@ class EmpresaController extends Controller
             'cpa_vence' => 'nullable|date',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
         $company->fill($data);
         $company->save();
 
@@ -53,7 +52,7 @@ class EmpresaController extends Controller
 
         $type = $request->type;
         $column = $type.'_path';
-        $company = Company::instance();
+        $company = currentCompany();
 
         // Delete old file if exists
         if ($company->$column && \Storage::disk('public')->exists($company->$column)) {
@@ -77,7 +76,7 @@ class EmpresaController extends Controller
 
         $type = $request->type;
         $column = $type.'_path';
-        $company = Company::instance();
+        $company = currentCompany();
 
         if ($company->$column && \Storage::disk('public')->exists($company->$column)) {
             \Storage::disk('public')->delete($company->$column);

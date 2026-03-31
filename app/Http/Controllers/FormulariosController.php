@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\OfferGeneratedFile;
 use App\Models\Personnel;
 use App\Models\Project;
@@ -13,7 +12,7 @@ class FormulariosController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         $generated = OfferGeneratedFile::whereNull('offer_id')
             ->latest('generated_at')

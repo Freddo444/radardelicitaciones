@@ -1,7 +1,14 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Billing\AzulController;
+use App\Http\Controllers\Billing\BankTransferController;
+use App\Http\Controllers\Billing\PayPalController;
+use App\Http\Controllers\Billing\SubscriptionController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CompanySetupController;
+use App\Http\Controllers\CompanySwitchController;
+use App\Http\Controllers\CompanyUsersController;
 use App\Http\Controllers\ConvocatoriasController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentosController;
@@ -11,6 +18,7 @@ use App\Http\Controllers\EquiposController;
 use App\Http\Controllers\FinancieroController;
 use App\Http\Controllers\FormulariosController;
 use App\Http\Controllers\InteligenciaController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LogsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OfertasController;
@@ -20,16 +28,18 @@ use App\Http\Controllers\PollController;
 use App\Http\Controllers\PollProgressController;
 use App\Http\Controllers\PrellenadoController;
 use App\Http\Controllers\ProyectosController;
+use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\RubrosController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TableroController;
-use App\Http\Controllers\UsersController;
 use Illuminate\Support\Facades\Route;
 
-// Auth (guest only)
+// ── Auth (guest only) ────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
+    Route::get('/registro', [RegisterController::class, 'show'])->name('register.show');
+    Route::post('/registro', [RegisterController::class, 'store'])->name('register.store');
 
     Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
@@ -38,8 +48,41 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// All app routes — require login
+// ── Invitations (no auth required — works for guests and logged-in) ──
+Route::get('/invitacion/{token}', [InvitationController::class, 'show'])->name('invitation.show');
+Route::post('/invitacion/{token}', [InvitationController::class, 'accept'])->name('invitation.accept');
+
+// ── PayPal webhook (no auth — verified by signature) ─────────────────
+Route::post('/paypal/webhook', [PayPalController::class, 'webhook'])->name('paypal.webhook');
+
+// ── Billing & company setup (auth, no tenant required) ───────────────
 Route::middleware('auth')->group(function () {
+    // Billing
+    Route::get('/facturacion', [SubscriptionController::class, 'index'])->name('billing.index');
+    Route::delete('/facturacion/cancelar', [SubscriptionController::class, 'cancel'])->name('billing.cancel');
+    Route::post('/paypal/create-order', [PayPalController::class, 'createOrder'])->name('paypal.create-order');
+    Route::post('/paypal/capture-order', [PayPalController::class, 'captureOrder'])->name('paypal.capture-order');
+    Route::get('/paypal/return', [PayPalController::class, 'return'])->name('paypal.return');
+    Route::get('/paypal/cancel', [PayPalController::class, 'cancel'])->name('paypal.cancel');
+    Route::post('/azul/pagar', [AzulController::class, 'createPayment'])->name('azul.create-payment');
+    Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
+    Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
+    Route::get('/transferencia', [BankTransferController::class, 'show'])->name('billing.bank-transfer');
+    Route::post('/transferencia', [BankTransferController::class, 'uploadReceipt'])->name('billing.bank-transfer.upload');
+
+    // Company setup wizard (post-payment)
+    Route::get('/configurar-empresa', [CompanySetupController::class, 'show'])->name('company-setup.show');
+    Route::post('/configurar-empresa', [CompanySetupController::class, 'store'])->name('company-setup.store');
+
+    // Company switcher
+    Route::get('/empresas', [CompanySwitchController::class, 'index'])->name('companies.index');
+    Route::post('/empresas/switch/{company}', [CompanySwitchController::class, 'switch'])->name('companies.switch');
+    Route::get('/empresas/nueva', [CompanySwitchController::class, 'create'])->name('companies.create');
+    Route::post('/empresas', [CompanySwitchController::class, 'store'])->name('companies.store');
+});
+
+// ── All tenant-scoped routes (auth + tenant + active subscription) ───
+Route::middleware(['auth', 'tenant', 'subscription.active'])->group(function () {
 
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
@@ -93,19 +136,17 @@ Route::middleware('auth')->group(function () {
     Route::patch('/rubros/{rubro}/toggle', [RubrosController::class, 'toggle'])->name('rubros.toggle');
     Route::get('/rubros/search', [RubrosController::class, 'search'])->name('rubros.search');
 
-    // Settings
-    // Settings (admin only)
-    Route::middleware('admin')->group(function () {
-        Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
-        Route::post('/configuracion', [SettingsController::class, 'update'])->name('settings.update');
-        Route::post('/configuracion/import-catalog', [SettingsController::class, 'importCatalog'])->name('settings.import-catalog');
-        Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
-        Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
-        Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');
-    });
+    // Settings (per-company)
+    Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
+    Route::post('/configuracion', [SettingsController::class, 'update'])->name('settings.update');
+    Route::post('/configuracion/import-catalog', [SettingsController::class, 'importCatalog'])->name('settings.import-catalog');
+    Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
+    Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
+    Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');
 
-    // Manual poll
+    // Manual poll + sondear
     Route::post('/sondeo/manual', [PollController::class, 'manual'])->name('poll.manual');
+    Route::post('/sondeo/sondear', [PollController::class, 'sondear'])->name('poll.sondear');
     Route::get('/sondeo/progreso', [PollProgressController::class, 'show'])->name('poll.progress');
     Route::get('/sondeo/status', [PollProgressController::class, 'status'])->name('poll.status');
 
@@ -219,12 +260,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/equipos/{equipo}/toggle', [EquiposController::class, 'toggle'])->name('equipos.toggle');
     Route::delete('/equipos/{equipo}', [EquiposController::class, 'destroy'])->name('equipos.destroy');
 
-    // Users (admin only)
-    Route::middleware('admin')->group(function () {
-        Route::get('/usuarios', [UsersController::class, 'index'])->name('users.index');
-        Route::post('/usuarios', [UsersController::class, 'store'])->name('users.store');
-        Route::delete('/usuarios/{user}', [UsersController::class, 'destroy'])->name('users.destroy');
-        Route::patch('/usuarios/{user}/password', [UsersController::class, 'updatePassword'])->name('users.password');
-        Route::patch('/usuarios/{user}/role', [UsersController::class, 'updateRole'])->name('users.role');
-    });
+    // Company users (per-company, owner can invite/remove)
+    Route::get('/usuarios', [CompanyUsersController::class, 'index'])->name('company-users.index');
+    Route::post('/usuarios/invitar', [CompanyUsersController::class, 'invite'])->name('company-users.invite');
+    Route::delete('/usuarios/{user}', [CompanyUsersController::class, 'removeUser'])->name('company-users.remove');
+    Route::delete('/invitaciones/{invitation}', [CompanyUsersController::class, 'cancelInvitation'])->name('company-users.cancel-invitation');
 });

@@ -1,7 +1,7 @@
 <x-mail::message>
-# Te invitaron a SECP Monitor
+# Te invitaron a Radar de Licitaciones
 
-Hola **{{ $user->name }}**, tu cuenta fue creada en **SECP Monitor**.
+Hola **{{ $user->name }}**, tu cuenta fue creada en **Radar de Licitaciones**.
 
 Aquí están tus credenciales de acceso:
 
@@ -16,5 +16,5 @@ Iniciar sesión
 
 Te recomendamos cambiar tu contraseña después de iniciar sesión.
 
-— Grupo Alzare SRL
+— Radar de Licitaciones
 </x-mail::message>

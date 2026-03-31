@@ -39,4 +39,19 @@ return [
         'key' => env('GEMINI_API_KEY', ''),
     ],
 
+    'paypal' => [
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'secret' => env('PAYPAL_SECRET'),
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+        'sandbox' => env('PAYPAL_SANDBOX', true),
+    ],
+
+    'azul' => [
+        'merchant_id' => env('AZUL_MERCHANT_ID'),
+        'auth_key' => env('AZUL_AUTH_KEY'),
+        'auth2_key' => env('AZUL_AUTH2_KEY'),
+        'domain' => env('AZUL_DOMAIN'),
+        'sandbox' => env('AZUL_SANDBOX', true),
+    ],
+
 ];

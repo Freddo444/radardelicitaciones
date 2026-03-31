@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'nombre',
@@ -28,11 +30,6 @@ class Project extends Model
         'fecha_fin' => 'date',
         'monto' => 'decimal:2',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     public function documents(): HasMany
     {

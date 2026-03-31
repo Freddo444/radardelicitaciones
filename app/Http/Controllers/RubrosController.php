@@ -17,13 +17,15 @@ class RubrosController extends Controller
 
     public function store(Request $request)
     {
+        $companyId = currentCompany()->id;
         $request->validate([
-            'code' => 'required|string|max:20|unique:rubros,code',
+            'code' => "required|string|max:20|unique:rubros,code,NULL,id,company_id,{$companyId}",
             'name' => 'required|string|max:255',
             'level' => 'required|in:familia,clase,subclase',
         ]);
 
         Rubro::create([
+            'company_id' => $companyId,
             'code' => $request->code,
             'name' => $request->name,
             'level' => $request->level,

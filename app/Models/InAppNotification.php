@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InAppNotification extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
-        'user_id', 'bid_id', 'type', 'title', 'body', 'data', 'read_at',
+        'user_id', 'bid_id', 'company_id', 'type', 'title', 'body', 'data', 'read_at',
     ];
 
     protected $casts = [

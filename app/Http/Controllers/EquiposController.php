@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\Equipment;
 use App\Models\OfferEquipment;
 use Illuminate\Http\Request;
@@ -11,7 +10,7 @@ class EquiposController extends Controller
 {
     public function index(Request $request)
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         $query = Equipment::where('company_id', $company->id)
             ->orderBy('active', 'desc')
@@ -43,7 +42,7 @@ class EquiposController extends Controller
             'cantidad' => 'required|integer|min:1',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         Equipment::create(array_merge($data, ['company_id' => $company->id]));
 

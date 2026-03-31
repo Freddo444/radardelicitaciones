@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class FinancialRecord extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'company_id', 'anio_fiscal', 'currency',
         'activo_total', 'activo_circulante', 'inventarios',
@@ -38,11 +40,6 @@ class FinancialRecord extends Model
         'endeudamiento_override' => 'decimal:4',
         'capital_trabajo_override' => 'decimal:2',
     ];
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 
     /**
      * Recalculate and store all four indices from current balance values.

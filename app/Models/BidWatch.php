@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BidWatch extends Model
 {
-    protected $fillable = ['bid_id', 'user_id'];
+    use BelongsToCompany;
+
+    protected $fillable = ['company_id', 'bid_id', 'user_id'];
 
     public function bid(): BelongsTo
     {

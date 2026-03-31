@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Jobs\ParsePliegoJob;
 use App\Models\Bid;
 use App\Models\BidDocument;
-use App\Models\Company;
 use App\Models\Equipment;
 use App\Models\FinancialRecord;
 use App\Models\Offer;
@@ -34,7 +33,7 @@ class OfertasController extends Controller
 
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
         $offers = Offer::where('company_id', $company->id)
             ->orderByRaw("FIELD(estado, 'en_preparacion', 'borrador', 'listo', 'enviado')")
             ->orderBy('fecha_limite')
@@ -63,7 +62,7 @@ class OfertasController extends Controller
             'notas' => 'nullable|string|max:2000',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         // If linking to a bid, pull denormalized info
         if (! empty($data['bid_id'])) {
@@ -95,7 +94,7 @@ class OfertasController extends Controller
             'generatedFiles',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
         $tab = request('tab', 'pliego');
 
         // Available vault records for composition pickers

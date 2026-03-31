@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BidDocument extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
-        'offer_id', 'document_type', 'original_filename',
+        'company_id', 'offer_id', 'document_type', 'original_filename',
         'source_url', 'downloaded_at', 'sha256', 'local_path', 'file_size_bytes',
     ];
 

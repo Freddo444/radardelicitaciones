@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bid;
-use App\Models\Company;
 use App\Models\Offer;
 use App\Models\OfferEvent;
 use Carbon\Carbon;
@@ -174,7 +173,7 @@ class TableroController extends Controller
             ]);
         }
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         $offer = Offer::create([
             'company_id' => $company->id,

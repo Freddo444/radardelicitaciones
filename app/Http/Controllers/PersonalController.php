@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\Personnel;
 use App\Models\PersonnelExperience;
 use Illuminate\Http\Request;
@@ -13,7 +12,7 @@ class PersonalController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
 
         $people = Personnel::where('company_id', $company->id)
             ->orderBy('active', 'desc')
@@ -31,7 +30,7 @@ class PersonalController extends Controller
             'cargo' => 'nullable|string|max:255',
         ]);
 
-        $company = Company::instance();
+        $company = currentCompany();
 
         Personnel::create(array_merge($data, [
             'company_id' => $company->id,

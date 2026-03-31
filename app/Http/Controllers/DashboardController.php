@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bid;
-use App\Models\Company;
 use App\Models\FinancialRecord;
 use App\Models\Offer;
 use App\Models\OfferEvent;
@@ -16,7 +15,7 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $company = Company::instance();
+        $company = currentCompany();
         $showAll = request()->boolean('ver');
 
         // ── Expiry alerts ─────────────────────────────────────────────
@@ -57,19 +56,19 @@ class DashboardController extends Controller
         $lastPolledAt = Setting::get('last_polled_at');
         $pollIntervalMins = (int) (Setting::get('poll_interval_minutes') ?? 60);
 
-        // ── Bid feed (respects settings filters) ─────────────────────
-        $bidQuery = Bid::filtered();
+        // ── Bid feed (company-scoped, respects settings filters) ─────
+        $bidQuery = Bid::forCompany($company->id)->filtered($company->id);
         $bidStats = [
             'total' => (clone $bidQuery)->count(),
-            'this_week' => (clone $bidQuery)->where('published_at', '>=', now()->startOfWeek())->count(),
-            'unnotified' => (clone $bidQuery)->whereNull('notified_at')->count(),
+            'this_week' => (clone $bidQuery)->where('bids.published_at', '>=', now()->startOfWeek())->count(),
+            'unnotified' => (clone $bidQuery)->whereNull('company_bid.notified_at')->count(),
         ];
 
         if ($showAll) {
-            $bids = (clone $bidQuery)->orderByDesc('published_at')->paginate(25);
+            $bids = (clone $bidQuery)->orderByDesc('bids.published_at')->paginate(25);
             $recentBids = null;
         } else {
-            $recentBids = (clone $bidQuery)->orderByDesc('published_at')->limit(7)->get();
+            $recentBids = (clone $bidQuery)->orderByDesc('bids.published_at')->limit(7)->get();
             $bids = null;
         }
 

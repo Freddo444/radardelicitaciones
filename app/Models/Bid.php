@@ -4,30 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Bid extends Model
 {
     protected $fillable = [
         'process_code', 'ocid', 'title', 'buyer_name', 'buyer_code',
         'procurement_method', 'status', 'amount_estimated', 'currency',
-        'published_at', 'tender_deadline', 'matched_rubros', 'secp_url',
-        'raw_data', 'notified_at', 'is_bookmarked', 'is_relevant', 'mipymes', 'mipymes_mujeres',
+        'published_at', 'tender_deadline', 'secp_url',
+        'raw_data', 'mipymes', 'mipymes_mujeres',
         'cached_documents', 'cached_articles', 'cached_contracts', 'cache_refreshed_at',
     ];
 
     protected $casts = [
-        'matched_rubros' => 'array',
         'raw_data' => 'array',
         'cached_documents' => 'array',
         'cached_articles' => 'array',
         'cached_contracts' => 'array',
         'published_at' => 'datetime',
         'tender_deadline' => 'datetime',
-        'notified_at' => 'datetime',
         'cache_refreshed_at' => 'datetime',
         'amount_estimated' => 'decimal:2',
-        'is_bookmarked' => 'boolean',
-        'is_relevant' => 'boolean',
         'mipymes' => 'boolean',
         'mipymes_mujeres' => 'boolean',
     ];
@@ -47,20 +44,44 @@ class Bid extends Model
         return $this->hasMany(BidWatch::class);
     }
 
-    /**
-     * Bids matching at least one positive keyword.
-     */
-    public function scopeRelevant(Builder $query): Builder
+    public function companies(): BelongsToMany
     {
-        return $query->where('is_relevant', true);
+        return $this->belongsToMany(Company::class, 'company_bid')
+            ->using(CompanyBid::class)
+            ->withPivot('matched_rubros', 'is_bookmarked', 'is_relevant', 'first_matched_at', 'notified_at')
+            ->withTimestamps();
     }
 
     /**
-     * Compute relevance for a bid title against configured keywords.
+     * Scope to bids matched to a specific company via company_bid pivot.
      */
-    public static function computeRelevance(string $title): bool
+    public function scopeForCompany(Builder $query, int $companyId): Builder
     {
-        $keywords = json_decode(Setting::get('radar_keywords', '[]'), true) ?: [];
+        return $query->select('bids.*')
+            ->addSelect(
+                'company_bid.is_bookmarked',
+                'company_bid.is_relevant',
+                'company_bid.matched_rubros',
+                'company_bid.notified_at as company_notified_at',
+            )
+            ->join('company_bid', 'bids.id', '=', 'company_bid.bid_id')
+            ->where('company_bid.company_id', $companyId);
+    }
+
+    /**
+     * Bids marked relevant for the current company (via pivot).
+     */
+    public function scopeRelevant(Builder $query): Builder
+    {
+        return $query->where('company_bid.is_relevant', true);
+    }
+
+    /**
+     * Compute relevance for a bid title against a company's configured keywords.
+     */
+    public static function computeRelevance(string $title, ?int $companyId = null): bool
+    {
+        $keywords = json_decode(Setting::get('radar_keywords', '[]', $companyId), true) ?: [];
         if (empty($keywords)) {
             return false;
         }
@@ -77,51 +98,53 @@ class Bid extends Model
     }
 
     /**
-     * Apply the user's configured filters from Settings.
+     * Apply the company's configured filters from Settings.
      */
-    public function scopeFiltered(Builder $query): Builder
+    public function scopeFiltered(Builder $query, ?int $companyId = null): Builder
     {
-        if (Setting::get('min_amount_filter') === '1') {
-            $min = (float) (Setting::get('min_amount_value') ?? 0);
+        $cid = $companyId ?? currentCompany()?->id;
+
+        if (Setting::get('min_amount_filter', '0', $cid) === '1') {
+            $min = (float) (Setting::get('min_amount_value', '0', $cid) ?? 0);
             if ($min > 0) {
                 $query->where(function ($q) use ($min) {
-                    $q->whereNull('amount_estimated')
-                        ->orWhere('amount_estimated', '>=', $min);
+                    $q->whereNull('bids.amount_estimated')
+                        ->orWhere('bids.amount_estimated', '>=', $min);
                 });
             }
         }
 
-        if (Setting::get('max_amount_filter') === '1') {
-            $max = (float) (Setting::get('max_amount_value') ?? 0);
+        if (Setting::get('max_amount_filter', '0', $cid) === '1') {
+            $max = (float) (Setting::get('max_amount_value', '0', $cid) ?? 0);
             if ($max > 0) {
                 $query->where(function ($q) use ($max) {
-                    $q->whereNull('amount_estimated')
-                        ->orWhere('amount_estimated', '<=', $max);
+                    $q->whereNull('bids.amount_estimated')
+                        ->orWhere('bids.amount_estimated', '<=', $max);
                 });
             }
         }
 
-        $excluded = json_decode(Setting::get('excluded_modalities', '[]'), true) ?: [];
+        $excluded = json_decode(Setting::get('excluded_modalities', '[]', $cid), true) ?: [];
         if (! empty($excluded)) {
             $query->where(function ($q) use ($excluded) {
-                $q->whereNull('procurement_method')
-                    ->orWhereNotIn('procurement_method', $excluded);
+                $q->whereNull('bids.procurement_method')
+                    ->orWhereNotIn('bids.procurement_method', $excluded);
             });
         }
 
-        if (Setting::get('open_deadline_filter') === '1') {
+        if (Setting::get('open_deadline_filter', '0', $cid) === '1') {
             $query->where(function ($q) {
-                $q->whereNull('tender_deadline')
-                    ->orWhere('tender_deadline', '>=', now());
+                $q->whereNull('bids.tender_deadline')
+                    ->orWhere('bids.tender_deadline', '>=', now());
             });
         }
 
         // Negative keyword exclusion
-        $excluded = json_decode(Setting::get('radar_excluded_keywords', '[]'), true) ?: [];
-        foreach ($excluded as $word) {
+        $excludedKw = json_decode(Setting::get('radar_excluded_keywords', '[]', $cid), true) ?: [];
+        foreach ($excludedKw as $word) {
             $word = trim($word);
             if ($word !== '') {
-                $query->where('title', 'not like', "%{$word}%");
+                $query->where('bids.title', 'not like', "%{$word}%");
             }
         }
 

@@ -26,5 +26,5 @@ Ver en Portal SECP
 
 ---
 
-*Monitor SECP — Notificación de cambio en convocatoria vigilada*
+*Radar de Licitaciones — Notificación de cambio en convocatoria vigilada*
 </x-mail::message>
