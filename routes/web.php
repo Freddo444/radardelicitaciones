@@ -34,6 +34,8 @@ use App\Http\Controllers\RubrosController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TableroController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // ── Marketing (public) ───────────────────────────────────────────────
@@ -67,13 +69,15 @@ Route::middleware('auth')->group(function () {
         return view('auth.verify-email');
     })->name('verification.notice');
 
-    Route::get('/email/verificar/{id}/{hash}', function (\Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
+    Route::get('/email/verificar/{id}/{hash}', function (EmailVerificationRequest $request) {
         $request->fulfill();
+
         return redirect()->route('dashboard')->with('success', 'Correo verificado.');
     })->middleware('signed')->name('verification.verify');
 
-    Route::post('/email/reenviar', function (\Illuminate\Http\Request $request) {
+    Route::post('/email/reenviar', function (Request $request) {
         $request->user()->sendEmailVerificationNotification();
+
         return back()->with('success', 'Enlace de verificación reenviado.');
     })->middleware('throttle:6,1')->name('verification.send');
 });

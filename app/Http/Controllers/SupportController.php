@@ -22,7 +22,7 @@ class SupportController extends Controller
 
         $details = implode("\n", [
             "De: {$request->name} ({$request->email})",
-            "Origen: Formulario de contacto (marketing)",
+            'Origen: Formulario de contacto (marketing)',
             '',
             $request->message,
         ]);
