@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
     // Company setup wizard (post-payment)
     Route::get('/configurar-empresa', [CompanySetupController::class, 'show'])->name('company-setup.show');
     Route::post('/configurar-empresa', [CompanySetupController::class, 'store'])->name('company-setup.store');
+    Route::post('/configurar-empresa/lookup-rpe', [CompanySetupController::class, 'lookupRpe'])->name('company-setup.lookup-rpe');
 
     // Company switcher
     Route::get('/empresas', [CompanySwitchController::class, 'index'])->name('companies.index');
