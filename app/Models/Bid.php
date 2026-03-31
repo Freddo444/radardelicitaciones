@@ -55,6 +55,18 @@ class Bid extends Model
     /**
      * Scope to bids matched to a specific company via company_bid pivot.
      */
+    /**
+     * Accessor: decode matched_rubros from pivot (arrives as JSON string).
+     */
+    public function getMatchedRubrosAttribute($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        return json_decode($value, true) ?: [];
+    }
+
     public function scopeForCompany(Builder $query, int $companyId): Builder
     {
         return $query->select('bids.*')

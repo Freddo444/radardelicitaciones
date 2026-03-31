@@ -252,9 +252,9 @@
                                 </td>
                                 <td class="py-4 pl-3 pr-4 text-right text-sm sm:pr-0" @click.stop>
                                     <div class="flex justify-end gap-x-2">
-                                        {{-- SECP external link --}}
+                                        {{-- DGCP external link --}}
                                         <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
-                                           class="rounded p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver en SECP">
+                                           class="rounded p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" title="Ver en DGCP">
                                             <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
                                             </svg>
@@ -336,7 +336,7 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
                                                     </svg>
                                                 </button>
-                                                <a :href="bid.secp_url" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-500" title="Ver en SECP">
+                                                <a :href="bid.secp_url" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-500" title="Ver en DGCP">
                                                     <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
                                                     </svg>
@@ -701,7 +701,7 @@
                                     <div class="flex items-center justify-between gap-3">
                                         <a :href="bid.secp_url" target="_blank" rel="noopener"
                                            class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900">
-                                            Ver en SECP
+                                            Ver en DGCP
                                             <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
                                             </svg>

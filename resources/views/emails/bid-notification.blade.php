@@ -23,7 +23,7 @@ Se encontró una nueva convocatoria que coincide con sus rubros monitoreados.
 @endforeach
 
 <x-mail::button :url="$bid->secp_url ?? '#'" color="green">
-Ver en Portal SECP
+Ver en DGCP
 </x-mail::button>
 
 ---

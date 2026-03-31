@@ -94,7 +94,7 @@ class SendWatchedBidChangeNotification implements ShouldQueue
             ."💰 {$amount}\n"
             ."📅 Cierre: {$deadline}\n\n"
             ."<b>Cambios:</b>\n{$changeLines}\n\n"
-            ."🔗 <a href=\"{$this->bid->secp_url}\">Ver en SECP</a>";
+            ."<a href=\"{$this->bid->secp_url}\">Ver en DGCP</a>";
 
         try {
             $sent = $telegram->sendMessage($text, $this->company->id);

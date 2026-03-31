@@ -31,8 +31,7 @@ class SettingsController extends Controller
             'excluded_modalities' => json_decode(Setting::get('excluded_modalities', '[]', $cid), true) ?? [],
             'radar_keywords' => implode(', ', json_decode(Setting::get('radar_keywords', '[]', $cid), true) ?: []),
             'radar_excluded_keywords' => implode(', ', json_decode(Setting::get('radar_excluded_keywords', '[]', $cid), true) ?: []),
-            // System-wide settings
-            'poll_interval_minutes' => Setting::get('poll_interval_minutes', 60),
+            // System-wide settings (read-only)
             'last_polled_at' => Setting::get('last_polled_at'),
             'catalog_item_count' => Setting::get('catalog_item_count'),
             'catalog_last_imported_at' => Setting::get('catalog_last_imported_at'),
@@ -47,7 +46,7 @@ class SettingsController extends Controller
             'notification_email' => 'nullable|email',
             'telegram_bot_token' => 'nullable|string',
             'telegram_chat_id' => 'nullable|string',
-            'poll_interval_minutes' => 'required|integer|min:10|max:1440',
+
             'min_amount_value' => 'nullable|numeric|min:0',
             'min_amount_currency' => 'required|in:DOP,USD',
             'max_amount_value' => 'nullable|numeric|min:0',
@@ -64,8 +63,6 @@ class SettingsController extends Controller
         Setting::set('notification_email', $request->notification_email, $cid);
         Setting::set('telegram_bot_token', $request->telegram_bot_token, $cid);
         Setting::set('telegram_chat_id', $request->telegram_chat_id, $cid);
-        // System-wide
-        Setting::set('poll_interval_minutes', $request->poll_interval_minutes);
         // Per-company filters
         $minVal = $request->min_amount_value ?? '0';
         Setting::set('min_amount_filter', ((float) $minVal > 0) ? '1' : '0', $cid);
@@ -117,8 +114,8 @@ class SettingsController extends Controller
         }
 
         try {
-            Mail::raw('Prueba de notificación del Monitor SECP. Si recibes esto, el correo está configurado correctamente.', function ($msg) use ($recipient) {
-                $msg->to($recipient)->subject('[SECP] Correo de prueba');
+            Mail::raw('Prueba de notificación de Radar de Licitaciones. Si recibes esto, el correo está configurado correctamente.', function ($msg) use ($recipient) {
+                $msg->to($recipient)->subject('Correo de prueba — Radar de Licitaciones');
             });
 
             return back()->with('success', "Correo de prueba enviado a {$recipient}.");
@@ -133,7 +130,7 @@ class SettingsController extends Controller
             return back()->with('error', 'Configure el token del bot y el Chat ID primero.');
         }
 
-        $sent = $telegram->sendMessage('🔔 <b>Monitor SECP</b> — Prueba de notificación exitosa.');
+        $sent = $telegram->sendMessage('Radar de Licitaciones — Prueba de notificación exitosa.');
 
         return back()->with(
             $sent ? 'success' : 'error',

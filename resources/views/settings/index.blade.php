@@ -109,17 +109,9 @@
                 {{-- Sondeo --}}
                 <div id="sondeo">
                     <h2 class="text-base/7 font-semibold text-gray-900">Sondeo</h2>
-                    <p class="mt-1 text-sm/6 text-gray-500">Frecuencia con la que se consulta la API para detectar nuevas convocatorias.</p>
+                    <p class="mt-1 text-sm/6 text-gray-500">El sistema monitorea la DGCP automáticamente cada hora y escanea el portal cada 15 minutos.</p>
 
                     <dl class="mt-6 divide-y divide-gray-100 border-t border-gray-200 text-sm/6">
-                        <div class="py-6 sm:flex sm:items-center">
-                            <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Intervalo (minutos)</dt>
-                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <input type="number" name="poll_interval_minutes" id="poll_interval_minutes"
-                                       value="{{ $settings['poll_interval_minutes'] }}" min="10" max="1440"
-                                       class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
-                            </dd>
-                        </div>
                         <div class="py-6 sm:flex sm:items-center">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Último sondeo</dt>
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">

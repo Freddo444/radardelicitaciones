@@ -25,7 +25,7 @@ class CalendarController extends Controller
             summary: $summary,
             description: $description,
             dtStart: $bid->tender_deadline,
-            uid: "bid-{$bid->id}@secp-monitor",
+            uid: "bid-{$bid->id}@radardelicitaciones",
         );
 
         $filename = "cierre-{$bid->process_code}.ics";
@@ -52,7 +52,7 @@ class CalendarController extends Controller
             summary: $summary,
             description: $description,
             dtStart: $offer->fecha_limite,
-            uid: "offer-{$offer->id}@secp-monitor",
+            uid: "offer-{$offer->id}@radardelicitaciones",
         );
 
         $filename = "oferta-{$offer->proceso_codigo}.ics";

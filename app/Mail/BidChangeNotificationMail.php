@@ -21,7 +21,7 @@ class BidChangeNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "[SECP] Cambio detectado: {$this->bid->title}",
+            subject: "Cambio detectado: {$this->bid->title}",
         );
     }
 

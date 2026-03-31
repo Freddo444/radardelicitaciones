@@ -18,7 +18,7 @@ class DigestNotificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: "[SECP] Resumen — {$this->bids->count()} nueva(s) convocatoria(s)",
+            subject: "Resumen — {$this->bids->count()} nueva(s) convocatoria(s)",
         );
     }
 

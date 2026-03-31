@@ -54,7 +54,6 @@ class DashboardController extends Controller
 
         // ── Poll status ───────────────────────────────────────────────
         $lastPolledAt = Setting::get('last_polled_at');
-        $pollIntervalMins = (int) (Setting::get('poll_interval_minutes') ?? 60);
 
         // ── Bid feed (company-scoped, respects settings filters) ─────
         $bidQuery = Bid::forCompany($company->id)->filtered($company->id);
@@ -74,7 +73,7 @@ class DashboardController extends Controller
 
         return view('dashboard.index', compact(
             'expiryAlerts', 'activeOffers', 'upcomingEvents', 'vaultStats',
-            'lastPolledAt', 'pollIntervalMins',
+            'lastPolledAt',
             'bidStats', 'recentBids', 'bids', 'showAll'
         ));
     }

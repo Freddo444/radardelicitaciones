@@ -198,7 +198,7 @@
                             </span>
                             @endif
                             <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
-                               class="text-xs text-blue-600 hover:underline">Ver en SECP →</a>
+                               class="text-xs text-blue-600 hover:underline">Ver en DGCP →</a>
                         </div>
                     </li>
                     @endforeach
@@ -235,7 +235,7 @@
                         <dt class="text-xs text-gray-500">Próximo sondeo</dt>
                         <dd class="mt-0.5 font-medium text-gray-900">
                             @if($lastPolledAt)
-                                @php $next = \Carbon\Carbon::parse($lastPolledAt)->addMinutes($pollIntervalMins); @endphp
+                                @php $next = \Carbon\Carbon::parse($lastPolledAt)->addHour(); @endphp
                                 {{ $next->format('d/m/Y H:i') }}
                                 @if($next->isFuture())
                                 <span class="text-xs text-gray-400 font-normal">(en {{ $next->diffForHumans(null, true) }})</span>
@@ -246,10 +246,6 @@
                                 <span class="text-gray-400">—</span>
                             @endif
                         </dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs text-gray-500">Intervalo</dt>
-                        <dd class="mt-0.5 font-medium text-gray-900">{{ $pollIntervalMins }} minutos</dd>
                     </div>
                     @if($bidStats['unnotified'] > 0)
                     <div>

@@ -21,7 +21,7 @@ Se detectaron cambios en una convocatoria que usted está vigilando.
 @endforeach
 
 <x-mail::button :url="$bid->secp_url ?? '#'" color="primary">
-Ver en Portal SECP
+Ver en DGCP
 </x-mail::button>
 
 ---

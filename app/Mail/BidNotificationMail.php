@@ -20,7 +20,7 @@ class BidNotificationMail extends Mailable
         $buyer = $this->bid->buyer_name ?? 'N/D';
 
         return new Envelope(
-            subject: "[SECP] {$this->bid->title} — {$buyer}",
+            subject: "Nueva convocatoria: {$this->bid->title} — {$buyer}",
         );
     }
 

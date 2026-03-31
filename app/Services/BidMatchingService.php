@@ -130,35 +130,45 @@ class BidMatchingService
      */
     public function sondear(int $companyId): int
     {
-        $companyRubroCodes = Rubro::withoutGlobalScopes()
+        $companyRubros = Rubro::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('active', true)
-            ->pluck('name', 'code') // code => name
-            ->all();
+            ->get()
+            ->keyBy('code');
 
-        if (empty($companyRubroCodes)) {
+        if ($companyRubros->isEmpty()) {
             return 0;
         }
+
+        $codes = $companyRubros->keys()->all();
 
         // Recent bids not yet linked to this company
         $bids = Bid::where('published_at', '>=', now()->subDays(90))
             ->whereDoesntHave('companies', fn ($q) => $q->where('companies.id', $companyId))
-            ->whereNotNull('matched_rubros')
+            ->whereNotNull('cached_articles')
             ->get();
 
         $matched = 0;
 
         foreach ($bids as $bid) {
-            $bidRubroCodes = collect($bid->matched_rubros)->pluck('code')->all();
-            $overlap = array_intersect_key($companyRubroCodes, array_flip($bidRubroCodes));
+            $articles = $bid->cached_articles ?? [];
+            $bidCodes = collect($articles)->pluck('codigoSubClaseUnspsc')
+                ->merge(collect($articles)->pluck('codigoClaseUnspsc'))
+                ->merge(collect($articles)->pluck('codigoFamiliaUnspsc'))
+                ->filter()
+                ->unique()
+                ->all();
+
+            $overlap = array_intersect($codes, $bidCodes);
 
             if (empty($overlap)) {
                 continue;
             }
 
             $matchedRubros = [];
-            foreach ($overlap as $code => $name) {
-                $matchedRubros[] = ['code' => $code, 'name' => $name];
+            foreach ($overlap as $code) {
+                $rubro = $companyRubros[$code];
+                $matchedRubros[] = ['code' => $code, 'name' => $rubro->name];
             }
 
             CompanyBid::create([
