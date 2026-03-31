@@ -21,7 +21,7 @@ class PayPalSetupCommand extends Command
         }
 
         $base = $this->apiBase();
-        $this->info("Using PayPal ".($this->isSandbox() ? 'SANDBOX' : 'LIVE'));
+        $this->info('Using PayPal '.($this->isSandbox() ? 'SANDBOX' : 'LIVE'));
 
         // 1. Create product
         $this->info('Creating product...');
