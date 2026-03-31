@@ -49,3 +49,5 @@ Schedule::command('secp:sync-institutions')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-institutions.log'));
+
+Schedule::command('telescope:prune --hours=72')->daily();

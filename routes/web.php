@@ -32,6 +32,7 @@ use App\Http\Controllers\ProyectosController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\RubrosController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SupportController;
 use App\Http\Controllers\TableroController;
 use Illuminate\Support\Facades\Route;
 
@@ -272,4 +273,7 @@ Route::middleware(['auth', 'tenant', 'subscription.active'])->group(function () 
     Route::post('/usuarios/invitar', [CompanyUsersController::class, 'invite'])->name('company-users.invite');
     Route::delete('/usuarios/{user}', [CompanyUsersController::class, 'removeUser'])->name('company-users.remove');
     Route::delete('/invitaciones/{invitation}', [CompanyUsersController::class, 'cancelInvitation'])->name('company-users.cancel-invitation');
+
+    // Support
+    Route::post('/soporte', [SupportController::class, 'store'])->name('support.store');
 });

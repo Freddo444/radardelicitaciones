@@ -266,6 +266,47 @@
                         <span class="sidebar-label">Configuración</span>
                     </a>
                 </li>
+                <li x-data="{ open: false }">
+                    <button @click="open = true" title="Reportar problema"
+                            class="sidebar-link group flex w-full gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-blue-200 hover:bg-blue-900 hover:text-white">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                             class="size-6 shrink-0 text-blue-200 group-hover:text-white">
+                            <path d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="sidebar-label">Reportar problema</span>
+                    </button>
+
+                    {{-- Support modal --}}
+                    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="open = false" @keydown.escape.window="open = false">
+                        <div class="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl" @click.stop>
+                            <h3 class="text-lg font-semibold text-gray-900">Reportar problema</h3>
+                            <p class="mt-1 text-sm text-gray-500">Describe el problema y te contactaremos lo antes posible.</p>
+
+                            <form method="POST" action="{{ route('support.store') }}" enctype="multipart/form-data" class="mt-4 space-y-4">
+                                @csrf
+                                <div>
+                                    <label for="support_subject" class="block text-sm font-medium text-gray-700">Asunto</label>
+                                    <input id="support_subject" type="text" name="subject" required
+                                           class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"/>
+                                </div>
+                                <div>
+                                    <label for="support_body" class="block text-sm font-medium text-gray-700">Descripción</label>
+                                    <textarea id="support_body" name="body" rows="4" required
+                                              class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"></textarea>
+                                </div>
+                                <div>
+                                    <label for="support_screenshot" class="block text-sm font-medium text-gray-700">Captura de pantalla (opcional)</label>
+                                    <input id="support_screenshot" type="file" name="screenshot" accept="image/*"
+                                           class="mt-1 block w-full text-sm text-gray-500 file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"/>
+                                </div>
+                                <div class="flex justify-end gap-3">
+                                    <button type="button" @click="open = false" class="rounded-md px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Cancelar</button>
+                                    <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">Enviar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </li>
             </ul>
         </li>
 
