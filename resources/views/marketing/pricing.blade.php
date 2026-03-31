@@ -115,7 +115,7 @@
 </section>
 
 {{-- ═══ FAQ ═══ --}}
-<section class="border-t bg-slate-50/50 py-24 sm:py-32">
+<section id="faq" class="border-t bg-slate-50/50 py-24 sm:py-32">
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h2 class="font-display text-center text-2xl font-bold text-gray-900 sm:text-3xl" data-animate>Preguntas frecuentes</h2>
 

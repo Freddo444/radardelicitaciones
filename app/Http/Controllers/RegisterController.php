@@ -185,6 +185,8 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
+        $user->sendEmailVerificationNotification();
+
         return redirect()->route('company-setup.show')
             ->with('success', '¡Pago confirmado y cuenta creada! Configura tu primera empresa.');
     }

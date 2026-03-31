@@ -47,6 +47,10 @@ return [
         'sandbox' => env('PAYPAL_SANDBOX', true),
     ],
 
+    'whatsapp' => [
+        'number' => env('WHATSAPP_NUMBER', ''),
+    ],
+
     'azul' => [
         'merchant_id' => env('AZUL_MERCHANT_ID'),
         'auth_key' => env('AZUL_AUTH_KEY'),

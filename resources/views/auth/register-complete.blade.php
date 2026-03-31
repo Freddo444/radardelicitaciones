@@ -56,8 +56,9 @@
 
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                <input id="password" type="password" name="password" required autocomplete="new-password"
+                <input id="password" type="password" name="password" required autocomplete="new-password" minlength="8"
                        class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
+                <p class="mt-1 text-xs text-gray-500">Mínimo 8 caracteres</p>
             </div>
 
             <div>

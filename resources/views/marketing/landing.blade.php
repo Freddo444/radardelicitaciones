@@ -280,6 +280,112 @@
     </div>
 </section>
 
+{{-- ═══ FAQ ═══ --}}
+<section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+        <h2 class="font-display text-center text-2xl font-bold text-gray-900 sm:text-3xl" data-animate>Preguntas frecuentes</h2>
+
+        <div class="mt-12 divide-y divide-gray-200" x-data="{ open: null }">
+            @php
+            $faqs = [
+                ['¿Cómo saben qué licitaciones me interesan?', 'Usted selecciona los códigos UNSPSC (rubros) de los bienes y servicios que ofrece su empresa. El sistema cruza automáticamente cada nueva licitación con sus rubros y le notifica cuando hay coincidencia.'],
+                ['¿Es seguro subir mis documentos?', 'Sí. Sus documentos se almacenan en servidores seguros con conexión encriptada. Cada empresa tiene un espacio aislado — ningún otro usuario puede acceder a sus datos.'],
+                ['¿Puedo cancelar en cualquier momento?', 'Sí, sin penalidades. Su acceso continúa hasta el final del período pagado. Puede cancelar desde su panel de facturación.'],
+                ['¿Qué incluye el análisis de pliegos con IA?', 'La inteligencia artificial lee el documento del pliego completo y genera un resumen con requisitos, montos, plazos, documentos solicitados y condiciones especiales. Le ahorra horas de lectura.'],
+            ];
+            @endphp
+
+            @foreach($faqs as $i => [$q, $a])
+            <div data-animate>
+                <button @click="open === {{ $i }} ? open = null : open = {{ $i }}"
+                        class="flex w-full items-center justify-between py-5 text-left text-sm font-semibold text-gray-900">
+                    {{ $q }}
+                    <svg class="size-5 shrink-0 text-gray-400 transition-transform duration-200" :class="open === {{ $i }} && 'rotate-45'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                    </svg>
+                </button>
+                <div x-show="open === {{ $i }}" x-cloak x-collapse>
+                    <p class="pb-5 text-sm leading-6 text-gray-600">{{ $a }}</p>
+                </div>
+            </div>
+            @endforeach
+
+            <div class="pt-6 text-center">
+                <a href="/precios#faq" class="text-sm font-medium text-emerald-600 hover:text-emerald-500">Ver más preguntas frecuentes &rarr;</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- ═══ CONTACT ═══ --}}
+<section id="contacto" class="py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl" data-animate>
+            <div class="text-center">
+                <p class="font-display text-sm font-semibold text-emerald-600">Contáctenos</p>
+                <h2 class="font-display mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    ¿Tiene preguntas? Escríbanos
+                </h2>
+                <p class="mt-4 text-lg text-gray-600">
+                    Responderemos a la brevedad posible.
+                </p>
+            </div>
+
+            @if(session('contact_sent'))
+            <div class="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+                <svg class="mx-auto size-10 text-emerald-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                <p class="mt-3 font-display text-lg font-semibold text-emerald-800">Mensaje enviado</p>
+                <p class="mt-1 text-sm text-emerald-700">Gracias por contactarnos. Le responderemos pronto.</p>
+            </div>
+            @endif
+
+            <form method="POST" action="{{ route('contact.store') }}" class="mt-10 space-y-6">
+                @csrf
+                {{-- Honeypot --}}
+                <div class="hidden" aria-hidden="true">
+                    <input type="text" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="contact-name" class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" name="name" id="contact-name" required
+                               value="{{ old('name') }}"
+                               class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 shadow-sm transition focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                               placeholder="Su nombre">
+                        @error('name')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                    <div>
+                        <label for="contact-email" class="block text-sm font-medium text-gray-700">Correo electrónico</label>
+                        <input type="email" name="email" id="contact-email" required
+                               value="{{ old('email') }}"
+                               class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 shadow-sm transition focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                               placeholder="correo@ejemplo.com">
+                        @error('email')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+                </div>
+                <div>
+                    <label for="contact-message" class="block text-sm font-medium text-gray-700">Mensaje</label>
+                    <textarea name="message" id="contact-message" rows="5" required
+                              class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 shadow-sm transition focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm"
+                              placeholder="¿En qué podemos ayudarle?">{{ old('message') }}</textarea>
+                    @error('message')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                </div>
+                <div class="text-center">
+                    <button type="submit"
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40">
+                        <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                        </svg>
+                        Enviar mensaje
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
 {{-- ═══ CTA ═══ --}}
 <section class="relative overflow-hidden bg-blue-800 py-24 sm:py-32">
     <div class="absolute inset-0 opacity-[0.03]"

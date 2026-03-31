@@ -39,6 +39,10 @@ use Illuminate\Support\Facades\Route;
 // ── Marketing (public) ───────────────────────────────────────────────
 Route::get('/', [MarketingController::class, 'landing'])->name('landing');
 Route::get('/precios', [MarketingController::class, 'pricing'])->name('pricing');
+Route::get('/terminos', [MarketingController::class, 'terms'])->name('terms');
+Route::get('/privacidad', [MarketingController::class, 'privacy'])->name('privacy');
+Route::post('/contacto', [SupportController::class, 'contact'])->name('contact.store')->middleware('throttle:5,1');
+Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
 
 // ── Auth (guest only) ────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -56,6 +60,23 @@ Route::middleware('guest')->group(function () {
     Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->name('password.update');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// ── Email verification ────────���─────────────────────────────────────
+Route::middleware('auth')->group(function () {
+    Route::get('/email/verificar', function () {
+        return view('auth.verify-email');
+    })->name('verification.notice');
+
+    Route::get('/email/verificar/{id}/{hash}', function (\Illuminate\Foundation\Auth\EmailVerificationRequest $request) {
+        $request->fulfill();
+        return redirect()->route('dashboard')->with('success', 'Correo verificado.');
+    })->middleware('signed')->name('verification.verify');
+
+    Route::post('/email/reenviar', function (\Illuminate\Http\Request $request) {
+        $request->user()->sendEmailVerificationNotification();
+        return back()->with('success', 'Enlace de verificación reenviado.');
+    })->middleware('throttle:6,1')->name('verification.send');
+});
 
 // ── Invitations (no auth required — works for guests and logged-in) ──
 Route::get('/invitacion/{token}', [InvitationController::class, 'show'])->name('invitation.show');
@@ -90,7 +111,7 @@ Route::middleware('auth')->group(function () {
 });
 
 // ── All tenant-scoped routes (auth + tenant + active subscription) ───
-Route::middleware(['auth', 'tenant', 'subscription.active'])->group(function () {
+Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

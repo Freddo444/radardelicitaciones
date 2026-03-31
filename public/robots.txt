@@ -1,2 +1,11 @@
 User-agent: *
-Disallow:
+Disallow: /dashboard
+Disallow: /configuracion
+Disallow: /convocatorias
+Disallow: /empresa
+Disallow: /ofertas
+Disallow: /documentos
+Disallow: /facturacion
+Disallow: /admin
+
+Sitemap: https://radardelicitaciones.com/sitemap.xml
