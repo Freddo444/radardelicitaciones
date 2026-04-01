@@ -8,14 +8,14 @@
 @section('content')
 
 {{-- ═══ HERO ═══ --}}
-<section class="relative min-h-[90vh] flex items-center overflow-hidden bg-slate-950">
+<section class="relative min-h-[80vh] flex items-center overflow-hidden bg-slate-950 lg:min-h-[90vh]">
     {{-- Background grid dots --}}
     <div class="absolute inset-0 opacity-[0.03]"
          style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 32px 32px;"></div>
     {{-- Gradient overlay --}}
     <div class="absolute inset-0 bg-gradient-to-br from-blue-950/80 via-slate-950 to-slate-950"></div>
 
-    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-32 lg:py-40">
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
         <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
             {{-- Left: Copy --}}
             <div>
@@ -36,13 +36,13 @@
                     Monitoreo automático del portal DGCP, análisis de pliegos con inteligencia artificial y herramientas completas para preparar ofertas ganadoras.
                 </p>
 
-                <div class="mt-10 flex flex-wrap gap-4">
+                <div class="mt-10 flex flex-col gap-4 sm:flex-row">
                     <a href="/registro"
-                       class="rounded-lg bg-emerald-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40">
+                       class="w-full rounded-lg bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 sm:w-auto">
                         Comenzar ahora
                     </a>
                     <a href="/precios"
-                       class="rounded-lg border border-slate-600 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white">
+                       class="w-full rounded-lg border border-slate-600 px-6 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white sm:w-auto">
                         Ver precios
                     </a>
                 </div>
@@ -52,7 +52,29 @@
                 </p>
             </div>
 
-            {{-- Right: Radar visualization --}}
+            {{-- Mobile: Mini radar --}}
+            <div class="mt-12 flex justify-center lg:hidden" aria-hidden="true">
+                <div class="relative h-[200px] w-[200px]">
+                    <div class="absolute inset-0 rounded-full border border-white/[0.06]"></div>
+                    <div class="absolute inset-8 rounded-full border border-white/[0.08]"></div>
+                    <div class="absolute inset-16 rounded-full border border-white/[0.10]"></div>
+                    <div class="absolute inset-0 flex items-center"><div class="w-full h-px bg-white/[0.04]"></div></div>
+                    <div class="absolute inset-0 flex justify-center"><div class="h-full w-px bg-white/[0.04]"></div></div>
+                    <div class="absolute inset-0 rounded-full overflow-hidden">
+                        <div class="radar-sweep absolute inset-0 origin-center">
+                            <div class="absolute top-0 left-1/2 w-1/2 h-1/2 origin-bottom-left"
+                                 style="background: conic-gradient(from -90deg at 0% 100%, transparent 0deg, rgba(16,185,129,0.25) 30deg, transparent 55deg)"></div>
+                        </div>
+                    </div>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="relative h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 live-dot"></div>
+                    </div>
+                    <div class="absolute top-[25%] left-[60%] h-1.5 w-1.5 rounded-full bg-emerald-400/60"></div>
+                    <div class="absolute top-[55%] left-[30%] h-1.5 w-1.5 rounded-full bg-emerald-400/40"></div>
+                </div>
+            </div>
+
+            {{-- Desktop: Radar visualization --}}
             <div class="relative mx-auto hidden lg:block" aria-hidden="true">
                 <div class="relative h-[420px] w-[420px]">
                     {{-- Concentric circles --}}
@@ -123,18 +145,18 @@
 {{-- ═══ STATS BAR ═══ --}}
 <section class="relative z-10 -mt-8">
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-        <div data-animate class="grid grid-cols-1 gap-px overflow-hidden rounded-2xl bg-gray-200 shadow-lg sm:grid-cols-3">
-            <div class="bg-white px-6 py-8 text-center">
-                <p class="font-display text-3xl font-bold text-gray-900">500+</p>
-                <p class="mt-1 text-sm text-gray-500">Licitaciones nuevas cada mes</p>
+        <div data-animate class="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-gray-200 shadow-lg">
+            <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">500+</p>
+                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Licitaciones nuevas cada mes</p>
             </div>
-            <div class="bg-white px-6 py-8 text-center">
-                <p class="font-display text-3xl font-bold text-gray-900">200+</p>
-                <p class="mt-1 text-sm text-gray-500">Instituciones monitoreadas</p>
+            <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">200+</p>
+                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Instituciones monitoreadas</p>
             </div>
-            <div class="bg-white px-6 py-8 text-center">
-                <p class="font-display text-3xl font-bold text-gray-900">1,000+</p>
-                <p class="mt-1 text-sm text-gray-500">Rubros UNSPSC disponibles</p>
+            <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">1,000+</p>
+                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Rubros UNSPSC disponibles</p>
             </div>
         </div>
     </div>
@@ -156,7 +178,7 @@
         <div class="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
             {{-- Feature 1 --}}
             <div data-animate data-delay="1"
-                 class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200">
+                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
                         <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -175,7 +197,7 @@
 
             {{-- Feature 2 --}}
             <div data-animate data-delay="2"
-                 class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200">
+                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
                         <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -191,7 +213,7 @@
 
             {{-- Feature 3 --}}
             <div data-animate data-delay="3"
-                 class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200">
+                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
                         <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -207,7 +229,7 @@
 
             {{-- Feature 4 --}}
             <div data-animate data-delay="4"
-                 class="group relative rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200">
+                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
                 <div class="flex items-center gap-3">
                     <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
                         <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -274,7 +296,7 @@
         </div>
         <div data-animate class="mx-auto mt-12 flex max-w-3xl flex-wrap justify-center gap-3">
             @foreach(['Construcción y obras civiles', 'Ingeniería y consultoría', 'Suministros y materiales', 'Tecnología y servicios', 'Alimentos y catering', 'Mobiliario y equipos', 'Servicios profesionales', 'Salud y farmacéutica'] as $industry)
-            <span class="rounded-full border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm">{{ $industry }}</span>
+            <span class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm sm:px-5 sm:py-2.5 sm:text-sm">{{ $industry }}</span>
             @endforeach
         </div>
     </div>
@@ -372,9 +394,9 @@
                               placeholder="¿En qué podemos ayudarle?">{{ old('message') }}</textarea>
                     @error('message')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                 </div>
-                <div class="text-center">
+                <div>
                     <button type="submit"
-                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40">
+                            class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 sm:w-auto">
                         <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
                         </svg>
@@ -397,13 +419,13 @@
         <p class="mt-4 text-lg text-blue-100">
             Regístrese y configure su empresa en minutos. Sin compromisos de permanencia.
         </p>
-        <div class="mt-10 flex flex-wrap justify-center gap-4">
+        <div class="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a href="/registro"
-               class="rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40">
+               class="w-full rounded-lg bg-emerald-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 sm:w-auto">
                 Crear cuenta
             </a>
             <a href="/precios"
-               class="rounded-lg border border-blue-400/30 px-8 py-3.5 text-sm font-semibold text-white transition hover:border-blue-300/50 hover:bg-blue-700/50">
+               class="w-full rounded-lg border border-blue-400/30 px-8 py-3.5 text-center text-sm font-semibold text-white transition hover:border-blue-300/50 hover:bg-blue-700/50 sm:w-auto">
                 Ver precios
             </a>
         </div>

@@ -22,7 +22,7 @@
 
         {{-- Pricing calculator --}}
         <div data-animate class="mx-auto mt-16 max-w-lg" x-data="{ companies: 1, users: 2 }">
-            <div class="rounded-3xl bg-white p-8 shadow-xl ring-1 ring-gray-200 sm:p-10">
+            <div class="rounded-3xl bg-white p-6 shadow-xl ring-1 ring-gray-200 sm:p-8 md:p-10">
                 {{-- Badge --}}
                 <div class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                     Plan Profesional
@@ -30,7 +30,7 @@
 
                 {{-- Price display --}}
                 <div class="mt-6 flex items-baseline gap-2">
-                    <span class="font-display text-5xl font-extrabold text-gray-900">$<span x-text="45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10"></span></span>
+                    <span class="font-display text-4xl font-extrabold text-gray-900 sm:text-5xl">$<span x-text="45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10"></span></span>
                     <span class="text-lg text-gray-500">/mes</span>
                 </div>
 
@@ -96,7 +96,7 @@
         {{-- Payment methods --}}
         <div data-animate class="mx-auto mt-12 max-w-lg text-center">
             <p class="text-sm font-medium text-gray-700">Métodos de pago aceptados</p>
-            <div class="mt-3 flex items-center justify-center gap-6 text-sm text-gray-500">
+            <div class="mt-3 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-xs text-gray-500 sm:text-sm">
                 <span class="flex items-center gap-1.5">
                     <svg class="size-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.656h6.21c2.062 0 3.486.462 4.232 1.372.348.425.573.886.676 1.39.109.533.11 1.168.003 1.944l-.009.058v.515l.407.228c.345.182.619.39.826.627.347.396.57.893.665 1.477.098.6.065 1.298-.098 2.073-.188.894-.495 1.671-.914 2.31a4.702 4.702 0 0 1-1.417 1.473c-.544.363-1.19.635-1.92.807-.71.168-1.516.254-2.393.254H11.09a.956.956 0 0 0-.944.805l-.032.182-1.514 9.479Z"/></svg>
                     PayPal
@@ -161,7 +161,7 @@
             Configure su radar en minutos y empiece a recibir licitaciones que coinciden con su perfil.
         </p>
         <a href="/registro"
-           class="mt-10 inline-block rounded-lg bg-emerald-500 px-8 py-3.5 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400">
+           class="mt-10 block w-full rounded-lg bg-emerald-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 sm:inline-block sm:w-auto">
             Crear cuenta
         </a>
     </div>

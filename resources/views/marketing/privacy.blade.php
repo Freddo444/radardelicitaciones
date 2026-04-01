@@ -7,12 +7,12 @@
 
 @section('content')
 
-<section class="pt-32 pb-24 sm:pt-40 sm:pb-32">
+<section class="pt-28 pb-20 sm:pt-40 sm:pb-32">
     <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <h1 class="font-display text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Política de privacidad</h1>
         <p class="mt-2 text-sm text-gray-500">Última actualización: 31 de marzo de 2026</p>
 
-        <div class="prose prose-gray mt-10 max-w-none text-sm leading-7">
+        <div class="prose prose-gray mt-10 max-w-none text-sm leading-6 sm:leading-7">
 
             <h2 class="font-display text-lg font-semibold text-gray-900">1. Información que recopilamos</h2>
             <p>Recopilamos la siguiente información cuando usted utiliza Radar de Licitaciones:</p>
