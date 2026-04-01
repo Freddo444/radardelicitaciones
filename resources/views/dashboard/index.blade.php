@@ -2,7 +2,7 @@
 @section('title', 'Dashboard')
 
 @section('content')
-<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
 
     {{-- ── Expiry alerts banner ──────────────────────────────────────── --}}
     @if($expiryAlerts->isNotEmpty())
@@ -12,11 +12,11 @@
             $expired  = $doc->expires_at->isPast();
             $daysLeft = (int) now()->diffInDays($doc->expires_at, false);
         @endphp
-        <div class="flex items-center gap-x-3 rounded-lg px-4 py-3 text-sm {{ $expired ? 'bg-red-50 ring-1 ring-inset ring-red-200' : 'bg-amber-50 ring-1 ring-inset ring-amber-200' }}">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-4 py-3 text-sm {{ $expired ? 'bg-red-50 ring-1 ring-inset ring-red-200' : 'bg-amber-50 ring-1 ring-inset ring-amber-200' }}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0 {{ $expired ? 'text-red-500' : 'text-amber-500' }}">
                 <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/>
             </svg>
-            <span class="{{ $expired ? 'text-red-800' : 'text-amber-800' }}">
+            <span class="flex-1 min-w-0 {{ $expired ? 'text-red-800' : 'text-amber-800' }}">
                 <strong>{{ $doc->name }}</strong>
                 @if($expired)
                     venció hace {{ abs($daysLeft) }} {{ abs($daysLeft) === 1 ? 'día' : 'días' }}
@@ -25,8 +25,8 @@
                 @endif
                 — {{ \App\Models\VaultDocument::$categories[$doc->category] ?? $doc->category }}
             </span>
-            <a href="{{ route('documentos.index') }}" class="ml-auto shrink-0 text-xs font-medium underline {{ $expired ? 'text-red-700' : 'text-amber-700' }}">
-                Ir a Documentos →
+            <a href="{{ route('documentos.index') }}" class="shrink-0 text-xs font-medium underline {{ $expired ? 'text-red-700' : 'text-amber-700' }}">
+                Documentos →
             </a>
         </div>
         @endforeach
@@ -53,7 +53,7 @@
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             @foreach($activeOffers as $oferta)
             @php $dias = $oferta->diasRestantes(); @endphp
-            <div class="relative flex flex-col rounded-xl border border-gray-200 bg-white p-5 shadow-xs hover:shadow-sm transition-shadow">
+            <div class="relative flex flex-col rounded-xl border border-gray-200 bg-white p-4 shadow-xs hover:shadow-sm transition-shadow sm:p-5">
                 <div class="flex items-start justify-between gap-x-2 mb-3">
                     <span class="rounded-md px-2 py-0.5 text-xs font-medium {{ \App\Models\Offer::$estadoColors[$oferta->estado] ?? 'bg-gray-100 text-gray-700' }}">
                         {{ \App\Models\Offer::$estados[$oferta->estado] ?? $oferta->estado }}
@@ -106,8 +106,8 @@
                         'custom' => 'Evento',
                     ];
                 @endphp
-                <li class="flex items-center gap-x-4 px-5 py-3">
-                    <div class="flex flex-col items-center shrink-0 w-12">
+                <li class="flex items-center gap-x-3 px-4 py-3 sm:gap-x-4 sm:px-5">
+                    <div class="flex flex-col items-center shrink-0 w-10 sm:w-12">
                         <span class="text-xs font-medium {{ $urgentClass }}">{{ $event->event_date->format('d') }}</span>
                         <span class="text-xs text-gray-400 uppercase">{{ $event->event_date->translatedFormat('M') }}</span>
                     </div>
@@ -115,13 +115,15 @@
                         <p class="text-sm font-medium text-gray-900">{{ $typeLabels[$event->event_type] ?? $event->event_type }}</p>
                         <p class="text-xs text-gray-500 truncate">{{ $event->offer->proceso_nombre }}</p>
                     </div>
-                    <span class="shrink-0 text-xs font-medium {{ $urgentClass }}">
-                        @if($daysUntil === 0) Hoy
-                        @elseif($daysUntil === 1) Mañana
-                        @else {{ $daysUntil }} días
-                        @endif
-                    </span>
-                    <a href="{{ route('ofertas.show', $event->offer_id) }}?tab=cronograma" class="shrink-0 text-xs text-blue-600 hover:underline">Ver →</a>
+                    <div class="shrink-0 flex flex-col items-end gap-y-0.5 sm:flex-row sm:items-center sm:gap-x-3">
+                        <span class="text-xs font-medium {{ $urgentClass }}">
+                            @if($daysUntil === 0) Hoy
+                            @elseif($daysUntil === 1) Mañana
+                            @else {{ $daysUntil }}d
+                            @endif
+                        </span>
+                        <a href="{{ route('ofertas.show', $event->offer_id) }}?tab=cronograma" class="text-xs text-blue-600 hover:underline">Ver →</a>
+                    </div>
                 </li>
                 @endforeach
             </ul>
@@ -134,7 +136,7 @@
 
         {{-- Convocatorias recientes (2/3 width) --}}
         <div class="lg:col-span-2">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex flex-wrap items-center justify-between gap-y-1 mb-4">
                 <h2 class="text-sm font-semibold text-gray-900">Convocatorias recientes</h2>
                 <div class="flex items-center gap-x-3 text-xs text-gray-500">
                     <span>{{ number_format($bidStats['total']) }} total · {{ number_format($bidStats['this_week']) }} esta semana</span>
@@ -168,34 +170,48 @@
                             default                            => 'bg-gray-100 text-gray-600 ring-gray-500/10',
                         };
                     @endphp
-                    <li class="flex items-start justify-between gap-x-4 px-6 py-4">
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-start gap-x-2">
-                                <p class="text-sm font-semibold text-gray-900 line-clamp-1">{{ $bid->title }}</p>
-                                <span class="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $statusStyle }}">
-                                    {{ $bid->status ?? 'N/D' }}
-                                </span>
+                    <li class="px-4 py-4 sm:px-6">
+                        <div class="flex items-start justify-between gap-x-3">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-start gap-x-2">
+                                    <p class="text-sm font-semibold text-gray-900 line-clamp-2 sm:line-clamp-1">{{ $bid->title }}</p>
+                                    <span class="mt-0.5 shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $statusStyle }}">
+                                        {{ $bid->status ?? 'N/D' }}
+                                    </span>
+                                </div>
+                                <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500">
+                                    <span class="truncate max-w-[180px] sm:max-w-[200px]">{{ $bid->buyer_name }}</span>
+                                    @if($bid->tender_deadline)
+                                    <span class="text-gray-400">·</span>
+                                    <span>Cierre {{ $bid->tender_deadline->format('d/m/Y') }}</span>
+                                    @endif
+                                    @if(!empty($bid->matched_rubros))
+                                    <span class="text-gray-400">·</span>
+                                    @foreach($bid->matched_rubros as $rubro)
+                                    @php $code = is_array($rubro) ? ($rubro['code'] ?? $rubro) : $rubro; @endphp
+                                    <span class="font-mono text-blue-600">{{ $code }}</span>
+                                    @endforeach
+                                    @endif
+                                </div>
                             </div>
-                            <div class="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
-                                <span class="truncate max-w-[200px]">{{ $bid->buyer_name }}</span>
-                                @if($bid->tender_deadline)
-                                <span class="text-gray-400">·</span>
-                                <span>Cierre {{ $bid->tender_deadline->format('d/m/Y') }}</span>
+                            <div class="shrink-0 hidden sm:flex flex-col items-end gap-y-1">
+                                @if($bid->amount_estimated && $bid->amount_estimated > 0)
+                                <span class="text-xs font-semibold text-gray-900">
+                                    {{ $bid->currency === 'USD' ? 'US$' : 'RD$' }}{{ number_format($bid->amount_estimated, 0, '.', ',') }}
+                                </span>
                                 @endif
-                                @if(!empty($bid->matched_rubros))
-                                <span class="text-gray-400">·</span>
-                                @foreach($bid->matched_rubros as $rubro)
-                                @php $code = is_array($rubro) ? ($rubro['code'] ?? $rubro) : $rubro; @endphp
-                                <span class="font-mono text-blue-600">{{ $code }}</span>
-                                @endforeach
-                                @endif
+                                <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
+                                   class="text-xs text-blue-600 hover:underline">DGCP →</a>
                             </div>
                         </div>
-                        <div class="shrink-0 flex flex-col items-end gap-y-1">
+                        {{-- Mobile-only: amount + link row --}}
+                        <div class="mt-2 flex items-center justify-between sm:hidden">
                             @if($bid->amount_estimated && $bid->amount_estimated > 0)
                             <span class="text-xs font-semibold text-gray-900">
                                 {{ $bid->currency === 'USD' ? 'US$' : 'RD$' }}{{ number_format($bid->amount_estimated, 0, '.', ',') }}
                             </span>
+                            @else
+                            <span></span>
                             @endif
                             <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
                                class="text-xs text-blue-600 hover:underline">Ver en DGCP →</a>
@@ -216,7 +232,7 @@
         <div class="space-y-6">
 
             {{-- Sondeo status --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
                 <h2 class="text-sm font-semibold text-gray-900 mb-4">Estado del sondeo</h2>
 
                 <dl class="space-y-3 text-sm">
@@ -272,25 +288,25 @@
             </div>
 
             {{-- Bóveda summary --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-xs">
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
                 <h2 class="text-sm font-semibold text-gray-900 mb-4">Resumen de bóveda</h2>
-                <dl class="grid grid-cols-2 gap-3">
-                    <a href="{{ route('personal.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
+                <dl class="grid grid-cols-2 gap-2 sm:gap-3">
+                    <a href="{{ route('personal.index') }}" class="rounded-lg bg-gray-50 p-2.5 hover:bg-gray-100 transition-colors sm:p-3">
                         <dt class="text-xs text-gray-500">Personal activo</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['personnel'] }}</dd>
                         @if($vaultStats['personnel'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
-                    <a href="{{ route('proyectos.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
+                    <a href="{{ route('proyectos.index') }}" class="rounded-lg bg-gray-50 p-2.5 hover:bg-gray-100 transition-colors sm:p-3">
                         <dt class="text-xs text-gray-500">Proyectos</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['projects'] }}</dd>
                         @if($vaultStats['projects'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
-                    <a href="{{ route('documentos.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
+                    <a href="{{ route('documentos.index') }}" class="rounded-lg bg-gray-50 p-2.5 hover:bg-gray-100 transition-colors sm:p-3">
                         <dt class="text-xs text-gray-500">Documentos</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['documents'] }}</dd>
                         @if($vaultStats['documents'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif
                     </a>
-                    <a href="{{ route('financiero.index') }}" class="rounded-lg bg-gray-50 p-3 hover:bg-gray-100 transition-colors">
+                    <a href="{{ route('financiero.index') }}" class="rounded-lg bg-gray-50 p-2.5 hover:bg-gray-100 transition-colors sm:p-3">
                         <dt class="text-xs text-gray-500">Años fiscales</dt>
                         <dd class="mt-1 text-2xl font-semibold text-gray-900">{{ $vaultStats['financials'] }}</dd>
                         @if($vaultStats['financials'] === 0)<span class="text-xs text-blue-600">Agregar &rarr;</span>@endif

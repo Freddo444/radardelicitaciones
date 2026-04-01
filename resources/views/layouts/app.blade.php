@@ -102,7 +102,7 @@
                      x-transition:leave="transition ease-in duration-75"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="absolute right-0 z-50 mt-2 w-80 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
+                     class="fixed inset-x-4 top-16 z-50 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-80 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-gray-900/5">
 
                     <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                         <h3 class="text-sm font-semibold text-gray-900">Notificaciones</h3>
