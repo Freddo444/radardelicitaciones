@@ -81,6 +81,8 @@
             <a href="{{ route('register.show') }}" class="font-medium text-blue-600 hover:text-blue-500">Registrate</a>
         </p>
 
+        <a href="/" class="block text-center text-sm text-gray-400 hover:text-gray-600 transition-colors">&larr; Volver al sitio</a>
+
     </div>
 </div>
 
