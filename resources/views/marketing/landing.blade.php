@@ -37,18 +37,25 @@
                 </p>
 
                 <div class="mt-10 flex flex-col gap-4 sm:flex-row">
-                    <a href="/registro"
+                    <a href="{{ route('register.trial') }}"
                        class="w-full rounded-lg bg-emerald-500 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 sm:w-auto">
-                        Comenzar ahora
+                        Prueba gratis 7 días
                     </a>
+                    @if(config('services.calendly.url'))
+                    <a href="{{ config('services.calendly.url') }}" target="_blank" rel="noopener"
+                       class="w-full rounded-lg border border-slate-600 px-6 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white sm:w-auto">
+                        Agendar demo
+                    </a>
+                    @else
                     <a href="/precios"
                        class="w-full rounded-lg border border-slate-600 px-6 py-3 text-center text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white sm:w-auto">
                         Ver precios
                     </a>
+                    @endif
                 </div>
 
                 <p class="mt-8 text-xs text-slate-500">
-                    Cobertura del 100% de las licitaciones publicadas en Compras Dominicana
+                    Sin tarjeta de crédito. 2 análisis de pliegos con IA incluidos.
                 </p>
             </div>
 
@@ -147,16 +154,16 @@
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div data-animate class="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-gray-200 shadow-lg">
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">500+</p>
-                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Licitaciones nuevas cada mes</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['bids']) }}+</p>
+                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Licitaciones monitoreadas</p>
             </div>
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">200+</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['institutions']) }}+</p>
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Instituciones monitoreadas</p>
             </div>
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">1,000+</p>
-                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Rubros UNSPSC disponibles</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['parses']) }}+</p>
+                <p class="mt-1 text-xs text-gray-500 sm:text-sm">Documentos analizados con IA</p>
             </div>
         </div>
     </div>
@@ -246,6 +253,62 @@
     </div>
 </section>
 
+{{-- ═══ WHY RADAR ═══ --}}
+<section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div data-animate>
+                <p class="font-display text-sm font-semibold text-emerald-600">Por qué elegirnos</p>
+                <h2 class="font-display mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    La ventaja que su competencia no tiene
+                </h2>
+                <dl class="mt-8 space-y-5">
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">IA que lee pliegos por usted</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Suba el pliego y en segundos obtenga requisitos, montos, personal y documentos extraídos automáticamente.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">Espacio de trabajo completo</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Personal clave, equipos, proyectos, financieros y documentos legales — todo organizado y listo para componer ofertas.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">Formularios que se llenan solos</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Los formularios RPE y documentos estándar se completan con datos de su empresa. Menos errores, menos tiempo.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">De licitación a oferta, sin salir</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Monitoreo, análisis, preparación, tablero Kanban y ensamblaje final — todo en una sola plataforma.</dd>
+                        </div>
+                    </div>
+                </dl>
+            </div>
+            <div data-animate data-delay="2" class="relative">
+                <img src="/images/shots/ai-analysis.png" alt="Análisis de pliego con inteligencia artificial"
+                     class="rounded-2xl shadow-2xl ring-1 ring-gray-900/10" loading="lazy">
+            </div>
+        </div>
+    </div>
+</section>
+
 {{-- ═══ HOW IT WORKS ═══ --}}
 <section class="py-24 sm:py-32">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -279,6 +342,70 @@
                     <p class="mt-2 text-sm leading-6 text-gray-600">Le notificamos cada licitación que coincida. Analice el pliego con IA, prepare su oferta con nuestras herramientas y presente.</p>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+{{-- ═══ TESTIMONIALS ═══ --}}
+<section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-2xl text-center" data-animate>
+            <p class="font-display text-sm font-semibold text-emerald-600">Lo que dicen nuestros clientes</p>
+            <h2 class="font-display mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                Empresas que ya licitan con ventaja
+            </h2>
+        </div>
+
+        <div class="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
+            @php
+            $testimonials = [
+                [
+                    'quote' => 'El análisis de pliegos con IA nos ahorra horas de trabajo. En segundos sabemos si vale la pena participar en una licitación.',
+                    'name' => 'Fausto Coronado',
+                    'role' => 'Gerente',
+                    'company' => 'Negocios e Inversiones Kaiser S.R.L.',
+                    'initials' => 'FC',
+                ],
+                [
+                    'quote' => 'Antes se nos pasaban oportunidades por no revisar el portal a tiempo. Con Radar, no se nos escapa ninguna convocatoria de nuestros rubros.',
+                    'name' => 'Francisco Jimenez',
+                    'role' => 'Gerente',
+                    'company' => 'Constructora Maelo',
+                    'initials' => 'FJ',
+                ],
+                [
+                    'quote' => 'Los formularios pre-llenados eliminaron los errores que cometíamos al copiar datos. Ahora presentamos ofertas más rápido y con más confianza.',
+                    'name' => 'Jose Luis Rodriguez',
+                    'role' => 'Gerente',
+                    'company' => 'Inversiones Tuira S.R.L.',
+                    'initials' => 'JR',
+                ],
+                [
+                    'quote' => 'Tener todo centralizado — documentos, personal, equipos, proyectos — nos permite armar ofertas en días, no en semanas.',
+                    'name' => 'Jorge Rodriguez',
+                    'role' => 'Gerente de Ingeniería',
+                    'company' => 'Constructora AG SRL',
+                    'initials' => 'JR',
+                ],
+            ];
+            @endphp
+
+            @foreach($testimonials as $i => $t)
+            <div data-animate data-delay="{{ $i + 1 }}"
+                 class="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
+                <svg class="size-8 text-emerald-200" fill="currentColor" viewBox="0 0 32 32">
+                    <path d="M9.352 4C4.456 7.456 1 13.12 1 19.36c0 5.088 3.072 8.064 6.624 8.064 3.36 0 5.856-2.688 5.856-5.856 0-3.168-2.208-5.472-5.088-5.472-.576 0-1.344.096-1.536.192.48-3.264 3.552-7.104 6.624-9.024L9.352 4zm16.512 0c-4.8 3.456-8.256 9.12-8.256 15.36 0 5.088 3.072 8.064 6.624 8.064 3.264 0 5.856-2.688 5.856-5.856 0-3.168-2.304-5.472-5.184-5.472-.576 0-1.248.096-1.44.192.48-3.264 3.456-7.104 6.528-9.024L25.864 4z"/>
+                </svg>
+                <p class="mt-4 text-sm leading-6 text-gray-700">{{ $t['quote'] }}</p>
+                <div class="mt-6 flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-800 text-xs font-bold text-white">{{ $t['initials'] }}</div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">{{ $t['name'] }}</p>
+                        <p class="text-xs text-gray-500">{{ $t['role'] }} — {{ $t['company'] }}</p>
+                    </div>
+                </div>
+            </div>
+            @endforeach
         </div>
     </div>
 </section>
@@ -417,17 +544,24 @@
             Empiece a ganar más licitaciones hoy
         </h2>
         <p class="mt-4 text-lg text-blue-100">
-            Regístrese y configure su empresa en minutos. Sin compromisos de permanencia.
+            Pruebe gratis por 7 días. Sin tarjeta de crédito, sin compromisos.
         </p>
         <div class="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-            <a href="/registro"
+            <a href="{{ route('register.trial') }}"
                class="w-full rounded-lg bg-emerald-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 hover:shadow-emerald-500/40 sm:w-auto">
-                Crear cuenta
+                Prueba gratis 7 días
             </a>
+            @if(config('services.calendly.url'))
+            <a href="{{ config('services.calendly.url') }}" target="_blank" rel="noopener"
+               class="w-full rounded-lg border border-blue-400/30 px-8 py-3.5 text-center text-sm font-semibold text-white transition hover:border-blue-300/50 hover:bg-blue-700/50 sm:w-auto">
+                Agendar demo
+            </a>
+            @else
             <a href="/precios"
                class="w-full rounded-lg border border-blue-400/30 px-8 py-3.5 text-center text-sm font-semibold text-white transition hover:border-blue-300/50 hover:bg-blue-700/50 sm:w-auto">
                 Ver precios
             </a>
+            @endif
         </div>
     </div>
 </section>

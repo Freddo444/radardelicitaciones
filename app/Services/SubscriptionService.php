@@ -17,6 +17,12 @@ class SubscriptionService
 
     public const BASE_USERS = 2;
 
+    public const ANNUAL_DISCOUNT = 0.20;
+
+    public const TRIAL_DAYS = 7;
+
+    public const TRIAL_PARSE_LIMIT = 2;
+
     /**
      * Calculate monthly amount based on subscription limits.
      */
@@ -28,6 +34,18 @@ class SubscriptionService
         return self::BASE_PRICE
             + ($extraCompanies * self::EXTRA_COMPANY_PRICE)
             + ($extraUsers * self::EXTRA_USER_PRICE);
+    }
+
+    public static function calculateAnnual(int $maxCompanies = 1, int $maxUsers = 2): float
+    {
+        return round(static::calculateMonthly($maxCompanies, $maxUsers) * 12 * (1 - self::ANNUAL_DISCOUNT), 2);
+    }
+
+    public static function calculatePrice(int $maxCompanies, int $maxUsers, string $billingCycle = 'monthly'): float
+    {
+        return $billingCycle === 'annual'
+            ? static::calculateAnnual($maxCompanies, $maxUsers)
+            : static::calculateMonthly($maxCompanies, $maxUsers);
     }
 
     /**
@@ -80,15 +98,18 @@ class SubscriptionService
             'notes' => $notes,
         ]);
 
-        // Activate if this is the first payment on a pending subscription
-        if ($subscription->isPending()) {
-            static::activate($subscription);
-        }
+        $period = $subscription->billing_cycle === 'annual' ? now()->addYear() : now()->addMonth();
 
-        // Extend period if already active
-        if ($subscription->isActive()) {
+        // Activate if first payment on a pending or trialing subscription
+        if ($subscription->isPending() || $subscription->trialExpired() || $subscription->status === 'trialing') {
             $subscription->update([
-                'current_period_end' => now()->addMonth(),
+                'status' => 'active',
+                'current_period_start' => now(),
+                'current_period_end' => $period,
+            ]);
+        } elseif ($subscription->status === 'active') {
+            $subscription->update([
+                'current_period_end' => $period,
             ]);
         }
 
@@ -100,12 +121,22 @@ class SubscriptionService
      */
     public static function usage(Subscription $subscription): array
     {
-        return [
+        $usage = [
             'companies' => $subscription->companyCount(),
             'max_companies' => $subscription->max_companies,
             'users' => $subscription->userCount(),
             'max_users' => $subscription->max_users,
             'monthly_amount' => $subscription->monthly_amount,
         ];
+
+        if ($subscription->status === 'trialing') {
+            $usage['trial_parses_used'] = $subscription->trial_parse_count;
+            $usage['trial_parses_limit'] = $subscription->trial_parse_limit;
+            $usage['trial_days_left'] = $subscription->trial_ends_at
+                ? max(0, (int) now()->diffInDays($subscription->trial_ends_at, false))
+                : 0;
+        }
+
+        return $usage;
     }
 }

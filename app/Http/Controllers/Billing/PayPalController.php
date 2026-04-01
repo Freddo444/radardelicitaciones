@@ -94,9 +94,11 @@ class PayPalController extends Controller
             'notes' => 'Webhook: PAYMENT.SALE.COMPLETED',
         ]);
 
+        $period = $subscription->billing_cycle === 'annual' ? now()->addYear() : now()->addMonth();
+
         $subscription->update([
             'status' => 'active',
-            'current_period_end' => now()->addMonth(),
+            'current_period_end' => $period,
         ]);
 
         Log::info('[PayPal] Recurring payment recorded', ['subscription' => $subscription->id, 'amount' => $amount]);

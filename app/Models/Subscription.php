@@ -13,16 +13,20 @@ class Subscription extends Model
         'current_period_start', 'current_period_end',
         'max_companies', 'max_users', 'monthly_amount',
         'payment_gateway', 'gateway_subscription_id', 'gateway_customer_id',
-        'cancelled_at',
+        'cancelled_at', 'trial_ends_at', 'trial_parse_count', 'trial_parse_limit',
+        'billing_cycle',
     ];
 
     protected $casts = [
         'current_period_start' => 'date',
         'current_period_end' => 'date',
         'cancelled_at' => 'datetime',
+        'trial_ends_at' => 'datetime',
         'monthly_amount' => 'decimal:2',
         'max_companies' => 'integer',
         'max_users' => 'integer',
+        'trial_parse_count' => 'integer',
+        'trial_parse_limit' => 'integer',
     ];
 
     public function owner(): BelongsTo
@@ -37,7 +41,22 @@ class Subscription extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === 'active' || $this->isTrialing();
+    }
+
+    public function isTrialing(): bool
+    {
+        return $this->status === 'trialing' && $this->trial_ends_at && $this->trial_ends_at->isFuture();
+    }
+
+    public function trialExpired(): bool
+    {
+        return $this->status === 'trialing' && $this->trial_ends_at && $this->trial_ends_at->isPast();
+    }
+
+    public function canUseTrial(): bool
+    {
+        return $this->isTrialing() && $this->trial_parse_count < $this->trial_parse_limit;
     }
 
     public function isPending(): bool

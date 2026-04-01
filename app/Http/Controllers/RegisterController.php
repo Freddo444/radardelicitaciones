@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\SubscriptionService;
@@ -19,6 +18,45 @@ class RegisterController extends Controller
         return view('auth.register');
     }
 
+    public function showTrialRegister()
+    {
+        return view('auth.register-trial');
+    }
+
+    public function storeTrial(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+        ]);
+
+        Subscription::create([
+            'user_id' => $user->id,
+            'plan' => 'trial',
+            'status' => 'trialing',
+            'max_companies' => 1,
+            'max_users' => 2,
+            'monthly_amount' => 0,
+            'trial_ends_at' => now()->addDays(SubscriptionService::TRIAL_DAYS),
+            'trial_parse_count' => 0,
+            'trial_parse_limit' => SubscriptionService::TRIAL_PARSE_LIMIT,
+        ]);
+
+        Auth::login($user);
+
+        $user->sendEmailVerificationNotification();
+
+        return redirect()->route('company-setup.show')
+            ->with('success', '¡Prueba gratuita activada! Configura tu primera empresa.');
+    }
+
     /**
      * Step 1: Store plan in session and create PayPal subscription.
      */
@@ -27,17 +65,21 @@ class RegisterController extends Controller
         $request->validate([
             'max_companies' => 'required|integer|min:1|max:10',
             'max_users' => 'required|integer|min:2|max:20',
+            'billing_cycle' => 'sometimes|in:monthly,annual',
         ]);
 
         $maxCompanies = (int) $request->max_companies;
         $maxUsers = (int) $request->max_users;
-        $amount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+        $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
+        $amount = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
 
         session([
             'register_plan' => [
                 'max_companies' => $maxCompanies,
                 'max_users' => $maxUsers,
-                'amount' => $amount,
+                'amount' => $monthlyAmount,
+                'billing_cycle' => $billingCycle,
             ],
         ]);
 
@@ -46,9 +88,12 @@ class RegisterController extends Controller
             return response()->json(['error' => 'Error de autenticación con PayPal.'], 500);
         }
 
-        $planId = config('services.paypal.plan_id');
+        $planId = $billingCycle === 'annual'
+            ? config('services.paypal.annual_plan_id')
+            : config('services.paypal.plan_id');
+
         if (! $planId) {
-            return response()->json(['error' => 'PayPal no está configurado. Contacta soporte.'], 500);
+            return response()->json(['error' => 'PayPal no está configurado para este ciclo. Contacta soporte.'], 500);
         }
 
         $payload = [
@@ -62,8 +107,12 @@ class RegisterController extends Controller
             ],
         ];
 
-        // Override price if different from base $45
-        if ($amount != 45.00) {
+        // Override price if different from base
+        $baseAmount = $billingCycle === 'annual'
+            ? SubscriptionService::calculateAnnual()
+            : SubscriptionService::calculateMonthly();
+
+        if ($amount != $baseAmount) {
             $payload['plan'] = [
                 'billing_cycles' => [
                     [
@@ -168,6 +217,8 @@ class RegisterController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        $billingCycle = $plan['billing_cycle'] ?? 'monthly';
+
         Subscription::create([
             'user_id' => $user->id,
             'plan' => 'basic',
@@ -175,10 +226,11 @@ class RegisterController extends Controller
             'max_companies' => $plan['max_companies'],
             'max_users' => $plan['max_users'],
             'monthly_amount' => $plan['amount'],
+            'billing_cycle' => $billingCycle,
             'payment_gateway' => 'paypal',
             'gateway_subscription_id' => $paypalSubId,
             'current_period_start' => now(),
-            'current_period_end' => now()->addMonth(),
+            'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
         ]);
 
         session()->forget(['register_plan', 'register_paypal_subscription_id']);

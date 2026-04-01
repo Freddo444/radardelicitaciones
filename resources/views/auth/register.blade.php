@@ -18,10 +18,20 @@
      x-data="{
         companies: 1,
         users: 2,
+        annual: false,
         loading: false,
         error: null,
-        get price() {
+        get monthlyPrice() {
             return 45 + Math.max(0, this.companies - 1) * 20 + Math.max(0, this.users - 2) * 10;
+        },
+        get annualPrice() {
+            return Math.round(this.monthlyPrice * 12 * 0.8 * 100) / 100;
+        },
+        get annualSavings() {
+            return Math.round(this.monthlyPrice * 12 * 0.2 * 100) / 100;
+        },
+        get displayPrice() {
+            return this.annual ? this.annualPrice : this.monthlyPrice;
         },
         async pay() {
             this.loading = true;
@@ -36,6 +46,7 @@
                     body: JSON.stringify({
                         max_companies: this.companies,
                         max_users: this.users,
+                        billing_cycle: this.annual ? 'annual' : 'monthly',
                     }),
                 });
                 const data = await res.json();
@@ -64,6 +75,19 @@
 
         {{-- Plan configurator --}}
         <div class="rounded-lg border border-gray-200 bg-gray-50 p-5 space-y-5">
+            {{-- Billing cycle toggle --}}
+            <div class="flex items-center justify-center gap-3">
+                <span class="text-sm font-medium" :class="annual ? 'text-gray-400' : 'text-gray-900'">Mensual</span>
+                <button type="button" @click="annual = !annual"
+                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                        :class="annual ? 'bg-blue-600' : 'bg-gray-200'">
+                    <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                          :class="annual ? 'translate-x-5' : 'translate-x-0'"></span>
+                </button>
+                <span class="text-sm font-medium" :class="annual ? 'text-gray-900' : 'text-gray-400'">Anual</span>
+                <span x-show="annual" x-cloak class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">-20%</span>
+            </div>
+
             <div>
                 <div class="flex items-center justify-between text-sm">
                     <label for="max_companies" class="font-medium text-gray-700">Empresas</label>
@@ -91,9 +115,12 @@
             </div>
 
             <div class="flex items-center justify-between rounded-md bg-blue-600 px-4 py-3 text-white">
-                <span class="text-sm font-medium">Total mensual</span>
-                <span class="text-lg font-bold">US$<span x-text="price"></span>/mes</span>
+                <span class="text-sm font-medium" x-text="annual ? 'Total anual' : 'Total mensual'"></span>
+                <span class="text-lg font-bold">US$<span x-text="displayPrice"></span><span x-text="annual ? '/año' : '/mes'"></span></span>
             </div>
+            <p x-show="annual" x-cloak class="text-center text-xs font-medium text-green-600">
+                Ahorras US$<span x-text="annualSavings"></span> al año
+            </p>
 
             <ul class="text-xs text-gray-500 space-y-1">
                 <li>• Base: US$45/mes (1 empresa, 2 usuarios)</li>
@@ -109,6 +136,11 @@
         </button>
 
         <p x-show="error" class="text-center text-sm text-red-600" x-text="error"></p>
+
+        <p class="text-center text-sm text-gray-500">
+            ¿Quieres probar primero?
+            <a href="{{ route('register.trial') }}" class="font-medium text-blue-600 hover:text-blue-500">Prueba gratis 7 días</a>
+        </p>
 
         <p class="text-center text-sm text-gray-500">
             ¿Ya tienes cuenta?

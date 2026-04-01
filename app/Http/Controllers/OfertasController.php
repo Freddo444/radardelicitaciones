@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TrialLimitExceededException;
 use App\Jobs\ParsePliegoJob;
 use App\Models\Bid;
 use App\Models\BidDocument;
@@ -20,6 +21,7 @@ use App\Models\OfferRequirementItem;
 use App\Models\OfferSnapshot;
 use App\Models\Personnel;
 use App\Models\Project;
+use App\Models\Subscription;
 use App\Services\DgcpApiClient;
 use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
@@ -175,7 +177,11 @@ class OfertasController extends Controller
             'file_size_bytes' => strlen($content),
         ]);
 
-        $gemini->reparse($oferta, $bidDoc);
+        try {
+            $gemini->reparse($oferta, $bidDoc);
+        } catch (TrialLimitExceededException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         if ($oferta->estado === 'borrador') {
             $oferta->update(['estado' => 'en_preparacion']);
@@ -198,7 +204,11 @@ class OfertasController extends Controller
             $oferta->activeParse()?->update(['human_verified_at' => null, 'human_verified_by' => null]);
         }
 
-        $gemini->reparse($oferta, $doc);
+        try {
+            $gemini->reparse($oferta, $doc);
+        } catch (TrialLimitExceededException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Re-análisis iniciado.');
     }
@@ -243,6 +253,12 @@ class OfertasController extends Controller
             'url' => 'required|url',
             'filename' => 'required|string|max:255',
         ]);
+
+        // Pre-check trial limit before dispatching async job
+        $subscription = Subscription::where('user_id', $oferta->company->owner_id)->first();
+        if ($subscription && $subscription->status === 'trialing' && ! $subscription->canUseTrial()) {
+            return response()->json(['error' => (new TrialLimitExceededException)->getMessage()], 422);
+        }
 
         ParsePliegoJob::dispatch($oferta, $request->url, $request->filename);
 

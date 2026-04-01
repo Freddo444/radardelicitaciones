@@ -48,10 +48,15 @@
             <p x-show="lookupError" class="mt-2 text-sm text-red-600" x-text="lookupError"></p>
 
             <div x-show="notFound" class="mt-4 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
-                No se encontró un proveedor con ese RPE. Puedes llenar los datos manualmente.
+                No se encontró un proveedor con ese RPE.
+                @if(empty($isTrial))
+                Puedes llenar los datos manualmente.
                 <button @click="formReady = true" class="mt-2 block font-semibold text-yellow-900 underline">
                     Continuar sin RPE
                 </button>
+                @else
+                <span class="block mt-1 text-yellow-700">Durante la prueba gratuita, el RPE es obligatorio para verificar tu empresa.</span>
+                @endif
             </div>
         </div>
 

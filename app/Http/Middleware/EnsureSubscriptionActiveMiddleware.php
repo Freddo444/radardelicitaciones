@@ -32,6 +32,15 @@ class EnsureSubscriptionActiveMiddleware
             $subscription = $user->subscription;
         }
 
+        if ($subscription && $subscription->trialExpired()) {
+            if ($user->isSubscriptionOwner()) {
+                return redirect()->route('billing.index')
+                    ->with('warning', 'Tu prueba gratuita ha expirado. Suscríbete para continuar.');
+            }
+
+            abort(403, 'La prueba gratuita de tu empresa ha expirado. Contacta al administrador.');
+        }
+
         if (! $subscription || ! $subscription->isActive()) {
             if ($user->isSubscriptionOwner()) {
                 return redirect()->route('billing.index')

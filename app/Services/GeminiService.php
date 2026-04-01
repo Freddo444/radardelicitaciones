@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Exceptions\TrialLimitExceededException;
 use App\Models\BidDocument;
 use App\Models\Offer;
 use App\Models\OfferEvent;
 use App\Models\OfferParseAttempt;
 use App\Models\OfferRequirement;
+use App\Models\Subscription;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -52,6 +54,8 @@ PROMPT;
      */
     public function fetchAndParse(Offer $offer, string $pdfUrl, string $originalFilename, ?int $userId = null): OfferParseAttempt
     {
+        $this->checkTrialLimit($offer);
+
         // Download PDF
         $attempt = OfferParseAttempt::create([
             'offer_id' => $offer->id,
@@ -96,6 +100,8 @@ PROMPT;
      */
     public function reparse(Offer $offer, BidDocument $bidDoc): OfferParseAttempt
     {
+        $this->checkTrialLimit($offer);
+
         $attempt = OfferParseAttempt::create([
             'offer_id' => $offer->id,
             'bid_document_id' => $bidDoc->id,
@@ -123,6 +129,24 @@ PROMPT;
     }
 
     // ── Private ───────────────────────────────────────────────────────
+
+    private function checkTrialLimit(Offer $offer): void
+    {
+        $subscription = Subscription::where('user_id', $offer->company->owner_id)->first();
+
+        if (! $subscription || $subscription->status !== 'trialing') {
+            return;
+        }
+
+        $updated = Subscription::where('id', $subscription->id)
+            ->where('status', 'trialing')
+            ->where('trial_parse_count', '<', $subscription->trial_parse_limit)
+            ->increment('trial_parse_count');
+
+        if ($updated === 0) {
+            throw new TrialLimitExceededException;
+        }
+    }
 
     private function parseDocument(OfferParseAttempt $attempt, BidDocument $bidDoc, string $pdfContent): OfferParseAttempt
     {

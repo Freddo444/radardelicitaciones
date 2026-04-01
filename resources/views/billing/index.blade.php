@@ -31,16 +31,22 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-semibold text-gray-900">Plan {{ ucfirst($subscription->plan) }}</h2>
+                    @if($subscription->status === 'trialing')
+                    <p class="text-sm text-gray-500">Prueba gratuita</p>
+                    @else
                     <p class="text-sm text-gray-500">US${{ number_format($subscription->monthly_amount, 2) }}/mes</p>
+                    @endif
                 </div>
                 <span class="inline-flex items-center rounded-full px-3 py-0.5 text-sm font-medium
-                    {{ $subscription->isActive() ? 'bg-green-100 text-green-800' : '' }}
+                    {{ $subscription->isActive() && $subscription->status !== 'trialing' ? 'bg-green-100 text-green-800' : '' }}
+                    {{ $subscription->status === 'trialing' ? 'bg-blue-100 text-blue-800' : '' }}
                     {{ $subscription->isPending() ? 'bg-yellow-100 text-yellow-800' : '' }}
                     {{ $subscription->isPastDue() ? 'bg-red-100 text-red-800' : '' }}
                     {{ $subscription->status === 'cancelled' ? 'bg-gray-100 text-gray-800' : '' }}
                     {{ $subscription->status === 'suspended' ? 'bg-red-100 text-red-800' : '' }}">
                     {{ match($subscription->status) {
                         'active' => 'Activa',
+                        'trialing' => 'Prueba gratuita',
                         'pending' => 'Pendiente de pago',
                         'past_due' => 'Pago vencido',
                         'cancelled' => 'Cancelada',
@@ -50,7 +56,23 @@
                 </span>
             </div>
 
-            @if($subscription->current_period_end)
+            @if($subscription->status === 'trialing')
+            <div class="mt-4 rounded-md bg-blue-50 p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-blue-900">Días restantes: {{ $usage['trial_days_left'] ?? 0 }}</p>
+                        <p class="mt-1 text-sm text-blue-700">Análisis con IA: {{ $usage['trial_parses_used'] ?? 0 }} / {{ $usage['trial_parses_limit'] ?? 0 }}</p>
+                    </div>
+                    <a href="{{ route('register.show') }}"
+                       class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+                        Suscríbete ahora
+                    </a>
+                </div>
+                <p class="mt-2 text-xs text-blue-600">Desde US$45/mes — acceso completo, análisis ilimitados.</p>
+            </div>
+            @endif
+
+            @if($subscription->current_period_end && $subscription->status !== 'trialing')
             <p class="mt-2 text-sm text-gray-500">
                 Periodo actual: {{ $subscription->current_period_start?->format('d/m/Y') }} — {{ $subscription->current_period_end->format('d/m/Y') }}
             </p>
@@ -77,6 +99,18 @@
                 <span class="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">PayPal</span>
                 <span class="text-sm text-gray-500">Cobro automático mensual</span>
             </div>
+        </div>
+        @endif
+
+        {{-- Trial expired --}}
+        @if($subscription->trialExpired())
+        <div class="mt-8 rounded-lg border-2 border-blue-200 bg-blue-50 p-6 shadow ring-1 ring-gray-900/5">
+            <h2 class="text-lg font-semibold text-gray-900">Tu prueba gratuita ha expirado</h2>
+            <p class="mt-1 text-sm text-gray-600">Suscríbete para mantener acceso a todas tus convocatorias, ofertas y análisis con IA.</p>
+            <a href="{{ route('register.show') }}"
+               class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
+                Suscríbete ahora — US$45/mes
+            </a>
         </div>
         @endif
 

@@ -21,24 +21,47 @@
         </div>
 
         {{-- Pricing calculator --}}
-        <div data-animate class="mx-auto mt-16 max-w-lg" x-data="{ companies: 1, users: 2 }">
+        <div data-animate class="mx-auto mt-16 max-w-lg" x-data="{ companies: 1, users: 2, annual: false }">
             <div class="rounded-3xl bg-white p-6 shadow-xl ring-1 ring-gray-200 sm:p-8 md:p-10">
                 {{-- Badge --}}
-                <div class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                    Plan Profesional
+                <div class="flex items-center justify-between">
+                    <div class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                        Plan Profesional
+                    </div>
+                    {{-- Billing toggle --}}
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-medium" :class="annual ? 'text-gray-400' : 'text-gray-900'">Mensual</span>
+                        <button type="button" @click="annual = !annual"
+                                class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                                :class="annual ? 'bg-emerald-500' : 'bg-gray-200'">
+                            <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                  :class="annual ? 'translate-x-4' : 'translate-x-0'"></span>
+                        </button>
+                        <span class="text-xs font-medium" :class="annual ? 'text-gray-900' : 'text-gray-400'">Anual</span>
+                        <span x-show="annual" x-cloak class="inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">-20%</span>
+                    </div>
                 </div>
 
                 {{-- Price display --}}
-                <div class="mt-6 flex items-baseline gap-2">
-                    <span class="font-display text-4xl font-extrabold text-gray-900 sm:text-5xl">$<span x-text="45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10"></span></span>
-                    <span class="text-lg text-gray-500">/mes</span>
+                <div class="mt-6">
+                    <div x-show="!annual" class="flex items-baseline gap-2">
+                        <span class="font-display text-4xl font-extrabold text-gray-900 sm:text-5xl">$<span x-text="45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10"></span></span>
+                        <span class="text-lg text-gray-500">/mes</span>
+                    </div>
+                    <div x-show="annual" x-cloak class="flex items-baseline gap-2">
+                        <span class="font-display text-4xl font-extrabold text-gray-900 sm:text-5xl">$<span x-text="Math.round((45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10) * 12 * 0.8 * 100) / 100"></span></span>
+                        <span class="text-lg text-gray-500">/año</span>
+                    </div>
+                    <p x-show="annual" x-cloak class="mt-1 text-sm text-emerald-600">
+                        Ahorras $<span x-text="Math.round((45 + Math.max(0, companies - 1) * 20 + Math.max(0, users - 2) * 10) * 12 * 0.2 * 100) / 100"></span> al año
+                    </p>
                 </div>
 
                 {{-- Breakdown --}}
                 <div class="mt-2 space-y-0.5 text-sm text-gray-500">
-                    <p>Base: $45 <span class="text-gray-400">(1 empresa, 2 usuarios)</span></p>
-                    <p x-show="companies > 1" x-cloak>+ $<span x-text="(companies - 1) * 20"></span> <span class="text-gray-400">(<span x-text="companies - 1"></span> empresa<span x-show="companies > 2">s</span> extra)</span></p>
-                    <p x-show="users > 2" x-cloak>+ $<span x-text="(users - 2) * 10"></span> <span class="text-gray-400">(<span x-text="users - 2"></span> usuario<span x-show="users > 3">s</span> extra)</span></p>
+                    <p>Base: $45/mes <span class="text-gray-400">(1 empresa, 2 usuarios)</span></p>
+                    <p x-show="companies > 1" x-cloak>+ $<span x-text="(companies - 1) * 20"></span>/mes <span class="text-gray-400">(<span x-text="companies - 1"></span> empresa<span x-show="companies > 2">s</span> extra)</span></p>
+                    <p x-show="users > 2" x-cloak>+ $<span x-text="(users - 2) * 10"></span>/mes <span class="text-gray-400">(<span x-text="users - 2"></span> usuario<span x-show="users > 3">s</span> extra)</span></p>
                 </div>
 
                 {{-- Sliders --}}
@@ -64,10 +87,13 @@
                 </div>
 
                 {{-- CTA --}}
-                <a href="/registro"
+                <a href="{{ route('register.trial') }}"
                    class="mt-8 block w-full rounded-lg bg-blue-800 py-3.5 text-center text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                    Comenzar ahora
+                    Prueba gratis 7 días
                 </a>
+                <p class="mt-2 text-center text-xs text-gray-500">
+                    o <a href="{{ route('register.show') }}" class="font-medium text-blue-600 hover:text-blue-500">suscríbete ahora</a>
+                </p>
 
                 {{-- Included features --}}
                 <ul class="mt-8 space-y-3 text-sm text-gray-600">
@@ -160,9 +186,9 @@
         <p class="mt-4 text-lg text-blue-100">
             Configure su radar en minutos y empiece a recibir licitaciones que coinciden con su perfil.
         </p>
-        <a href="/registro"
+        <a href="{{ route('register.trial') }}"
            class="mt-10 block w-full rounded-lg bg-emerald-500 px-8 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-400 sm:inline-block sm:w-auto">
-            Crear cuenta
+            Prueba gratis 7 días
         </a>
     </div>
 </section>

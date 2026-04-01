@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+
 class MarketingController extends Controller
 {
     public function landing()
@@ -10,7 +13,15 @@ class MarketingController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return view('marketing.landing');
+        $stats = Cache::remember('landing_stats', 3600, function () {
+            return [
+                'bids' => DB::table('bids')->count(),
+                'institutions' => DB::table('bids')->distinct('buyer_name')->count('buyer_name'),
+                'parses' => DB::table('offer_parse_attempts')->count(),
+            ];
+        });
+
+        return view('marketing.landing', compact('stats'));
     }
 
     public function pricing()
@@ -33,9 +44,10 @@ class MarketingController extends Controller
         $urls = [
             ['loc' => url('/'), 'priority' => '1.0', 'changefreq' => 'weekly'],
             ['loc' => url('/precios'), 'priority' => '0.8', 'changefreq' => 'monthly'],
+            ['loc' => url('/registro/prueba-gratis'), 'priority' => '0.9', 'changefreq' => 'monthly'],
+            ['loc' => url('/registro'), 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => url('/terminos'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => url('/privacidad'), 'priority' => '0.3', 'changefreq' => 'yearly'],
-            ['loc' => url('/registro'), 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => url('/login'), 'priority' => '0.5', 'changefreq' => 'yearly'],
         ];
 

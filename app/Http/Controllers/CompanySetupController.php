@@ -26,7 +26,9 @@ class CompanySetupController extends Controller
                 ->with('error', 'Has alcanzado el límite de empresas de tu plan.');
         }
 
-        return view('company-setup.create');
+        $isTrial = $subscription->isTrialing();
+
+        return view('company-setup.create', compact('isTrial'));
     }
 
     /**

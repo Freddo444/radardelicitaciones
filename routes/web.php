@@ -51,6 +51,8 @@ Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->name('auth.login');
     Route::get('/registro', [RegisterController::class, 'show'])->name('register.show');
+    Route::get('/registro/prueba-gratis', [RegisterController::class, 'showTrialRegister'])->name('register.trial');
+    Route::post('/registro/prueba-gratis', [RegisterController::class, 'storeTrial'])->name('register.trial.store');
     Route::post('/registro/crear-orden', [RegisterController::class, 'createOrder'])->name('register.create-order');
     Route::get('/registro/paypal-return', [RegisterController::class, 'paypalReturn'])->name('register.paypal-return');
     Route::get('/registro/completar', [RegisterController::class, 'showComplete'])->name('register.complete');

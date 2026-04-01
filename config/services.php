@@ -44,6 +44,7 @@ return [
         'secret' => env('PAYPAL_SECRET'),
         'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
         'plan_id' => env('PAYPAL_PLAN_ID'),
+        'annual_plan_id' => env('PAYPAL_ANNUAL_PLAN_ID'),
         'sandbox' => env('PAYPAL_SANDBOX', true),
     ],
 
@@ -57,6 +58,14 @@ return [
         'auth2_key' => env('AZUL_AUTH2_KEY'),
         'domain' => env('AZUL_DOMAIN'),
         'sandbox' => env('AZUL_SANDBOX', true),
+    ],
+
+    'calendly' => [
+        'url' => env('CALENDLY_URL', ''),
+    ],
+
+    'tawkto' => [
+        'widget_url' => env('TAWKTO_WIDGET_URL', ''),
     ],
 
 ];
