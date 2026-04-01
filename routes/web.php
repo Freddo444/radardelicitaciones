@@ -174,7 +174,6 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
     // Settings (per-company)
     Route::get('/configuracion', [SettingsController::class, 'index'])->name('settings.index');
     Route::post('/configuracion', [SettingsController::class, 'update'])->name('settings.update');
-    Route::post('/configuracion/import-catalog', [SettingsController::class, 'importCatalog'])->name('settings.import-catalog');
     Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
     Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
     Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');

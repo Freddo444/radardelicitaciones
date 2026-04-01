@@ -88,13 +88,6 @@ class SettingsController extends Controller
         return redirect()->route('settings.index')->with('success', 'Configuración guardada correctamente.');
     }
 
-    public function importCatalog()
-    {
-        \Artisan::queue('secp:import-catalog');
-
-        return back()->with('success', 'Importación del catálogo iniciada en segundo plano.');
-    }
-
     public function testConnection(DgcpApiClient $api)
     {
         $ok = $api->testConnection();

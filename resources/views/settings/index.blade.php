@@ -63,7 +63,6 @@
     {{-- Main content --}}
     <main class="flex-1 px-0 lg:px-0">
         {{-- Standalone test forms (outside main form to avoid nesting) --}}
-        <form id="form-import-catalog"   method="POST" action="{{ route('settings.import-catalog') }}">@csrf</form>
         <form id="form-test-connection" method="POST" action="{{ route('settings.test-connection') }}">@csrf</form>
         <form id="form-test-email"      method="POST" action="{{ route('settings.test-email') }}">@csrf</form>
         <form id="form-test-telegram"   method="POST" action="{{ route('settings.test-telegram') }}">@csrf</form>
@@ -89,10 +88,8 @@
                                     @endif
                                 </p>
                             </dt>
-                            <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <button type="submit" form="form-import-catalog" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50">
-                                    {{ $settings['catalog_item_count'] ? 'Actualizar catálogo' : 'Importar catálogo' }}
-                                </button>
+                            <dd class="mt-1 text-xs text-gray-500 sm:mt-0 sm:flex-auto">
+                                Se actualiza automáticamente cada mes
                             </dd>
                         </div>
                         <div class="py-6 sm:flex sm:items-center">
