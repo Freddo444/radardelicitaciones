@@ -2,7 +2,7 @@
 @section('title', 'Convocatorias')
 
 @section('content')
-<div x-data="convocatorias()" class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+<div x-data="convocatorias()" class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
 
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
@@ -13,7 +13,7 @@
 
     {{-- Tabs: Todas | Recomendadas | Guardadas --}}
     <div class="mt-6 border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+        <nav class="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
             <a href="{{ route('convocatorias.index', array_merge(request()->except('tab', 'page'), [])) }}"
                class="border-b-2 px-1 py-4 text-sm font-medium whitespace-nowrap {{ !request('tab') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700' }}">
                 Todas
@@ -30,11 +30,11 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET" action="{{ route('convocatorias.index') }}" class="mt-4 flex flex-wrap items-end gap-4">
+    <form method="GET" action="{{ route('convocatorias.index') }}" class="mt-4 flex flex-wrap items-end gap-3 sm:gap-4">
         @if(request('tab'))
             <input type="hidden" name="tab" value="{{ request('tab') }}">
         @endif
-        <div class="flex-1 min-w-[200px] max-w-sm">
+        <div class="w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
             <label for="q" class="block text-xs font-medium text-gray-700">Buscar</label>
             <input type="text" name="q" id="q" value="{{ request('q') }}" placeholder="Título, entidad o código..."
                    class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm">
@@ -98,7 +98,81 @@
                 </p>
             </div>
         @else
-            <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+
+            {{-- ── Mobile card list (below md) ──────────────────────────── --}}
+            <div class="md:hidden space-y-3">
+                @foreach($bids as $bid)
+                @php
+                    $status      = strtoupper($bid->status ?? '');
+                    $statusStyle = match(true) {
+                        str_contains($status, 'PUBLICAD')  => 'bg-green-50 text-green-700 ring-green-600/20',
+                        str_contains($status, 'ADJUDIC')   => 'bg-gray-100 text-gray-600 ring-gray-500/10',
+                        str_contains($status, 'CANCEL')    => 'bg-red-50 text-red-700 ring-red-600/20',
+                        str_contains($status, 'DESIERTO')  => 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+                        str_contains($status, 'CERRADA')   => 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+                        str_contains($status, 'ABIERTO')   => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+                        str_contains($status, 'APERTURAD') => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+                        str_contains($status, 'EVALUAC')   => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+                        default                            => 'bg-gray-100 text-gray-600 ring-gray-500/10',
+                    };
+                    $deadlinePast = $bid->tender_deadline && $bid->tender_deadline->isPast();
+                    $deadlineSoon = $bid->tender_deadline && !$deadlinePast && $bid->tender_deadline->diffInDays(now()) < 3;
+                @endphp
+                <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-xs active:bg-gray-50" @click="openDrawer({{ $bid->id }})">
+                    <div class="flex items-start justify-between gap-2">
+                        <h3 class="text-sm font-semibold text-gray-900 line-clamp-2 flex-1">{{ $bid->title }}</h3>
+                        <button @click.stop="toggleBookmark({{ $bid->id }}, $event)"
+                                class="shrink-0 transition-colors"
+                                :class="bookmarks[{{ $bid->id }}] ? 'text-yellow-500' : 'text-gray-300'">
+                            <svg class="size-5" :fill="bookmarks[{{ $bid->id }}] ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+                        <span class="truncate max-w-[200px]">{{ $bid->buyer_name ?? '—' }}</span>
+                        <span class="text-gray-400">·</span>
+                        <span class="font-mono">{{ $bid->process_code }}</span>
+                    </div>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset {{ $statusStyle }}">
+                            {{ $bid->status ?? 'N/D' }}
+                        </span>
+                        @if($bid->is_relevant)
+                            <span class="rounded bg-green-50 px-1.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">Relevante</span>
+                        @endif
+                        @if($bid->mipymes)
+                            <span class="rounded bg-purple-50 px-1.5 py-0.5 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">MIPYMES{{ $bid->mipymes_mujeres ? ' Mujeres' : '' }}</span>
+                        @endif
+                        @if(!empty($bid->matched_rubros))
+                            @foreach(array_slice($bid->matched_rubros, 0, 2) as $rubro)
+                                @php $code = is_array($rubro) ? ($rubro['code'] ?? $rubro) : $rubro; @endphp
+                                <span class="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-mono text-blue-700">{{ $code }}</span>
+                            @endforeach
+                            @if(count($bid->matched_rubros) > 2)
+                                <span class="text-xs text-gray-400">+{{ count($bid->matched_rubros) - 2 }}</span>
+                            @endif
+                        @endif
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-xs">
+                        <div class="text-gray-500">
+                            @if($bid->amount_estimated && $bid->amount_estimated > 0)
+                                <span class="font-semibold text-gray-900">{{ $bid->currency === 'USD' ? 'US$' : 'RD$' }}{{ number_format($bid->amount_estimated, 0, '.', ',') }}</span>
+                            @endif
+                        </div>
+                        @if($bid->tender_deadline)
+                        <span class="{{ $deadlinePast ? 'text-red-600' : ($deadlineSoon ? 'text-amber-600' : 'text-gray-500') }}">
+                            Cierre {{ $bid->tender_deadline->format('d/m/Y') }}
+                            @if($deadlinePast)(vencida)@elseif($deadlineSoon)({{ $bid->tender_deadline->diffForHumans(['parts' => 1, 'short' => true]) }})@endif
+                        </span>
+                        @endif
+                    </div>
+                </div>
+                @endforeach
+            </div>
+
+            {{-- ── Desktop table (md and up) ────────────────────────────── --}}
+            <div class="hidden md:block -mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
                 <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
                     <table class="min-w-full divide-y divide-gray-300">
                         <thead>
@@ -288,6 +362,14 @@
         @endif
     </div>
 
+    @push('styles')
+    <style>
+        @media (max-width: 767px) {
+            [x-data="convocatorias()"] .pagination-wrapper { font-size: 0.75rem; }
+        }
+    </style>
+    @endpush
+
     {{-- ── Slide-over Drawer ──────────────────────────────────────────── --}}
     <div x-show="drawerOpen" x-cloak class="relative z-50" role="dialog" aria-modal="true">
         {{-- Backdrop --}}
@@ -298,7 +380,7 @@
 
         <div class="fixed inset-0 overflow-hidden">
             <div class="absolute inset-0 overflow-hidden">
-                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 sm:pl-16">
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-6 sm:pl-16">
                     <div x-show="drawerOpen"
                          x-transition:enter="transform transition ease-in-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
                          x-transition:leave="transform transition ease-in-out duration-300" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full"
@@ -362,7 +444,7 @@
 
                                 {{-- Action row --}}
                                 <template x-if="bid">
-                                    <div class="mt-3 flex items-center gap-3">
+                                    <div class="mt-3 flex flex-wrap items-center gap-2 sm:gap-3">
                                         {{-- Guardar --}}
                                         <button @click="toggleBookmark(bid.id, $event)" class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors"
                                                 :class="bid.is_bookmarked ? 'bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20' : 'bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-100'">
@@ -534,7 +616,7 @@
                                     {{-- Tabs: Artículos | Documentos | Adjudicación --}}
                                     <div>
                                         <div class="border-b border-gray-200">
-                                            <nav class="-mb-px flex space-x-6">
+                                            <nav class="-mb-px flex space-x-3 sm:space-x-6">
                                                 <button @click="activeTab = 'articulos'; loadTab('articulos')"
                                                         class="border-b-2 py-3 text-sm font-medium whitespace-nowrap"
                                                         :class="activeTab === 'articulos' ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'">
