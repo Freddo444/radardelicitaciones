@@ -17,7 +17,7 @@ class MarketingController extends Controller
             return [
                 'bids' => DB::table('bids')->count(),
                 'institutions' => DB::table('bids')->distinct('buyer_name')->count('buyer_name'),
-                'parses' => DB::table('offer_parse_attempts')->count(),
+                'rubros' => DB::table('rubros')->distinct('code')->count('code'),
             ];
         });
 
