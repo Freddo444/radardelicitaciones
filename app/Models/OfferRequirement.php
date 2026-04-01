@@ -10,7 +10,7 @@ class OfferRequirement extends Model
 {
     protected $fillable = [
         'offer_id', 'parse_attempt_id', 'descripcion', 'tipo',
-        'estado', 'source', 'superseded', 'notes', 'acceptance_reason',
+        'estado', 'sobre', 'source', 'superseded', 'notes', 'acceptance_reason',
     ];
 
     protected $casts = [

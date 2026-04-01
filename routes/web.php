@@ -264,6 +264,9 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
 
     // Assembly
     Route::post('/ofertas/{oferta}/assemble', [OfertasController::class, 'assemble'])->name('ofertas.assemble');
+    Route::post('/ofertas/{oferta}/sobres', [OfertasController::class, 'saveSobres'])->name('ofertas.sobres.save');
+    Route::post('/ofertas/{oferta}/sobres/generate', [OfertasController::class, 'generateSobres'])->name('ofertas.sobres.generate');
+    Route::get('/ofertas/{oferta}/sobres/{sobre}/download', [OfertasController::class, 'downloadSobre'])->name('ofertas.sobres.download');
     Route::get('/ofertas/{oferta}/snapshots/{snapshot}/download', [OfertasController::class, 'downloadSnapshot'])->name('ofertas.snapshots.download');
 
     // Form generation within offer context

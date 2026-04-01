@@ -36,6 +36,7 @@ class FormGeneratorService
 
         // Forms with dedicated builders (special data processing)
         $result = match ($formCode) {
+            'CARATULA.A', 'CARATULA.B' => $this->buildCaratula($company, $params, $formCode),
             'SNCC.F.033' => $this->buildF033($company, $params),
             'SNCC.F.034' => $this->buildF034($company, $params),
             'SNCC.F.036' => $this->buildF036($company, $params),
@@ -57,6 +58,7 @@ class FormGeneratorService
             }
             $tpl = $this->tpl($templatePath);
             $this->set($tpl, $this->companyTokens($company), $this->processTokens($params));
+            $this->setImages($tpl, $company);
             $result = [$this->save($tpl, $formCode), [
                 'company' => $company->only(['razon_social', 'rnc']),
                 ...$params,
@@ -97,6 +99,8 @@ class FormGeneratorService
         if (! empty($extraTokens)) {
             $this->set($tpl, $extraTokens);
         }
+
+        $this->setImages($tpl, $company);
 
         $slug = pathinfo($relativePath, PATHINFO_FILENAME);
         $fullPath = $this->save($tpl, $slug);
@@ -157,6 +161,43 @@ class FormGeneratorService
         }
     }
 
+    /**
+     * Replace image tokens (img_firma, img_sello) with actual uploaded images.
+     * Falls back to empty string if the company hasn't uploaded the image.
+     */
+    private function setImages(TemplateProcessor $tpl, Company $c, array $sizeOverrides = []): void
+    {
+        $imageMap = [
+            'img_firma' => $c->firma_path,
+            'img_sello' => $c->sello_path,
+            'img_logo' => $c->logo_path,
+        ];
+
+        foreach ($imageMap as $token => $path) {
+            if (! in_array($token, $tpl->getVariables())) {
+                continue;
+            }
+
+            $fullPath = $path ? storage_path('app/public/'.$path) : null;
+            $size = $sizeOverrides[$token] ?? ['width' => 150, 'height' => 75];
+
+            if ($fullPath && file_exists($fullPath)) {
+                try {
+                    $tpl->setImageValue($token, [
+                        'path' => $fullPath,
+                        'width' => $size['width'],
+                        'height' => $size['height'],
+                        'ratio' => ! isset($sizeOverrides[$token]),
+                    ]);
+                } catch (\Throwable) {
+                    $tpl->setValue($token, '');
+                }
+            } else {
+                $tpl->setValue($token, '');
+            }
+        }
+    }
+
     /** Standard company-level tokens, sourced from the single Company record. */
     private function companyTokens(Company $c): array
     {
@@ -203,10 +244,27 @@ class FormGeneratorService
 
     // ── Form builders ─────────────────────────────────────────────────
 
+    private function buildCaratula(Company $c, array $p, string $formCode): array
+    {
+        $templatePath = OfferGeneratedFile::$templatePaths[$formCode];
+        $tpl = $this->tpl($templatePath);
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c, [
+            'img_firma' => ['width' => 254, 'height' => 60],
+            'img_sello' => ['width' => 156, 'height' => 145],
+        ]);
+
+        return [$this->save($tpl, $formCode), [
+            'company' => $c->only(['razon_social', 'rnc']),
+            ...$p,
+        ]];
+    }
+
     private function buildF033(Company $c, array $p): array
     {
         $tpl = $this->tpl('estandar/SNCC_F033_Of_Economica.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.033'), [
             'company' => $c->only(['razon_social', 'rnc']),
@@ -218,6 +276,7 @@ class FormGeneratorService
     {
         $tpl = $this->tpl('estandar/SNCC_F034_Presentacion_de_Oferta.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.034'), [
             'company' => $c->only(['razon_social', 'rnc']),
@@ -231,6 +290,7 @@ class FormGeneratorService
         $items = Equipment::where('company_id', $c->id)->active()->orderBy('descripcion')->get();
 
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.036'), [
             'company' => $c->only(['razon_social']),
@@ -243,6 +303,7 @@ class FormGeneratorService
     {
         $tpl = $this->tpl('estandar/SNCC_F037_Personal_Oferente.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.037'), [
             'company' => $c->only(['razon_social']),
@@ -254,6 +315,7 @@ class FormGeneratorService
     {
         $tpl = $this->tpl('estandar/SNCC_F042_Informacion_Oferente.docx');
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.042'), [
             'company' => $c->only(['razon_social', 'rnc']),
@@ -286,6 +348,7 @@ class FormGeneratorService
                 'persona_idiomas' => implode(', ', $person->idiomas ?? []),
             ]
         );
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.D.045'), [
             'person_id' => $person->id,
@@ -309,6 +372,7 @@ class FormGeneratorService
                 'persona_idiomas' => implode(', ', $person->idiomas ?? []),
             ]
         );
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.D.048'), [
             'person_id' => $person->id,
@@ -324,6 +388,7 @@ class FormGeneratorService
         $tpl = $this->tpl('estandar/SNCC_D049_Experiencia_contratista.docx');
 
         $this->set($tpl, $this->companyTokens($c), $this->processTokens($p));
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.D.049'), [
             'company' => $c->only(['razon_social']),
@@ -343,6 +408,7 @@ class FormGeneratorService
                 'rep_estado_civil' => $p['rep_estado_civil'] ?? '',
             ]
         );
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'DECL.JURADA'), [
             'company' => $c->only(['razon_social', 'rnc', 'rep_legal_nombre', 'rep_legal_cedula']),
@@ -360,6 +426,7 @@ class FormGeneratorService
                 'rep_estado_civil' => $p['rep_estado_civil'] ?? '',
             ]
         );
+        $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'DECL.COMPROMISO_ETICO'), [
             'company' => $c->only(['razon_social', 'rnc']),

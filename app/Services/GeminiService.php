@@ -26,21 +26,45 @@ class GeminiService
     private string $parserVersion = 'v1.0';
 
     private string $prompt = <<<'PROMPT'
-Eres un experto en contrataciones públicas de la República Dominicana.
-Analiza este pliego de condiciones y extrae la siguiente información en JSON estrictamente válido (sin texto adicional, sin markdown):
+Eres un analista experto en contrataciones públicas de la República Dominicana (Ley 340-06 y sus modificaciones, Ley 47-25, reglamentos DGCP).
+
+TAREA: Analiza el pliego de condiciones adjunto y extrae TODOS los requisitos de participación, documentos solicitados, y condiciones de la licitación.
+
+INSTRUCCIONES:
+1. Lee el documento COMPLETO antes de responder. No te detengas en las primeras páginas.
+2. Busca específicamente en estas secciones (pueden tener nombres diferentes):
+   - "Requisitos de elegibilidad" / "Documentos habilitantes" → documentos_requeridos
+   - "Criterios de evaluación financiera" / "Capacidad financiera" → indices_financieros
+   - "Personal clave" / "Equipo de trabajo" → personal_requerido
+   - "Equipos y maquinarias" → equipos_requeridos
+   - "Experiencia del oferente" / "Experiencia específica" → experiencia_requerida
+   - "Presentación de ofertas" / "Instrucciones a los oferentes" → formato_oferta
+   - "Calendario del proceso" / "Cronograma" → fechas_clave
+   - "Criterios de evaluación" / "Método de evaluación" → criterios_evaluacion
+3. Para documentos_requeridos: incluye TODO documento mencionado como obligatorio (certificaciones DGII, TSS, DGCP, declaraciones juradas, garantías, estados financieros, poderes notariales, etc.)
+4. Para personal_requerido: extrae cada cargo individual con sus años de experiencia mínima
+5. Para fechas_clave: usa formato ISO 8601 (YYYY-MM-DD o YYYY-MM-DDTHH:MM)
+6. Si un campo no aparece en el documento, usa null (no inventes datos)
+
+Responde ÚNICAMENTE con JSON válido, sin markdown ni texto adicional:
 {
-  "documentos_requeridos": [{"nombre": "", "copias": 0, "tipo": "original|copia|apostilla"}],
+  "documentos_requeridos": [{"nombre": "nombre exacto del documento", "copias": 0, "tipo": "original|copia|copia_certificada|apostilla"}],
   "indices_financieros": {"solvencia_min": null, "liquidez_min": null, "endeudamiento_max": null},
-  "personal_requerido": [{"cargo": "", "experiencia_años": 0, "certificaciones": []}],
-  "equipos_requeridos": [{"descripcion": "", "cantidad": 0}],
+  "personal_requerido": [{"cargo": "título del cargo", "experiencia_años": 0, "certificaciones": []}],
+  "equipos_requeridos": [{"descripcion": "descripción del equipo", "cantidad": 0}],
   "experiencia_requerida": {"proyectos_similares": 0, "monto_minimo": 0, "currency": "DOP"},
-  "formato_oferta": {"copias": 0, "idioma": "español", "formato": ""},
+  "formato_oferta": {"copias": 0, "idioma": "español", "formato": "sobre cerrado|digital|mixto"},
   "fechas_clave": {"visita_campo": null, "aclaraciones": null, "entrega_oferta": null, "apertura_sobres": null},
-  "criterios_evaluacion": [{"criterio": "", "peso": 0}],
+  "criterios_evaluacion": [{"criterio": "nombre del criterio", "peso": 0}],
   "confidence_score": 0,
   "notas": ""
 }
-El campo confidence_score (0-100) refleja qué tan completo y claro es el pliego para extraer estos datos.
+
+CONFIDENCE_SCORE: Evalúa de 0 a 100 basándote en:
+- 90+: El pliego es claro, estructurado, y pudiste extraer la mayoría de campos
+- 70-89: Pliego parcialmente claro, algunos campos ambiguos o faltantes
+- 50-69: Pliego confuso, muchos campos no pudieron extraerse con certeza
+- <50: Documento ilegible, incompleto, o no es un pliego de condiciones
 PROMPT;
 
     public function __construct()
@@ -223,13 +247,13 @@ PROMPT;
     private function processExtraction(OfferParseAttempt $attempt, ?array $parsed): OfferParseAttempt
     {
         if (! $parsed) {
-            $attempt->update(['status' => 'failed', 'failure_reason' => 'No se pudo extraer JSON válido de la respuesta de Gemini.']);
+            $attempt->update(['status' => 'failed', 'failure_reason' => 'No se pudo extraer JSON válido de la respuesta de IA.']);
             $this->advanceOfferState($attempt->offer, $attempt);
 
             return $attempt;
         }
 
-        $confidence = (int) ($parsed['confidence_score'] ?? 0);
+        $confidence = min((int) ($parsed['confidence_score'] ?? 0), 99);
 
         // Check for required fields
         $requiredFields = ['documentos_requeridos', 'indices_financieros', 'personal_requerido'];

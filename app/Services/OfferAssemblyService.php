@@ -90,7 +90,178 @@ class OfferAssemblyService
         ]);
     }
 
+    /**
+     * Generate Sobre A and Sobre B ZIP packages.
+     * Each ZIP contains all requirement-item files converted to PDF.
+     */
+    public function assembleSobres(Offer $offer): array
+    {
+        $offer->load('activeRequirements.items');
+
+        $sobreDir = storage_path('app/generated/sobres');
+        if (! is_dir($sobreDir)) {
+            mkdir($sobreDir, 0755, true);
+        }
+
+        $pdfCacheDir = storage_path('app/generated/pdf_cache');
+        if (! is_dir($pdfCacheDir)) {
+            mkdir($pdfCacheDir, 0755, true);
+        }
+
+        $result = [];
+        $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $offer->proceso_codigo ?? 'oferta');
+
+        foreach (['A', 'B'] as $sobre) {
+            $reqs = $offer->activeRequirements->where('sobre', $sobre);
+            if ($reqs->isEmpty()) {
+                continue;
+            }
+
+            $files = $this->collectSobreFiles($reqs);
+            if (empty($files)) {
+                continue;
+            }
+
+            // Convert each file to PDF and collect paths
+            $pdfPaths = [];
+            foreach ($files as $file) {
+                $pdf = $this->ensurePdf($file['full_path'], $pdfCacheDir);
+                if ($pdf) {
+                    $pdfPaths[] = ['path' => $pdf, 'label' => $file['label']];
+                }
+            }
+
+            if (empty($pdfPaths)) {
+                continue;
+            }
+
+            // Build ZIP
+            $zipName = "Sobre {$sobre}-{$code}.zip";
+            $zipPath = "{$sobreDir}/{$zipName}";
+
+            $zip = new ZipArchive;
+            $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+            $usedNames = [];
+            foreach ($pdfPaths as $entry) {
+                $baseName = pathinfo($entry['label'], PATHINFO_FILENAME).'.pdf';
+                // Avoid duplicate names
+                if (isset($usedNames[$baseName])) {
+                    $usedNames[$baseName]++;
+                    $baseName = pathinfo($entry['label'], PATHINFO_FILENAME)."_{$usedNames[$baseName]}.pdf";
+                } else {
+                    $usedNames[$baseName] = 1;
+                }
+                $zip->addFile($entry['path'], $baseName);
+            }
+            $zip->close();
+
+            $result[$sobre] = $zipPath;
+        }
+
+        return $result;
+    }
+
     // ── Private ───────────────────────────────────────────────────────
+
+    private function collectSobreFiles($requirements): array
+    {
+        $files = [];
+
+        foreach ($requirements as $req) {
+            foreach ($req->items as $item) {
+                if ($item->vault_ref_type === 'vault_documents') {
+                    $doc = VaultDocument::find($item->vault_ref_id);
+                    if ($doc?->path) {
+                        $fullPath = Storage::disk('vault')->path($doc->path);
+                        if (file_exists($fullPath)) {
+                            $files[] = [
+                                'full_path' => $fullPath,
+                                'label' => $doc->name ?? basename($doc->path),
+                            ];
+                        }
+                    }
+                } elseif ($item->vault_ref_type === 'offer_generated_files') {
+                    $gen = OfferGeneratedFile::find($item->vault_ref_id);
+                    if ($gen?->path) {
+                        $fullPath = storage_path('app/'.$gen->path);
+                        if (file_exists($fullPath)) {
+                            $files[] = [
+                                'full_path' => $fullPath,
+                                'label' => OfferGeneratedFile::$forms[$gen->form_code] ?? $gen->form_code,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return $files;
+    }
+
+    private function ensurePdf(string $filePath, string $cacheDir): ?string
+    {
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+        // Already PDF
+        if ($ext === 'pdf') {
+            return $filePath;
+        }
+
+        $hash = md5($filePath.filemtime($filePath));
+        $pdfPath = "{$cacheDir}/{$hash}.pdf";
+
+        if (file_exists($pdfPath)) {
+            return $pdfPath;
+        }
+
+        // Convert with LibreOffice
+        if (in_array($ext, ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'odt', 'ods'])) {
+            $cmd = sprintf(
+                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg($cacheDir),
+                escapeshellarg($filePath)
+            );
+            exec($cmd, $output, $exitCode);
+
+            // LibreOffice outputs with original filename
+            $convertedName = pathinfo($filePath, PATHINFO_FILENAME).'.pdf';
+            $convertedPath = "{$cacheDir}/{$convertedName}";
+
+            if ($exitCode === 0 && file_exists($convertedPath)) {
+                // Rename to hash-based name to avoid collisions
+                rename($convertedPath, $pdfPath);
+
+                return $pdfPath;
+            }
+
+            return null;
+        }
+
+        // Images → convert with LibreOffice as fallback
+        if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'])) {
+            $cmd = sprintf(
+                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                escapeshellarg($cacheDir),
+                escapeshellarg($filePath)
+            );
+            exec($cmd, $output, $exitCode);
+
+            $convertedName = pathinfo($filePath, PATHINFO_FILENAME).'.pdf';
+            $convertedPath = "{$cacheDir}/{$convertedName}";
+
+            if ($exitCode === 0 && file_exists($convertedPath)) {
+                rename($convertedPath, $pdfPath);
+
+                return $pdfPath;
+            }
+
+            return null;
+        }
+
+        // Unsupported format — include as-is won't work, skip
+        return null;
+    }
 
     private function collectFileHashes(Offer $offer): array
     {

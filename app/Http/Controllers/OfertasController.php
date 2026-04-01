@@ -22,6 +22,7 @@ use App\Models\OfferSnapshot;
 use App\Models\Personnel;
 use App\Models\Project;
 use App\Models\Subscription;
+use App\Models\VaultDocument;
 use App\Services\DgcpApiClient;
 use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
@@ -333,11 +334,46 @@ class OfertasController extends Controller
         abort_unless($req->offer_id === $oferta->id, 403);
         abort_unless($oferta->isEditable(), 403);
 
-        $data = $request->validate([
-            'vault_ref_type' => 'required|in:vault_documents,personnel,projects,equipment,financial_records,offer_generated_files',
-            'vault_ref_id' => 'required|integer',
-            'role_note' => 'nullable|string|max:255',
-        ]);
+        if ($request->input('vault_ref_type') === 'uploaded_file') {
+            $request->validate([
+                'upload_name' => 'required|string|max:255',
+                'upload_file' => 'required|file|max:20480',
+                'upload_category' => 'required|in:'.implode(',', array_keys(VaultDocument::$categories)),
+                'role_note' => 'nullable|string|max:255',
+            ]);
+
+            $company = currentCompany();
+            $file = $request->file('upload_file');
+            $category = $request->input('upload_category');
+            $stored = $file->storeAs(
+                "vault/{$company->id}/{$category}",
+                \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension(),
+                'vault'
+            );
+
+            $doc = VaultDocument::create([
+                'company_id' => $company->id,
+                'category' => $category,
+                'name' => $request->input('upload_name'),
+                'filename' => $file->getClientOriginalName(),
+                'path' => $stored,
+                'copy_type' => 'original',
+                'language' => 'es',
+                'is_current' => true,
+            ]);
+
+            $data = [
+                'vault_ref_type' => 'vault_documents',
+                'vault_ref_id' => $doc->id,
+                'role_note' => $request->input('role_note'),
+            ];
+        } else {
+            $data = $request->validate([
+                'vault_ref_type' => 'required|in:vault_documents,personnel,projects,equipment,financial_records,offer_generated_files',
+                'vault_ref_id' => 'required|integer',
+                'role_note' => 'nullable|string|max:255',
+            ]);
+        }
 
         $req->items()->create($data);
         $req->recalculateEstado();
@@ -487,6 +523,56 @@ class OfertasController extends Controller
         abort_unless(file_exists($fullPath), 404);
 
         return response()->download($fullPath, basename($fullPath));
+    }
+
+    public function saveSobres(Request $request, Offer $oferta)
+    {
+        abort_unless(in_array($oferta->estado, ['en_preparacion', 'listo']), 403);
+
+        $data = $request->validate([
+            'sobres' => 'required|array',
+            'sobres.*' => 'nullable|in:A,B',
+        ]);
+
+        foreach ($data['sobres'] as $reqId => $sobre) {
+            OfferRequirement::where('id', $reqId)
+                ->where('offer_id', $oferta->id)
+                ->update(['sobre' => $sobre ?: null]);
+        }
+
+        return redirect()->route('ofertas.show', [$oferta, 'tab' => 'ensamblar'])
+            ->with('success', 'Asignación de sobres guardada.');
+    }
+
+    public function generateSobres(Offer $oferta, OfferAssemblyService $assembly)
+    {
+        abort_unless(in_array($oferta->estado, ['listo', 'en_preparacion']), 422);
+
+        $result = $assembly->assembleSobres($oferta);
+
+        if (empty($result)) {
+            return redirect()->route('ofertas.show', [$oferta, 'tab' => 'ensamblar'])
+                ->with('error', 'No hay requisitos asignados a ningún sobre.');
+        }
+
+        return redirect()->route('ofertas.show', [$oferta, 'tab' => 'ensamblar'])
+            ->with('success', 'Sobres generados correctamente.');
+    }
+
+    public function downloadSobre(Offer $oferta, string $sobre)
+    {
+        abort_unless(in_array($sobre, ['A', 'B']), 404);
+
+        $pattern = storage_path("app/generated/sobres/Sobre {$sobre}-{$oferta->proceso_codigo}*.zip");
+        $files = glob($pattern);
+
+        if (empty($files)) {
+            abort(404, "Sobre {$sobre} no ha sido generado.");
+        }
+
+        $latest = collect($files)->sort()->last();
+
+        return response()->download($latest, basename($latest));
     }
 
     // ── Form generation within offer context ──────────────────────────
