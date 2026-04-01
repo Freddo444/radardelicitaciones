@@ -169,6 +169,8 @@
                     <li><a href="/precios" class="inline-block py-1 hover:text-white transition-colors">Precios</a></li>
                     <li><a href="/registro" class="inline-block py-1 hover:text-white transition-colors">Crear cuenta</a></li>
                     <li><a href="/login" class="inline-block py-1 hover:text-white transition-colors">Iniciar sesión</a></li>
+                    <li><a href="/terminos" class="inline-block py-1 hover:text-white transition-colors">Términos de servicio</a></li>
+                    <li><a href="/privacidad" class="inline-block py-1 hover:text-white transition-colors">Política de privacidad</a></li>
                 </ul>
             </div>
             <div>
