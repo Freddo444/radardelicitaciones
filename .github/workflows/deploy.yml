@@ -31,8 +31,8 @@ jobs:
             # Trust repo ownership for any user
             git config --global --add safe.directory "$DEPLOY_PATH"
 
-            # 1. Take ownership so secp can do git pull + npm
-            echo "$SUDO_PASS" | sudo -S chown -R radar:radar "$DEPLOY_PATH"
+            # 1. Take ownership so radar can do git pull + npm
+            echo "$SUDO_PASS" | sudo -S chown -R radar:www-data "$DEPLOY_PATH"
 
             cd "$DEPLOY_PATH"
 
@@ -45,9 +45,8 @@ jobs:
             npm ci --no-audit
             npm run build
 
-            # 4. Give www-data ownership of app files (not node_modules, not .git, not public/build)
-            echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH"
-            echo "$SUDO_PASS" | sudo -S chown -R radar:radar "$DEPLOY_PATH/.git" "$DEPLOY_PATH/node_modules" "$DEPLOY_PATH/public/build"
+            # 4. Give www-data group ownership so PHP-FPM can read, radar user can write
+            echo "$SUDO_PASS" | sudo -S chown -R radar:www-data "$DEPLOY_PATH"
 
             # 5. Fix file permissions: 644 for files, 755 for dirs, 775 for writable dirs
             echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
@@ -55,20 +54,24 @@ jobs:
             echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
             echo "$SUDO_PASS" | sudo -S chmod 755 "$DEPLOY_PATH/artisan"
 
-            # 6. PHP tasks as www-data (composer, migrations, caches)
+            # 6. Composer install as radar (owns vendor dir)
+            cd "$DEPLOY_PATH"
+            composer install --no-interaction --prefer-dist --optimize-autoloader
+
+            # 7. Ensure storage/cache writable by www-data
+            echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
+
+            # 8. Artisan tasks as www-data (needs to write cache files)
             echo "$SUDO_PASS" | sudo -S -u www-data bash -c "
               cd '$DEPLOY_PATH'
-              composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-              php artisan package:discover --ansi
               php artisan migrate --force
               php artisan config:cache
               php artisan route:cache
-              php artisan view:cache
               php artisan event:cache
               php artisan queue:restart 2>/dev/null || true
             "
 
-            # 7. Restart supervisor worker
+            # 9. Restart supervisor worker
             echo "$SUDO_PASS" | sudo -S supervisorctl restart radar-worker:* 2>/dev/null || true
 
             echo 'Deployment complete.'
