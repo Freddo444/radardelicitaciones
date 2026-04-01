@@ -162,7 +162,7 @@
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Instituciones monitoreadas</p>
             </div>
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['rubros']) }}+</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['rubros'] ?? 0) }}+</p>
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Rubros UNSPSC monitoreados</p>
             </div>
         </div>
