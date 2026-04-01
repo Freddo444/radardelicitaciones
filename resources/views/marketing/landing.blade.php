@@ -169,6 +169,62 @@
     </div>
 </section>
 
+{{-- ═══ WHY RADAR ═══ --}}
+<section class="py-24 sm:py-32">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
+            <div data-animate>
+                <p class="font-display text-sm font-semibold text-emerald-600">Por qué elegirnos</p>
+                <h2 class="font-display mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+                    La ventaja que su competencia no tiene
+                </h2>
+                <dl class="mt-8 space-y-5">
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">IA que lee pliegos por usted</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Suba el pliego y en segundos obtenga requisitos, montos, personal y documentos extraídos automáticamente.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">Espacio de trabajo completo</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Personal clave, equipos, proyectos, financieros y documentos legales — todo organizado y listo para componer ofertas.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">Formularios que se llenan solos</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Los formularios RPE y documentos estándar se completan con datos de su empresa. Menos errores, menos tiempo.</dd>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex-shrink-0 mt-1">
+                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-semibold text-gray-900">De licitación a oferta, sin salir</dt>
+                            <dd class="mt-1 text-sm text-gray-600">Monitoreo, análisis, preparación, tablero Kanban y ensamblaje final — todo en una sola plataforma.</dd>
+                        </div>
+                    </div>
+                </dl>
+            </div>
+            <div data-animate data-delay="2" class="relative">
+                <img src="/images/shots/ai-analysis.png" alt="Análisis de pliego con inteligencia artificial"
+                     class="rounded-2xl shadow-2xl ring-1 ring-gray-900/10" loading="lazy">
+            </div>
+        </div>
+    </div>
+</section>
+
 {{-- ═══ FEATURES ═══ --}}
 <section class="py-24 sm:py-32 bg-slate-50/50">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -290,62 +346,6 @@
                 <p class="mt-4 text-base text-gray-600">
                     Tablero Kanban para mover ofertas desde borrador hasta enviado. Sepa exactamente dónde está cada proceso sin perder el hilo.
                 </p>
-            </div>
-        </div>
-    </div>
-</section>
-
-{{-- ═══ WHY RADAR ═══ --}}
-<section class="py-24 sm:py-32">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-            <div data-animate>
-                <p class="font-display text-sm font-semibold text-emerald-600">Por qué elegirnos</p>
-                <h2 class="font-display mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-                    La ventaja que su competencia no tiene
-                </h2>
-                <dl class="mt-8 space-y-5">
-                    <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
-                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-semibold text-gray-900">IA que lee pliegos por usted</dt>
-                            <dd class="mt-1 text-sm text-gray-600">Suba el pliego y en segundos obtenga requisitos, montos, personal y documentos extraídos automáticamente.</dd>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
-                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-semibold text-gray-900">Espacio de trabajo completo</dt>
-                            <dd class="mt-1 text-sm text-gray-600">Personal clave, equipos, proyectos, financieros y documentos legales — todo organizado y listo para componer ofertas.</dd>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
-                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-semibold text-gray-900">Formularios que se llenan solos</dt>
-                            <dd class="mt-1 text-sm text-gray-600">Los formularios RPE y documentos estándar se completan con datos de su empresa. Menos errores, menos tiempo.</dd>
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
-                            <svg class="size-5 text-emerald-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-semibold text-gray-900">De licitación a oferta, sin salir</dt>
-                            <dd class="mt-1 text-sm text-gray-600">Monitoreo, análisis, preparación, tablero Kanban y ensamblaje final — todo en una sola plataforma.</dd>
-                        </div>
-                    </div>
-                </dl>
-            </div>
-            <div data-animate data-delay="2" class="relative">
-                <img src="/images/shots/ai-analysis.png" alt="Análisis de pliego con inteligencia artificial"
-                     class="rounded-2xl shadow-2xl ring-1 ring-gray-900/10" loading="lazy">
             </div>
         </div>
     </div>
