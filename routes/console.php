@@ -8,52 +8,54 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('secp:poll')
+$php = 'php -d memory_limit=4G ' . base_path('artisan');
+
+Schedule::exec("{$php} secp:poll")
     ->hourly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-poll.log'));
 
 // Periodic digest — per-company frequency checked inside the command
-Schedule::command('secp:send-digest')
+Schedule::exec("{$php} secp:send-digest")
     ->hourly()
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/secp-digest.log'));
 
-Schedule::command('secp:scrape')
+Schedule::exec("{$php} secp:scrape")
     ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-scrape.log'));
 
-Schedule::command('secp:sync-providers')
+Schedule::exec("{$php} secp:sync-providers")
     ->weekly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-providers.log'));
 
-Schedule::command('secp:sync-contracts')
+Schedule::exec("{$php} secp:sync-contracts")
     ->monthly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-contracts.log'));
 
-Schedule::command('secp:sync-pacc')
+Schedule::exec("{$php} secp:sync-pacc")
     ->monthly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-pacc.log'));
 
-Schedule::command('secp:sync-institutions')
+Schedule::exec("{$php} secp:sync-institutions")
     ->quarterly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-sync-institutions.log'));
 
-Schedule::command('secp:import-catalog')
+Schedule::exec("{$php} secp:import-catalog")
     ->monthly()
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-import-catalog.log'));
 
-Schedule::command('telescope:prune --hours=72')->daily();
+Schedule::exec("{$php} telescope:prune --hours=72")->daily();
