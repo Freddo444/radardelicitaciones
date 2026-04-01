@@ -154,15 +154,15 @@
     <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div data-animate class="grid grid-cols-3 gap-px overflow-hidden rounded-2xl bg-gray-200 shadow-lg">
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['bids']) }}+</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format(max($stats['bids'], 500)) }}+</p>
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Licitaciones monitoreadas</p>
             </div>
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['institutions']) }}+</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format(max($stats['institutions'], 200)) }}+</p>
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Instituciones monitoreadas</p>
             </div>
             <div class="bg-white px-3 py-5 text-center sm:px-6 sm:py-8">
-                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format($stats['rubros'] ?? 0) }}+</p>
+                <p class="font-display text-xl font-bold text-gray-900 sm:text-3xl">{{ number_format(max($stats['rubros'] ?? 0, 1000)) }}+</p>
                 <p class="mt-1 text-xs text-gray-500 sm:text-sm">Rubros UNSPSC monitoreados</p>
             </div>
         </div>
@@ -183,71 +183,83 @@
         </div>
 
         <div class="mx-auto mt-16 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-2">
-            {{-- Feature 1 --}}
+            {{-- Feature 1: Monitoreo --}}
             <div data-animate data-delay="1"
-                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
-                        <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
-                        </svg>
+                 class="group relative rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 overflow-hidden">
+                <div class="p-6 sm:p-8">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
+                            <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 0 1 0-5.304m5.304 0a3.75 3.75 0 0 1 0 5.304m-7.425 2.121a6.75 6.75 0 0 1 0-9.546m9.546 0a6.75 6.75 0 0 1 0 9.546M5.106 18.894c-3.808-3.807-3.808-9.98 0-13.788m13.788 0c3.808 3.807 3.808 9.98 0 13.788M12 12h.008v.008H12V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-lg font-semibold text-gray-900">Monitoreo 24/7</h3>
+                        <span class="relative flex h-2 w-2 live-dot">
+                            <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                        </span>
                     </div>
-                    <h3 class="font-display text-lg font-semibold text-gray-900">Monitoreo 24/7</h3>
-                    <span class="relative flex h-2 w-2 live-dot">
-                        <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                    </span>
+                    <p class="mt-4 text-sm leading-6 text-gray-600">
+                        Vigilamos el portal de la DGCP las 24 horas. Le avisamos por correo electrónico y Telegram cuando aparezcan licitaciones que coincidan con sus rubros.
+                    </p>
                 </div>
-                <p class="mt-4 text-sm leading-6 text-gray-600">
-                    Vigilamos el portal de la DGCP las 24 horas. Le avisamos por correo electrónico y Telegram cuando aparezcan licitaciones que coincidan con sus rubros.
-                </p>
+                <img src="/images/shots/convocatorias.png" alt="Vista de convocatorias" class="w-full border-t border-gray-100" loading="lazy">
             </div>
 
-            {{-- Feature 2 --}}
+            {{-- Feature 2: AI --}}
             <div data-animate data-delay="2"
-                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
-                        <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
-                        </svg>
+                 class="group relative rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 overflow-hidden">
+                <div class="p-6 sm:p-8">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
+                            <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-lg font-semibold text-gray-900">Análisis de pliegos con IA</h3>
                     </div>
-                    <h3 class="font-display text-lg font-semibold text-gray-900">Análisis de pliegos con IA</h3>
+                    <p class="mt-4 text-sm leading-6 text-gray-600">
+                        La inteligencia artificial lee los documentos del pliego en segundos. Identifica requisitos, montos, plazos y condiciones para que usted decida rápido si participar.
+                    </p>
                 </div>
-                <p class="mt-4 text-sm leading-6 text-gray-600">
-                    La inteligencia artificial lee los documentos del pliego en segundos. Identifica requisitos, montos, plazos y condiciones para que usted decida rápido si participar.
-                </p>
+                <img src="/images/shots/checklist.png" alt="Checklist de requisitos extraídos con IA" class="w-full border-t border-gray-100" loading="lazy">
             </div>
 
-            {{-- Feature 3 --}}
+            {{-- Feature 3: Ofertas --}}
             <div data-animate data-delay="3"
-                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
-                        <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
-                        </svg>
+                 class="group relative rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 overflow-hidden">
+                <div class="p-6 sm:p-8">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
+                            <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-lg font-semibold text-gray-900">Espacio para ofertas</h3>
                     </div>
-                    <h3 class="font-display text-lg font-semibold text-gray-900">Espacio para ofertas</h3>
+                    <p class="mt-4 text-sm leading-6 text-gray-600">
+                        Organice toda su documentación: personal clave, equipos, proyectos ejecutados, estados financieros y documentos legales. Todo listo cuando necesite armar una oferta.
+                    </p>
                 </div>
-                <p class="mt-4 text-sm leading-6 text-gray-600">
-                    Organice toda su documentación: personal clave, equipos, proyectos ejecutados, estados financieros y documentos legales. Todo listo cuando necesite armar una oferta.
-                </p>
+                <img src="/images/shots/tablero-kanban.png" alt="Tablero Kanban de ofertas" class="w-full border-t border-gray-100" loading="lazy">
             </div>
 
-            {{-- Feature 4 --}}
+            {{-- Feature 4: Formularios --}}
             <div data-animate data-delay="4"
-                 class="group relative rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 sm:p-8">
-                <div class="flex items-center gap-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
-                        <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/>
-                        </svg>
+                 class="group relative rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 transition-all hover:shadow-md hover:ring-emerald-200 active:shadow-md active:ring-emerald-200 overflow-hidden">
+                <div class="p-6 sm:p-8">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-800">
+                            <svg class="size-5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 0 0-1.883 2.542l.857 6a2.25 2.25 0 0 0 2.227 1.932H19.05a2.25 2.25 0 0 0 2.227-1.932l.857-6a2.25 2.25 0 0 0-1.883-2.542m-16.5 0V6A2.25 2.25 0 0 1 6 3.75h3.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 0 1.06.44H18A2.25 2.25 0 0 1 20.25 9v.776"/>
+                            </svg>
+                        </div>
+                        <h3 class="font-display text-lg font-semibold text-gray-900">Formularios pre-llenados</h3>
                     </div>
-                    <h3 class="font-display text-lg font-semibold text-gray-900">Formularios pre-llenados</h3>
+                    <p class="mt-4 text-sm leading-6 text-gray-600">
+                        Los formularios RPE y documentos estándar se completan automáticamente con los datos de su empresa. Menos errores, menos tiempo, más ofertas presentadas.
+                    </p>
                 </div>
-                <p class="mt-4 text-sm leading-6 text-gray-600">
-                    Los formularios RPE y documentos estándar se completan automáticamente con los datos de su empresa. Menos errores, menos tiempo, más ofertas presentadas.
-                </p>
+                <img src="/images/shots/formularios.png" alt="Formularios pre-llenados" class="w-full border-t border-gray-100" loading="lazy">
             </div>
         </div>
     </div>
