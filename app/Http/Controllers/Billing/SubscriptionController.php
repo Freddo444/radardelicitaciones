@@ -14,7 +14,13 @@ class SubscriptionController extends Controller
 {
     public function index()
     {
-        return redirect()->route('settings.index', ['tab' => 'suscripcion']);
+        $user = Auth::user();
+        $subscription = $user->subscription;
+        $usage = $subscription ? SubscriptionService::usage($subscription) : null;
+        $payments = $subscription ? $subscription->payments()->latest()->limit(10)->get() : collect();
+        $isOwner = $user->isSubscriptionOwner();
+
+        return view('billing.index', compact('subscription', 'usage', 'payments', 'isOwner'));
     }
 
     public function cancel(Request $request)
@@ -35,7 +41,7 @@ class SubscriptionController extends Controller
             'cancelled_at' => now(),
         ]);
 
-        return redirect()->route('settings.index', ['tab' => 'suscripcion'])
+        return redirect()->route('billing.index')
             ->with('success', 'Suscripción cancelada. Tendrás acceso hasta el final del periodo actual.');
     }
 
@@ -125,7 +131,7 @@ class SubscriptionController extends Controller
 
         $label = $type === 'company' ? 'empresa' : 'usuario';
 
-        return redirect()->route('settings.index', ['tab' => 'suscripcion'])
+        return redirect()->route('billing.index')
             ->with('success', "1 {$label} agregado(a). Cobro prorrateado: US\${$prorated}. Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.');
     }
 

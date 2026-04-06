@@ -4,10 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Setting;
 use App\Services\DgcpApiClient;
-use App\Services\SubscriptionService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
 class SettingsController extends Controller
@@ -39,13 +37,7 @@ class SettingsController extends Controller
             'catalog_last_imported_at' => Setting::get('catalog_last_imported_at'),
         ];
 
-        $user = Auth::user();
-        $subscription = $user->subscription;
-        $usage = $subscription ? SubscriptionService::usage($subscription) : null;
-        $payments = $subscription ? $subscription->payments()->limit(10)->get() : collect();
-        $isOwner = $user->isSubscriptionOwner();
-
-        return view('settings.index', compact('settings', 'subscription', 'usage', 'payments', 'isOwner'));
+        return view('settings.index', compact('settings'));
     }
 
     public function update(Request $request)

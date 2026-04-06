@@ -256,6 +256,16 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{{ route('billing.index') }}" title="Suscripción"
+                       class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('billing.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                             class="size-6 shrink-0 {{ request()->routeIs('billing.*') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
+                            <path d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="sidebar-label">Suscripci&oacute;n</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{{ route('settings.index') }}" title="Configuración"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('settings.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
