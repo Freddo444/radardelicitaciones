@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Models\Payment;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,18 +14,7 @@ class SubscriptionController extends Controller
 {
     public function index()
     {
-        $user = Auth::user();
-        $subscription = $user->subscription;
-
-        if (! $subscription) {
-            return redirect()->route('register.show')
-                ->with('error', 'No tienes una suscripción. Regístrate primero.');
-        }
-
-        $usage = SubscriptionService::usage($subscription);
-        $payments = $subscription->payments()->limit(10)->get();
-
-        return view('billing.index', compact('subscription', 'usage', 'payments'));
+        return redirect()->route('settings.index', ['tab' => 'suscripcion']);
     }
 
     public function cancel(Request $request)
@@ -36,7 +26,6 @@ class SubscriptionController extends Controller
             abort(403);
         }
 
-        // Cancel on PayPal if it's a PayPal subscription
         if ($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
             $this->cancelPayPalSubscription($subscription->gateway_subscription_id);
         }
@@ -46,37 +35,218 @@ class SubscriptionController extends Controller
             'cancelled_at' => now(),
         ]);
 
-        return back()->with('success', 'Suscripción cancelada.');
+        return redirect()->route('settings.index', ['tab' => 'suscripcion'])
+            ->with('success', 'Suscripción cancelada. Tendrás acceso hasta el final del periodo actual.');
+    }
+
+    /**
+     * Preview proration for adding a user or company.
+     */
+    public function previewAddon(Request $request)
+    {
+        $request->validate(['type' => 'required|in:user,company']);
+
+        $subscription = Auth::user()->subscription;
+        if (! $subscription || ! $subscription->isActive() || $subscription->status === 'trialing') {
+            return response()->json(['error' => 'Suscripción no activa.'], 422);
+        }
+
+        $addonPrice = $request->type === 'company'
+            ? SubscriptionService::EXTRA_COMPANY_PRICE
+            : SubscriptionService::EXTRA_USER_PRICE;
+
+        $prorated = SubscriptionService::calculateProration($subscription, $addonPrice);
+
+        $newCompanies = $subscription->max_companies + ($request->type === 'company' ? 1 : 0);
+        $newUsers = $subscription->max_users + ($request->type === 'user' ? 1 : 0);
+        $newMonthly = SubscriptionService::calculateMonthly($newCompanies, $newUsers);
+        $newRecurring = SubscriptionService::calculatePrice($newCompanies, $newUsers, $subscription->billing_cycle ?? 'monthly');
+
+        $periodEnd = $subscription->current_period_end?->format('d/m/Y') ?? '—';
+
+        return response()->json([
+            'prorated_amount' => $prorated,
+            'addon_monthly' => $addonPrice,
+            'new_monthly' => $newMonthly,
+            'new_recurring' => $newRecurring,
+            'billing_cycle' => $subscription->billing_cycle ?? 'monthly',
+            'period_end' => $periodEnd,
+        ]);
+    }
+
+    /**
+     * Purchase an additional user or company with prorated charge.
+     */
+    public function purchaseAddon(Request $request)
+    {
+        $request->validate(['type' => 'required|in:user,company']);
+
+        $user = Auth::user();
+        $subscription = $user->subscription;
+
+        if (! $subscription || ! $user->isSubscriptionOwner()) {
+            abort(403);
+        }
+
+        if (! $subscription->isActive() || $subscription->status === 'trialing') {
+            return back()->with('error', 'Necesitas una suscripción activa para agregar recursos.');
+        }
+
+        $type = $request->type;
+        $addonPrice = $type === 'company'
+            ? SubscriptionService::EXTRA_COMPANY_PRICE
+            : SubscriptionService::EXTRA_USER_PRICE;
+
+        $newCompanies = $subscription->max_companies + ($type === 'company' ? 1 : 0);
+        $newUsers = $subscription->max_users + ($type === 'user' ? 1 : 0);
+        $prorated = SubscriptionService::calculateProration($subscription, $addonPrice);
+        $newMonthly = SubscriptionService::calculateMonthly($newCompanies, $newUsers);
+        $newRecurring = SubscriptionService::calculatePrice($newCompanies, $newUsers, $subscription->billing_cycle ?? 'monthly');
+
+        // 1. Capture prorated one-time payment via PayPal
+        if ($prorated > 0 && $subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
+            $captured = $this->captureOneTimePayment($subscription, $prorated, $type);
+            if (! $captured) {
+                return back()->with('error', 'Error al procesar el cobro prorrateado con PayPal. Intenta de nuevo.');
+            }
+        }
+
+        // 2. Revise PayPal subscription recurring amount for next cycle
+        if ($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
+            $this->revisePayPalSubscription($subscription->gateway_subscription_id, $newRecurring);
+        }
+
+        // 3. Update local subscription limits
+        $subscription->update([
+            'max_companies' => $newCompanies,
+            'max_users' => $newUsers,
+            'monthly_amount' => $newMonthly,
+        ]);
+
+        $label = $type === 'company' ? 'empresa' : 'usuario';
+
+        return redirect()->route('settings.index', ['tab' => 'suscripcion'])
+            ->with('success', "1 {$label} agregado(a). Cobro prorrateado: US\${$prorated}. Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.');
+    }
+
+    /**
+     * Capture a one-time prorated payment via PayPal subscription.
+     */
+    private function captureOneTimePayment(mixed $subscription, float $amount, string $type): bool
+    {
+        $token = $this->getAccessToken();
+        if (! $token) {
+            return false;
+        }
+
+        $response = Http::withToken($token)
+            ->post($this->apiUrl("/v1/billing/subscriptions/{$subscription->gateway_subscription_id}/capture"), [
+                'note' => 'Prorated charge for additional '.($type === 'company' ? 'company' : 'user'),
+                'capture_type' => 'OUTSTANDING_BALANCE',
+                'amount' => [
+                    'currency_code' => 'USD',
+                    'value' => number_format($amount, 2, '.', ''),
+                ],
+            ]);
+
+        if ($response->failed()) {
+            Log::error('[PayPal] Failed to capture prorated payment', [
+                'subscription' => $subscription->id,
+                'amount' => $amount,
+                'body' => $response->body(),
+            ]);
+
+            return false;
+        }
+
+        Payment::create([
+            'subscription_id' => $subscription->id,
+            'amount' => $amount,
+            'currency' => 'USD',
+            'gateway' => 'paypal',
+            'gateway_payment_id' => $response->json('id'),
+            'status' => 'completed',
+            'paid_at' => now(),
+            'notes' => 'Prorated: +1 '.($type === 'company' ? 'empresa' : 'usuario'),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Revise PayPal subscription recurring amount for next billing cycle.
+     */
+    private function revisePayPalSubscription(string $paypalSubId, float $newAmount): void
+    {
+        $token = $this->getAccessToken();
+        if (! $token) {
+            return;
+        }
+
+        $response = Http::withToken($token)
+            ->post($this->apiUrl("/v1/billing/subscriptions/{$paypalSubId}/revise"), [
+                'plan' => [
+                    'billing_cycles' => [
+                        [
+                            'sequence' => 1,
+                            'pricing_scheme' => [
+                                'fixed_price' => [
+                                    'value' => number_format($newAmount, 2, '.', ''),
+                                    'currency_code' => 'USD',
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ]);
+
+        if ($response->failed()) {
+            Log::error('[PayPal] Failed to revise subscription amount', [
+                'id' => $paypalSubId,
+                'new_amount' => $newAmount,
+                'body' => $response->body(),
+            ]);
+        }
     }
 
     private function cancelPayPalSubscription(string $paypalSubId): void
     {
-        $clientId = config('services.paypal.client_id');
-        $secret = config('services.paypal.secret');
-
-        if (! $clientId || ! $secret) {
-            return;
-        }
-
-        $base = config('services.paypal.sandbox')
-            ? 'https://api-m.sandbox.paypal.com'
-            : 'https://api-m.paypal.com';
-
-        $tokenResponse = Http::asForm()
-            ->withBasicAuth($clientId, $secret)
-            ->post("{$base}/v1/oauth2/token", ['grant_type' => 'client_credentials']);
-
-        $token = $tokenResponse->json('access_token');
+        $token = $this->getAccessToken();
         if (! $token) {
             return;
         }
 
         $response = Http::withToken($token)
             ->withBody(json_encode(['reason' => 'Customer requested cancellation']), 'application/json')
-            ->post("{$base}/v1/billing/subscriptions/{$paypalSubId}/cancel");
+            ->post($this->apiUrl("/v1/billing/subscriptions/{$paypalSubId}/cancel"));
 
         if ($response->failed()) {
             Log::error('[PayPal] Failed to cancel subscription', ['id' => $paypalSubId, 'body' => $response->body()]);
         }
+    }
+
+    private function getAccessToken(): ?string
+    {
+        $clientId = config('services.paypal.client_id');
+        $secret = config('services.paypal.secret');
+
+        if (! $clientId || ! $secret) {
+            return null;
+        }
+
+        $response = Http::asForm()
+            ->withBasicAuth($clientId, $secret)
+            ->post($this->apiUrl('/v1/oauth2/token'), ['grant_type' => 'client_credentials']);
+
+        return $response->json('access_token');
+    }
+
+    private function apiUrl(string $path): string
+    {
+        $base = config('services.paypal.sandbox')
+            ? 'https://api-m.sandbox.paypal.com'
+            : 'https://api-m.paypal.com';
+
+        return $base.$path;
     }
 }

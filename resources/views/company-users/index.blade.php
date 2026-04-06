@@ -57,7 +57,7 @@
             @else
             <p class="text-sm text-gray-500">
                 Limite de usuarios alcanzado ({{ $subscription->max_users }}).
-                <a href="{{ route('billing.index') }}" class="text-blue-600 hover:underline">Actualiza tu plan</a> para agregar mas.
+                <a href="{{ route('settings.index') }}#suscripcion" class="text-blue-600 hover:underline">Actualiza tu plan</a> para agregar mas.
             </p>
             @endif
         </div>

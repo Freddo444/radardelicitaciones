@@ -8,7 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-$php = 'php -d memory_limit=4G ' . base_path('artisan');
+$php = 'php -d memory_limit=4G '.base_path('artisan');
 
 Schedule::exec("{$php} secp:poll")
     ->hourly()

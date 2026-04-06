@@ -29,6 +29,7 @@ use App\Services\GeminiService;
 use App\Services\OfferAssemblyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class OfertasController extends Controller
 {
@@ -347,7 +348,7 @@ class OfertasController extends Controller
             $category = $request->input('upload_category');
             $stored = $file->storeAs(
                 "vault/{$company->id}/{$category}",
-                \Illuminate\Support\Str::uuid().'.'.$file->getClientOriginalExtension(),
+                Str::uuid().'.'.$file->getClientOriginalExtension(),
                 'vault'
             );
 

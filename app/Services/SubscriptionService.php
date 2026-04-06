@@ -117,6 +117,46 @@ class SubscriptionService
     }
 
     /**
+     * Calculate prorated one-time charge for an add-on mid-cycle.
+     */
+    public static function calculateProration(Subscription $subscription, float $addonMonthlyPrice): float
+    {
+        if ($subscription->billing_cycle === 'annual') {
+            $periodStart = $subscription->current_period_start;
+            $periodEnd = $subscription->current_period_end;
+            $totalDays = $periodStart->diffInDays($periodEnd);
+            $remainingDays = max(0, now()->startOfDay()->diffInDays($periodEnd, false));
+            $annualAddon = $addonMonthlyPrice * 12 * (1 - self::ANNUAL_DISCOUNT);
+
+            return $totalDays > 0 ? round($annualAddon * ($remainingDays / $totalDays), 2) : 0;
+        }
+
+        // Monthly: prorate based on days remaining in current period
+        $periodStart = $subscription->current_period_start;
+        $periodEnd = $subscription->current_period_end;
+        $totalDays = $periodStart->diffInDays($periodEnd);
+        $remainingDays = max(0, now()->startOfDay()->diffInDays($periodEnd, false));
+
+        return $totalDays > 0 ? round($addonMonthlyPrice * ($remainingDays / $totalDays), 2) : 0;
+    }
+
+    /**
+     * New monthly amount after adding users/companies.
+     */
+    public static function newMonthlyAmount(int $maxCompanies, int $maxUsers): float
+    {
+        return self::calculateMonthly($maxCompanies, $maxUsers);
+    }
+
+    /**
+     * New recurring amount (monthly or annual) after adding users/companies.
+     */
+    public static function newRecurringAmount(int $maxCompanies, int $maxUsers, string $billingCycle = 'monthly'): float
+    {
+        return self::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+    }
+
+    /**
      * Usage summary for the billing page.
      */
     public static function usage(Subscription $subscription): array
