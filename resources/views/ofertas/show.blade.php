@@ -46,6 +46,7 @@
     @php
         $tabs = [
             'pliego'      => 'Pliego',
+            'documentos'  => 'Documentos del proceso',
             'checklist'   => 'Checklist',
             'composicion' => 'Composición',
             'formularios' => 'Formularios',
@@ -373,6 +374,83 @@
         </div>
         @endif
 
+    </div>
+    @endif
+
+
+    {{-- ═══════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB: DOCUMENTOS DEL PROCESO                                         --}}
+    {{-- ═══════════════════════════════════════════════════════════════════ --}}
+    @if($tab === 'documentos')
+    <div x-data="{
+        docs: [],
+        loading: true,
+        async init() {
+            try {
+                const res = await fetch('{{ route('ofertas.api-docs', $oferta) }}');
+                const json = await res.json();
+                this.docs = json.docs || [];
+            } catch (e) {
+                console.error(e);
+            }
+            this.loading = false;
+        }
+    }" class="space-y-6">
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-sm font-semibold text-gray-900">Documentos del proceso</h2>
+                <p class="mt-0.5 text-xs text-gray-500">Documentos publicados por la institución contratante en el portal DGCP.</p>
+            </div>
+
+            <template x-if="loading">
+                <div class="px-6 py-8 text-center">
+                    <svg class="animate-spin size-5 text-gray-400 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Cargando documentos...</p>
+                </div>
+            </template>
+
+            <template x-if="!loading && docs.length === 0">
+                <div class="px-6 py-8 text-center">
+                    <svg class="mx-auto size-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">No se encontraron documentos para este proceso.</p>
+                </div>
+            </template>
+
+            <template x-if="!loading && docs.length > 0">
+                <ul class="divide-y divide-gray-100">
+                    <template x-for="(doc, i) in docs" :key="i">
+                        <li class="flex items-center justify-between px-6 py-4 gap-x-4">
+                            <div class="flex items-center gap-x-3 min-w-0 flex-1">
+                                <svg class="size-8 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                                </svg>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate" x-text="doc.nombre_documento || doc.tipo_documento || 'Documento'"></p>
+                                    <p class="text-xs text-gray-500">
+                                        <span x-text="doc.tipo_documento || ''"></span>
+                                        <span x-show="doc.fecha_carga_archivo" x-text="' · ' + doc.fecha_carga_archivo"></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <template x-if="doc.url_documento">
+                                <a :href="doc.url_documento" target="_blank" rel="noopener"
+                                   class="shrink-0 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                                    </svg>
+                                    Descargar
+                                </a>
+                            </template>
+                        </li>
+                    </template>
+                </ul>
+            </template>
+        </div>
     </div>
     @endif
 
