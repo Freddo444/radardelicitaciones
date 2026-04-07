@@ -21,6 +21,10 @@ class FormGeneratorService
     {
         $this->tplRoot = resource_path('form_templates');
         $this->outDir = storage_path('app/generated');
+
+        if (! is_dir($this->outDir)) {
+            mkdir($this->outDir, 0755, true);
+        }
     }
 
     /**
