@@ -661,7 +661,10 @@ class OfertasController extends Controller
                 escapeshellarg($docxPath)
             );
             exec($cmd, $output, $exitCode);
-            abort_if($exitCode !== 0 || ! file_exists($pdfPath), 500, 'Error al convertir a PDF.');
+            if ($exitCode !== 0 || ! file_exists($pdfPath)) {
+                \Log::error('LibreOffice conversion failed', ['cmd' => $cmd, 'exit' => $exitCode, 'output' => $output]);
+                abort(500, 'Error al convertir a PDF: '.implode("\n", $output));
+            }
         }
 
         return response()->file($pdfPath, [
