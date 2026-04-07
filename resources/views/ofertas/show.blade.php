@@ -73,8 +73,8 @@
     @if($tab === 'pliego')
     <div class="space-y-6">
 
-        {{-- Parse status --}}
-        @if($activeParse)
+        {{-- Parse status (hide when still running — polling progress bar handles that) --}}
+        @if($activeParse && !$activeParse->isPending())
         <div class="rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h2 class="text-sm font-semibold text-gray-900">Estado del análisis</h2>
@@ -205,6 +205,49 @@
             failReason: '',
             pollTimer: null,
             stepTimer: null,
+            init() {
+                @if($activeParse && $activeParse->isPending())
+                this.startPolling(3);
+                @endif
+            },
+            startPolling(initialStep = 0) {
+                this.parsing = true;
+                this.step = initialStep;
+                this.progress = Math.max(5, initialStep / this.steps.length * 85);
+                this.failed = false;
+                this.failReason = '';
+                this.stepTimer = setInterval(() => {
+                    if (this.step < this.steps.length - 1) {
+                        this.step++;
+                        this.progress = Math.min(90, 5 + (this.step / this.steps.length) * 85);
+                    }
+                }, 8000);
+                this.pollTimer = setInterval(async () => {
+                    try {
+                        const sr = await fetch('{{ route('ofertas.parse-status', $oferta) }}');
+                        const data = await sr.json();
+                        if (data.status === 'pending' || data.status === 'running') {
+                            this.step = Math.max(this.step, data.status === 'running' ? 3 : 1);
+                            this.progress = Math.max(this.progress, data.status === 'running' ? 50 : 15);
+                        } else if (data.status === 'parsed' || data.status === 'needs_review' || data.status === 'verified') {
+                            this.progress = 100;
+                            clearInterval(this.pollTimer);
+                            clearInterval(this.stepTimer);
+                            setTimeout(() => window.location.reload(), 600);
+                        } else if (data.status === 'failed') {
+                            clearInterval(this.pollTimer);
+                            clearInterval(this.stepTimer);
+                            this.failed = true;
+                            this.failReason = data.failure_reason || 'Error desconocido';
+                            this.parsing = false;
+                        }
+                    } catch (e) { /* keep polling */ }
+                }, 3000);
+            },
+            stopPolling() {
+                clearInterval(this.pollTimer);
+                clearInterval(this.stepTimer);
+            },
             async fetchDocs() {
                 this.loading = true;
                 try {
@@ -219,20 +262,6 @@
             },
             async parseDoc(url, filename) {
                 if (this.parsing) return;
-                this.parsing = true;
-                this.step = 0;
-                this.progress = 5;
-                this.failed = false;
-                this.failReason = '';
-
-                // Animate steps progressively
-                this.stepTimer = setInterval(() => {
-                    if (this.step < this.steps.length - 1) {
-                        this.step++;
-                        this.progress = Math.min(90, 5 + (this.step / this.steps.length) * 85);
-                    }
-                }, 8000);
-
                 try {
                     const res = await fetch('{{ route('ofertas.parse-from-api', $oferta) }}', {
                         method: 'POST',
@@ -240,31 +269,8 @@
                         body: JSON.stringify({ url, filename })
                     });
                     if (!res.ok) throw new Error('Error al iniciar análisis');
-
-                    // Poll for completion
-                    this.pollTimer = setInterval(async () => {
-                        try {
-                            const sr = await fetch('{{ route('ofertas.parse-status', $oferta) }}');
-                            const data = await sr.json();
-                            if (data.status === 'running') {
-                                this.step = Math.max(this.step, 3);
-                                this.progress = Math.max(this.progress, 50);
-                            } else if (data.status === 'parsed' || data.status === 'needs_review' || data.status === 'verified') {
-                                this.progress = 100;
-                                clearInterval(this.pollTimer);
-                                clearInterval(this.stepTimer);
-                                setTimeout(() => window.location.reload(), 600);
-                            } else if (data.status === 'failed') {
-                                clearInterval(this.pollTimer);
-                                clearInterval(this.stepTimer);
-                                this.failed = true;
-                                this.failReason = data.failure_reason || 'Error desconocido';
-                                this.parsing = false;
-                            }
-                        } catch (e) { /* keep polling */ }
-                    }, 3000);
+                    this.startPolling(0);
                 } catch (e) {
-                    clearInterval(this.stepTimer);
                     this.failed = true;
                     this.failReason = e.message;
                     this.parsing = false;

@@ -275,6 +275,11 @@ class OfertasController extends Controller
             return response()->json(['status' => 'none']);
         }
 
+        // Detect stale running/pending attempts (job crashed or timed out)
+        if ($attempt->isPending() && $attempt->created_at->diffInMinutes(now()) > 4) {
+            $attempt->update(['status' => 'failed', 'failure_reason' => 'El análisis excedió el tiempo límite. Intenta de nuevo.']);
+        }
+
         return response()->json([
             'status' => $attempt->status,
             'failure_reason' => $attempt->failure_reason,
