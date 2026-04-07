@@ -206,9 +206,9 @@
             pollTimer: null,
             stepTimer: null,
             init() {
-                @if($activeParse && $activeParse->isPending())
-                this.startPolling(3);
-                @endif
+                if ({{ ($activeParse && $activeParse->isPending()) ? 'true' : 'false' }}) {
+                    this.startPolling(3);
+                }
             },
             startPolling(initialStep = 0) {
                 this.parsing = true;
