@@ -61,7 +61,7 @@ class FormGeneratorService
                 throw new \InvalidArgumentException("Unknown form code: {$formCode}");
             }
             $tpl = $this->tpl($templatePath);
-            $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens());
+            $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens(), $params);
             $this->setImages($tpl, $company);
             $result = [$this->save($tpl, $formCode), [
                 'company' => $company->only(['razon_social', 'rnc']),
