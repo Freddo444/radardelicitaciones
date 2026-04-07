@@ -262,7 +262,15 @@ class OfertasController extends Controller
             return response()->json(['error' => (new TrialLimitExceededException)->getMessage()], 422);
         }
 
-        ParsePliegoJob::dispatch($oferta, $request->url, $request->filename);
+        // Create attempt now so it's visible immediately (before queue picks up the job)
+        $attempt = OfferParseAttempt::create([
+            'offer_id' => $oferta->id,
+            'status' => 'pending',
+            'parser_version' => 'v1.0',
+            'triggered_by' => auth()->id(),
+        ]);
+
+        ParsePliegoJob::dispatch($oferta, $request->url, $request->filename, $attempt->id);
 
         return response()->json(['ok' => true]);
     }

@@ -19,6 +19,7 @@ class ParsePliegoJob implements ShouldQueue
         public Offer $offer,
         public string $pdfUrl,
         public string $filename,
+        public ?int $attemptId = null,
         public ?int $userId = null,
     ) {
         $this->userId = $userId ?? auth()->id();
@@ -26,6 +27,6 @@ class ParsePliegoJob implements ShouldQueue
 
     public function handle(GeminiService $gemini): void
     {
-        $gemini->fetchAndParse($this->offer, $this->pdfUrl, $this->filename, $this->userId);
+        $gemini->fetchAndParse($this->offer, $this->pdfUrl, $this->filename, $this->userId, $this->attemptId);
     }
 }

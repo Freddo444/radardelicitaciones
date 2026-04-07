@@ -76,17 +76,19 @@ PROMPT;
      * Fetch pliego PDF from DGCP URL, store locally, create parse attempt, and trigger parse.
      * Returns the OfferParseAttempt record.
      */
-    public function fetchAndParse(Offer $offer, string $pdfUrl, string $originalFilename, ?int $userId = null): OfferParseAttempt
+    public function fetchAndParse(Offer $offer, string $pdfUrl, string $originalFilename, ?int $userId = null, ?int $attemptId = null): OfferParseAttempt
     {
         $this->checkTrialLimit($offer);
 
-        // Download PDF
-        $attempt = OfferParseAttempt::create([
-            'offer_id' => $offer->id,
-            'status' => 'pending',
-            'parser_version' => $this->parserVersion,
-            'triggered_by' => $userId ?? Auth::id(),
-        ]);
+        // Reuse pre-created attempt (from controller) or create one
+        $attempt = $attemptId
+            ? OfferParseAttempt::findOrFail($attemptId)
+            : OfferParseAttempt::create([
+                'offer_id' => $offer->id,
+                'status' => 'pending',
+                'parser_version' => $this->parserVersion,
+                'triggered_by' => $userId ?? Auth::id(),
+            ]);
 
         try {
             $pdfContent = $this->downloadPdf($pdfUrl);
