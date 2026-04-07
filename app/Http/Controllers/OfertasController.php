@@ -677,6 +677,11 @@ class OfertasController extends Controller
     {
         abort_unless($file->offer_id === $oferta->id, 403);
 
+        // Remove checklist items referencing this file
+        OfferRequirementItem::where('vault_ref_type', 'offer_generated_files')
+            ->where('vault_ref_id', $file->id)
+            ->delete();
+
         $fullPath = storage_path('app/'.$file->path);
         if (file_exists($fullPath)) {
             unlink($fullPath);
