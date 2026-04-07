@@ -448,7 +448,10 @@ class FormGeneratorService
                 'provincia' => 'Distrito Nacional',
             ]
         );
-        $this->setImages($tpl, $c);
+        $this->setImages($tpl, $c, [
+            'img_firma' => ['width' => 150, 'height' => 35],
+            'img_sello' => ['width' => 100, 'height' => 93],
+        ]);
 
         return [$this->save($tpl, 'DECL.COMPROMISO_ETICO'), [
             'company' => $c->only(['razon_social', 'rnc']),
