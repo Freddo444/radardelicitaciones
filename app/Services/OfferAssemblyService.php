@@ -218,7 +218,7 @@ class OfferAssemblyService
         // Convert with LibreOffice
         if (in_array($ext, ['docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'odt', 'ods'])) {
             $cmd = sprintf(
-                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                'HOME=/var/www soffice --headless --convert-to pdf --outdir %s %s 2>&1',
                 escapeshellarg($cacheDir),
                 escapeshellarg($filePath)
             );
@@ -241,7 +241,7 @@ class OfferAssemblyService
         // Images → convert with LibreOffice as fallback
         if (in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'])) {
             $cmd = sprintf(
-                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                'HOME=/var/www soffice --headless --convert-to pdf --outdir %s %s 2>&1',
                 escapeshellarg($cacheDir),
                 escapeshellarg($filePath)
             );

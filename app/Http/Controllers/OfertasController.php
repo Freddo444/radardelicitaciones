@@ -656,7 +656,7 @@ class OfertasController extends Controller
         // Convert if PDF doesn't exist or is older than the docx
         if (! file_exists($pdfPath) || filemtime($pdfPath) < filemtime($docxPath)) {
             $cmd = sprintf(
-                'soffice --headless --convert-to pdf --outdir %s %s 2>&1',
+                'HOME=/var/www soffice --headless --convert-to pdf --outdir %s %s 2>&1',
                 escapeshellarg($pdfDir),
                 escapeshellarg($docxPath)
             );
