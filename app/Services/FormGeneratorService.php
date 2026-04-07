@@ -246,6 +246,21 @@ class FormGeneratorService
         ];
     }
 
+    private function dateTokens(): array
+    {
+        $now = now();
+        $meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        $unidades = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciséis', 'diecisiete', 'dieciocho', 'diecinueve', 'veinte', 'veintiuno', 'veintidós', 'veintitrés', 'veinticuatro', 'veinticinco', 'veintiséis', 'veintisiete', 'veintiocho', 'veintinueve', 'treinta', 'treinta y uno'];
+
+        return [
+            'dia' => $now->day,
+            'dia_letras' => $unidades[$now->day] ?? (string) $now->day,
+            'mes' => $meses[$now->month - 1],
+            'anio' => $now->year,
+            'anio_letras' => 'dos mil '.($unidades[$now->year - 2000] ?? (string) ($now->year - 2000)),
+        ];
+    }
+
     // ── Form builders ─────────────────────────────────────────────────
 
     private function buildCaratula(Company $c, array $p, string $formCode): array
@@ -425,9 +440,12 @@ class FormGeneratorService
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
+            $this->dateTokens(),
             [
                 'rep_nacionalidad' => $p['rep_nacionalidad'] ?? 'Dominicano/a',
                 'rep_estado_civil' => $p['rep_estado_civil'] ?? '',
+                'ciudad' => 'Santo Domingo',
+                'provincia' => 'Distrito Nacional',
             ]
         );
         $this->setImages($tpl, $c);
