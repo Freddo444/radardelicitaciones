@@ -897,7 +897,7 @@
                 @endphp
                 <div class="flex items-center justify-between px-6 py-4 {{ $isPast ? 'opacity-60' : '' }}">
                     <div class="flex items-start gap-x-4">
-                        <div class="w-12 flex-shrink-0 text-center">
+                        <div class="w-12 shrink-0 text-center">
                             <div class="text-2xl font-bold {{ $isPast ? 'text-gray-400' : 'text-gray-900' }} leading-none">
                                 {{ $event->event_date?->format('d') }}
                             </div>
