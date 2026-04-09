@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\SubscriptionService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -31,23 +33,37 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $user = DB::transaction(function () use ($request) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                ]);
 
-        Subscription::create([
-            'user_id' => $user->id,
-            'plan' => 'trial',
-            'status' => 'trialing',
-            'max_companies' => 1,
-            'max_users' => 2,
-            'monthly_amount' => 0,
-            'trial_ends_at' => now()->addDays(SubscriptionService::TRIAL_DAYS),
-            'trial_parse_count' => 0,
-            'trial_parse_limit' => SubscriptionService::TRIAL_PARSE_LIMIT,
-        ]);
+                Subscription::create([
+                    'user_id' => $user->id,
+                    'plan' => 'trial',
+                    'status' => 'trialing',
+                    'max_companies' => 1,
+                    'max_users' => 2,
+                    'monthly_amount' => 0,
+                    'trial_ends_at' => now()->addDays(SubscriptionService::TRIAL_DAYS),
+                    'trial_parse_count' => 0,
+                    'trial_parse_limit' => SubscriptionService::TRIAL_PARSE_LIMIT,
+                ]);
+
+                return $user;
+            });
+        } catch (QueryException $e) {
+            Log::error('[Register] Trial registration failed', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withInput($request->except('password', 'password_confirmation'))
+                ->with('error', 'No se pudo crear tu cuenta en este momento. Intenta de nuevo.');
+        }
 
         Auth::login($user);
 
@@ -218,27 +234,42 @@ class RegisterController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
         $billingCycle = $plan['billing_cycle'] ?? 'monthly';
 
-        Subscription::create([
-            'user_id' => $user->id,
-            'plan' => 'basic',
-            'status' => 'active',
-            'max_companies' => $plan['max_companies'],
-            'max_users' => $plan['max_users'],
-            'monthly_amount' => $plan['amount'],
-            'billing_cycle' => $billingCycle,
-            'payment_gateway' => 'paypal',
-            'gateway_subscription_id' => $paypalSubId,
-            'current_period_start' => now(),
-            'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
-        ]);
+        try {
+            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paypalSubId) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($request->password),
+                ]);
+
+                Subscription::create([
+                    'user_id' => $user->id,
+                    'plan' => 'basic',
+                    'status' => 'active',
+                    'max_companies' => $plan['max_companies'],
+                    'max_users' => $plan['max_users'],
+                    'monthly_amount' => $plan['amount'],
+                    'billing_cycle' => $billingCycle,
+                    'payment_gateway' => 'paypal',
+                    'gateway_subscription_id' => $paypalSubId,
+                    'current_period_start' => now(),
+                    'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
+                ]);
+
+                return $user;
+            });
+        } catch (QueryException $e) {
+            Log::error('[Register] Paid registration failed', [
+                'email' => $request->email,
+                'paypal_subscription_id' => $paypalSubId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withInput($request->except('password', 'password_confirmation'))
+                ->with('error', 'No se pudo crear tu cuenta en este momento. Intenta de nuevo.');
+        }
 
         session()->forget(['register_plan', 'register_paypal_subscription_id']);
 
