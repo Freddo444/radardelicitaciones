@@ -49,7 +49,10 @@ class AdminCompanyController extends Controller
 
     public function impersonate(Company $company)
     {
-        session(['impersonating_company_id' => $company->id]);
+        session([
+            'impersonating_company_id' => $company->id,
+        ]);
+        session()->forget('impersonating_user_name');
 
         return redirect()->route('dashboard')
             ->with('info', "Impersonando {$company->razon_social}.");
@@ -57,7 +60,7 @@ class AdminCompanyController extends Controller
 
     public function stopImpersonation()
     {
-        session()->forget('impersonating_company_id');
+        session()->forget(['impersonating_company_id', 'impersonating_user_name']);
 
         return redirect()->route('admin.dashboard')
             ->with('success', 'Impersonacion detenida.');

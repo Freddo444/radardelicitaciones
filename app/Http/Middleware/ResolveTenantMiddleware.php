@@ -25,7 +25,7 @@ class ResolveTenantMiddleware
 
                 return $next($request);
             }
-            session()->forget('impersonating_company_id');
+            session()->forget(['impersonating_company_id', 'impersonating_user_name']);
         }
 
         $companyId = session('current_company_id') ?? $user->current_company_id;

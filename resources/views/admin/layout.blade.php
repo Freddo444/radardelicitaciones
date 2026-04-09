@@ -46,6 +46,16 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.users.index') }}"
+                               class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.users.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                                     class="size-5 shrink-0 opacity-80">
+                                    <path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Usuarios
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('admin.subscriptions.index') }}"
                                class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
@@ -108,7 +118,12 @@
                 <svg viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0 text-amber-600">
                     <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.345 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
                 </svg>
-                <p class="text-sm font-medium text-amber-900">Impersonando empresa #{{ session('impersonating_company_id') }}</p>
+                <p class="text-sm font-medium text-amber-900">
+                    Impersonando empresa #{{ session('impersonating_company_id') }}
+                    @if(session('impersonating_user_name'))
+                        <span class="font-normal text-amber-800/90"> — vista como {{ session('impersonating_user_name') }}</span>
+                    @endif
+                </p>
             </div>
             <form method="POST" action="{{ route('admin.impersonate.stop') }}">
                 @csrf
@@ -130,6 +145,7 @@
             <nav class="space-y-1.5">
                 <a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.dashboard') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Dashboard</a>
                 <a href="{{ route('admin.companies.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.companies.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Empresas</a>
+                <a href="{{ route('admin.users.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.users.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Usuarios</a>
                 <a href="{{ route('admin.subscriptions.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Suscripciones</a>
                 <a href="{{ route('admin.payments.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Pagos</a>
                 <a href="/telescope" target="_blank" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-400">Telescope</a>

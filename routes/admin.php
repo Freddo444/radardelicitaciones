@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCompanyController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 use App\Http\Controllers\Admin\AdminSubscriptionController;
+use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -13,6 +14,11 @@ Route::get('/empresas', [AdminCompanyController::class, 'index'])->name('compani
 Route::get('/empresas/{company}', [AdminCompanyController::class, 'show'])->name('companies.show');
 Route::post('/empresas/{company}/impersonate', [AdminCompanyController::class, 'impersonate'])->name('companies.impersonate');
 Route::post('/impersonate/stop', [AdminCompanyController::class, 'stopImpersonation'])->name('impersonate.stop');
+
+// Tenant users (subscription owners & trial)
+Route::get('/usuarios', [AdminUserController::class, 'index'])->name('users.index');
+Route::get('/usuarios/{user}', [AdminUserController::class, 'show'])->name('users.show');
+Route::post('/usuarios/{user}/impersonate', [AdminUserController::class, 'impersonate'])->name('users.impersonate');
 
 // Subscriptions
 Route::get('/suscripciones', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
