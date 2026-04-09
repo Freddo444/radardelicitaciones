@@ -3,8 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TrialInvitation;
 use App\Models\Subscription;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class AdminSubscriptionController extends Controller
 {
@@ -29,7 +34,7 @@ class AdminSubscriptionController extends Controller
     public function updateStatus(Request $request, Subscription $subscription)
     {
         $request->validate([
-            'status' => 'required|in:pending,active,past_due,cancelled,suspended',
+            'status' => 'required|in:pending,active,past_due,cancelled,suspended,trialing',
         ]);
 
         $old = $subscription->status;
@@ -43,5 +48,64 @@ class AdminSubscriptionController extends Controller
         }
 
         return back()->with('success', "Suscripcion #{$subscription->id}: {$old} → {$request->status}");
+    }
+
+    public function grantTrial(Request $request, Subscription $subscription)
+    {
+        $request->validate([
+            'duration' => 'required|integer|min:1|max:365',
+            'parse_limit' => 'required|integer|min:0|max:9999',
+        ]);
+
+        $subscription->update([
+            'status' => 'trialing',
+            'plan' => 'trial',
+            'trial_ends_at' => now()->addDays((int) $request->duration),
+            'trial_parse_count' => 0,
+            'trial_parse_limit' => (int) $request->parse_limit,
+            'monthly_amount' => 0,
+        ]);
+
+        $days = (int) $request->duration;
+        $owner = $subscription->owner?->name ?? 'Unknown';
+
+        return back()->with('success', "Trial de {$days} dias otorgado a {$owner} (limite: {$request->parse_limit} analisis).");
+    }
+
+    public function createTrial(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'duration' => 'required|integer|min:1|max:365',
+            'parse_limit' => 'required|integer|min:0|max:9999',
+        ]);
+
+        $password = Str::random(10);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($password),
+            'email_verified_at' => now(),
+        ]);
+
+        Subscription::create([
+            'user_id' => $user->id,
+            'plan' => 'trial',
+            'status' => 'trialing',
+            'max_companies' => 1,
+            'max_users' => 2,
+            'monthly_amount' => 0,
+            'trial_ends_at' => now()->addDays((int) $request->duration),
+            'trial_parse_count' => 0,
+            'trial_parse_limit' => (int) $request->parse_limit,
+        ]);
+
+        Mail::to($user->email)->send(new TrialInvitation($user, $password, (int) $request->duration));
+
+        $days = (int) $request->duration;
+
+        return back()->with('success', "Trial de {$days} dias creado para {$user->name} ({$user->email}). Email enviado con credenciales.");
     }
 }

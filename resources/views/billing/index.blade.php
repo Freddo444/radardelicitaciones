@@ -57,7 +57,7 @@
                     <p class="text-sm font-medium text-blue-900">D&iacute;as restantes: {{ $usage['trial_days_left'] ?? 0 }}</p>
                     <p class="mt-1 text-sm text-blue-700">An&aacute;lisis con IA: {{ $usage['trial_parses_used'] ?? 0 }} / {{ $usage['trial_parses_limit'] ?? 0 }}</p>
                 </div>
-                <a href="{{ route('register.show') }}"
+                <a href="{{ route('billing.subscribe') }}"
                    class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
                     Suscr&iacute;bete ahora
                 </a>
@@ -272,7 +272,7 @@
             {{ $subscription->trialExpired() ? 'Tu prueba gratuita ha expirado' : 'Activa tu suscripción' }}
         </h3>
         <p class="mt-1 text-sm text-gray-600">Suscr&iacute;bete para mantener acceso completo.</p>
-        <a href="{{ route('register.show') }}"
+        <a href="{{ route('billing.subscribe') }}"
            class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
             Suscr&iacute;bete ahora &mdash; US$45/mes
         </a>
@@ -282,7 +282,7 @@
     @else
     <div class="mt-6 rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
         <p class="text-sm text-gray-500">No tienes una suscripci&oacute;n activa.</p>
-        <a href="{{ route('register.show') }}"
+        <a href="{{ route('billing.subscribe') }}"
            class="mt-3 inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
             Suscr&iacute;bete ahora
         </a>

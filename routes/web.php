@@ -103,6 +103,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/azul/pagar', [AzulController::class, 'createPayment'])->name('azul.create-payment');
     Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
     Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
+    Route::get('/suscribirse', [SubscriptionController::class, 'showSubscribe'])->name('billing.subscribe');
+    Route::post('/suscribirse', [SubscriptionController::class, 'createSubscription'])->name('billing.subscribe.create');
+    Route::get('/suscribirse/return', [SubscriptionController::class, 'subscribeReturn'])->name('billing.subscribe.return');
     Route::get('/transferencia', [BankTransferController::class, 'show'])->name('billing.bank-transfer');
     Route::post('/transferencia', [BankTransferController::class, 'uploadReceipt'])->name('billing.bank-transfer.upload');
 

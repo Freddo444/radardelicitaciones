@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\Subscription;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,166 @@ class SubscriptionController extends Controller
         $isOwner = $user->isSubscriptionOwner();
 
         return view('billing.index', compact('subscription', 'usage', 'payments', 'isOwner'));
+    }
+
+    public function showSubscribe()
+    {
+        $user = Auth::user();
+        $subscription = $user->subscription;
+
+        if ($subscription && $subscription->isActive() && ! $subscription->trialExpired()) {
+            return redirect()->route('billing.index');
+        }
+
+        return view('billing.subscribe');
+    }
+
+    public function createSubscription(Request $request)
+    {
+        $request->validate([
+            'max_companies' => 'required|integer|min:1|max:10',
+            'max_users' => 'required|integer|min:2|max:20',
+            'billing_cycle' => 'sometimes|in:monthly,annual',
+        ]);
+
+        $maxCompanies = (int) $request->max_companies;
+        $maxUsers = (int) $request->max_users;
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+        $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
+        $amount = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+
+        session([
+            'subscribe_plan' => [
+                'max_companies' => $maxCompanies,
+                'max_users' => $maxUsers,
+                'amount' => $monthlyAmount,
+                'billing_cycle' => $billingCycle,
+            ],
+        ]);
+
+        $accessToken = $this->getAccessToken();
+        if (! $accessToken) {
+            return response()->json(['error' => 'Error de autenticacion con PayPal.'], 500);
+        }
+
+        $planId = $billingCycle === 'annual'
+            ? config('services.paypal.annual_plan_id')
+            : config('services.paypal.plan_id');
+
+        if (! $planId) {
+            return response()->json(['error' => 'PayPal no esta configurado para este ciclo.'], 500);
+        }
+
+        $payload = [
+            'plan_id' => $planId,
+            'application_context' => [
+                'return_url' => route('billing.subscribe.return'),
+                'cancel_url' => route('billing.subscribe'),
+                'brand_name' => 'Radar de Licitaciones',
+                'user_action' => 'SUBSCRIBE_NOW',
+                'shipping_preference' => 'NO_SHIPPING',
+            ],
+        ];
+
+        $baseAmount = $billingCycle === 'annual'
+            ? SubscriptionService::calculateAnnual()
+            : SubscriptionService::calculateMonthly();
+
+        if ($amount != $baseAmount) {
+            $payload['plan'] = [
+                'billing_cycles' => [
+                    [
+                        'sequence' => 1,
+                        'pricing_scheme' => [
+                            'fixed_price' => [
+                                'value' => number_format($amount, 2, '.', ''),
+                                'currency_code' => 'USD',
+                            ],
+                        ],
+                    ],
+                ],
+            ];
+        }
+
+        $response = Http::withToken($accessToken)
+            ->post($this->apiUrl('/v1/billing/subscriptions'), $payload);
+
+        if ($response->failed()) {
+            Log::error('[PayPal] Subscribe create failed', ['body' => $response->body()]);
+
+            return response()->json(['error' => 'Error al crear la suscripcion en PayPal.'], 500);
+        }
+
+        $sub = $response->json();
+        $approveUrl = collect($sub['links'])->firstWhere('rel', 'approve')['href'] ?? null;
+
+        session(['subscribe_paypal_id' => $sub['id']]);
+
+        return response()->json(['approve_url' => $approveUrl]);
+    }
+
+    public function subscribeReturn(Request $request)
+    {
+        $paypalSubId = $request->query('subscription_id') ?? session('subscribe_paypal_id');
+        $plan = session('subscribe_plan');
+
+        if (! $paypalSubId || ! $plan) {
+            return redirect()->route('billing.subscribe')
+                ->with('error', 'Sesion expirada. Intenta de nuevo.');
+        }
+
+        $accessToken = $this->getAccessToken();
+        if ($accessToken) {
+            $response = Http::withToken($accessToken)
+                ->get($this->apiUrl("/v1/billing/subscriptions/{$paypalSubId}"));
+
+            if ($response->ok()) {
+                $status = $response->json('status');
+                if (! in_array($status, ['ACTIVE', 'APPROVED'])) {
+                    return redirect()->route('billing.subscribe')
+                        ->with('error', 'La suscripcion no fue aprobada.');
+                }
+            }
+        }
+
+        $user = Auth::user();
+        $subscription = $user->subscription;
+        $billingCycle = $plan['billing_cycle'] ?? 'monthly';
+
+        if ($subscription) {
+            $subscription->update([
+                'plan' => 'basic',
+                'status' => 'active',
+                'max_companies' => $plan['max_companies'],
+                'max_users' => $plan['max_users'],
+                'monthly_amount' => $plan['amount'],
+                'billing_cycle' => $billingCycle,
+                'payment_gateway' => 'paypal',
+                'gateway_subscription_id' => $paypalSubId,
+                'current_period_start' => now(),
+                'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
+                'trial_ends_at' => null,
+            ]);
+        } else {
+            Subscription::create([
+                'user_id' => $user->id,
+                'plan' => 'basic',
+                'status' => 'active',
+                'max_companies' => $plan['max_companies'],
+                'max_users' => $plan['max_users'],
+                'monthly_amount' => $plan['amount'],
+                'billing_cycle' => $billingCycle,
+                'payment_gateway' => 'paypal',
+                'gateway_subscription_id' => $paypalSubId,
+                'current_period_start' => now(),
+                'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
+            ]);
+        }
+
+        session()->forget(['subscribe_plan', 'subscribe_paypal_id']);
+
+        return redirect()->route('billing.index')
+            ->with('success', 'Suscripcion activada. Bienvenido a Radar de Licitaciones.');
     }
 
     public function cancel(Request $request)

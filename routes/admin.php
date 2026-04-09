@@ -17,6 +17,8 @@ Route::post('/impersonate/stop', [AdminCompanyController::class, 'stopImpersonat
 // Subscriptions
 Route::get('/suscripciones', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');
 Route::patch('/suscripciones/{subscription}/status', [AdminSubscriptionController::class, 'updateStatus'])->name('subscriptions.update-status');
+Route::post('/suscripciones/{subscription}/grant-trial', [AdminSubscriptionController::class, 'grantTrial'])->name('subscriptions.grant-trial');
+Route::post('/suscripciones/create-trial', [AdminSubscriptionController::class, 'createTrial'])->name('subscriptions.create-trial');
 
 // Payments
 Route::get('/pagos', [AdminPaymentController::class, 'index'])->name('payments.index');
