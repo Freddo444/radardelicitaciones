@@ -26,7 +26,10 @@ class DigestNotificationMail extends Mailable
     {
         return new Content(
             markdown: 'emails.digest-notification',
-            with: ['bids' => $this->bids],
+            with: [
+                'bids' => $this->bids,
+                'convocatoriasUrl' => route('convocatorias.index'),
+            ],
         );
     }
 }

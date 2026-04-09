@@ -28,7 +28,10 @@ class BidNotificationMail extends Mailable
     {
         return new Content(
             markdown: 'emails.bid-notification',
-            with: ['bid' => $this->bid],
+            with: [
+                'bid' => $this->bid,
+                'detailUrl' => route('convocatorias.detail', $this->bid),
+            ],
         );
     }
 }

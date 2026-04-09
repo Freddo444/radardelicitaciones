@@ -1,16 +1,28 @@
 <x-mail::message>
-# Has sido invitado
+## Invitación a unirte a una empresa
 
-**{{ $inviterName }}** te ha invitado a unirte a **{{ $companyName }}** en Radar de Licitaciones.
+Hola,
+
+**{{ $inviterName }}** te invitó a colaborar en **{{ $companyName }}** dentro de **{{ config('app.name') }}**.
+
+<x-mail::panel>
+**Empresa:** {{ $companyName }}
+
+**Invitado por:** {{ $inviterName }}
+
+**Válida hasta:** {{ $expiresAt->copy()->locale('es')->timezone('America/Santo_Domingo')->translatedFormat('d \d\e F \d\e Y') }}
+</x-mail::panel>
 
 <x-mail::button :url="$acceptUrl">
-Aceptar invitacion
+Aceptar invitación
 </x-mail::button>
 
-Esta invitacion vence el {{ $expiresAt->format('d/m/Y') }}.
+Si el botón no funciona, copia y pega este enlace en tu navegador:
 
-Si no esperabas esta invitacion, puedes ignorar este correo.
+<span class="break-all">{{ $acceptUrl }}</span>
 
-Gracias,<br>
+<p class="email-muted">Si no esperabas esta invitación, puedes ignorar este correo con tranquilidad.</p>
+
+Saludos,<br>
 {{ config('app.name') }}
 </x-mail::message>

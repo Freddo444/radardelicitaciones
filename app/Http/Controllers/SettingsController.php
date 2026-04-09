@@ -60,7 +60,11 @@ class SettingsController extends Controller
         // Per-company settings
         Setting::set('digest_enabled', $request->has('digest_enabled') ? '1' : '0', $cid);
         Setting::set('digest_frequency', $request->input('digest_frequency', 'daily_9am'), $cid);
-        Setting::set('notification_email', $request->notification_email, $cid);
+        Setting::set(
+            'notification_email',
+            $request->filled('notification_email') ? trim((string) $request->notification_email) : null,
+            $cid
+        );
         Setting::set('telegram_bot_token', $request->telegram_bot_token, $cid);
         Setting::set('telegram_chat_id', $request->telegram_chat_id, $cid);
         // Per-company filters

@@ -32,6 +32,7 @@ class BidChangeNotificationMail extends Mailable
             with: [
                 'bid' => $this->bid,
                 'changes' => $this->changes,
+                'detailUrl' => route('convocatorias.detail', $this->bid),
             ],
         );
     }

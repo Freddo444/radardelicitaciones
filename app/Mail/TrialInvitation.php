@@ -28,11 +28,15 @@ class TrialInvitation extends Mailable
 
     public function content(): Content
     {
+        $this->user->loadMissing('subscription');
+
         return new Content(
             markdown: 'mail.trial-invitation',
             with: [
-                'url' => config('app.url'),
+                'loginUrl' => route('login'),
                 'trialDays' => $this->trialDays,
+                'trialEndsAt' => $this->user->subscription?->trial_ends_at,
+                'trialParseLimit' => $this->user->subscription?->trial_parse_limit,
             ],
         );
     }

@@ -1,20 +1,26 @@
 <x-mail::message>
-# Te invitaron a Radar de Licitaciones
+## Tu cuenta está lista
 
-Hola **{{ $user->name }}**, tu cuenta fue creada en **Radar de Licitaciones**.
+Hola **{{ $user->name }}**,
 
-Aquí están tus credenciales de acceso:
+Te han dado acceso a **{{ config('app.name') }}**. Aquí tienes tus credenciales:
 
-| | |
-|---|---|
-| **Correo** | {{ $user->email }} |
-| **Contraseña** | {{ $password }} |
+<x-mail::panel>
+**Correo:** {{ $user->email }}
 
-<x-mail::button :url="$url">
+**Contraseña temporal:** `{{ $password }}`
+</x-mail::panel>
+
+<x-mail::button :url="$loginUrl">
 Iniciar sesión
 </x-mail::button>
 
-Te recomendamos cambiar tu contraseña después de iniciar sesión.
+Después de entrar, configura tu perfil y revisa las convocatorias y el tablero de tu empresa.
 
-— Radar de Licitaciones
+Te recomendamos **cambiar tu contraseña** en Configuración cuando puedas.
+
+<p class="email-muted">Si no esperabas este correo, ignora el mensaje o avisa al administrador de tu organización.</p>
+
+Saludos,<br>
+{{ config('app.name') }}
 </x-mail::message>

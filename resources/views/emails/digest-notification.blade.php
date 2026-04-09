@@ -1,23 +1,26 @@
 <x-mail::message>
-# Resumen — {{ $bids->count() }} convocatoria(s)
+## Resumen de convocatorias
 
-Se encontraron nuevas convocatorias que coinciden con sus rubros monitoreados.
+Hay **{{ $bids->count() }} {{ $bids->count() === 1 ? 'convocatoria nueva' : 'convocatorias nuevas' }}** que coinciden con tus rubros.
 
 ---
 
 @foreach($bids as $bid)
-**{{ $bid->title }}**
+### {{ $bid->title }}
 
-| Campo | Detalle |
-|---|---|
+| Campo | Información |
+| --- | --- |
 | Institución | {{ $bid->buyer_name ?? 'N/D' }} |
 | Código proceso | {{ $bid->process_code }} |
 | Monto estimado | {{ $bid->currency ?? 'DOP' }} {{ $bid->amount_estimated ? number_format($bid->amount_estimated, 2) : 'N/D' }} |
-| Cierre de ofertas | {{ $bid->tender_deadline ? $bid->tender_deadline->format('d/m/Y H:i') : 'N/D' }} |
+| Cierre de ofertas | {{ $bid->tender_deadline ? $bid->tender_deadline->timezone('America/Santo_Domingo')->format('d/m/Y H:i') : 'N/D' }} |
 
 ---
-
 @endforeach
 
-*Radar de Licitaciones — Notificación de resumen*
+<x-mail::button :url="$convocatoriasUrl">
+Ver todas en Radar
+</x-mail::button>
+
+<p class="email-muted">Puedes ajustar frecuencia y canales de notificación en Configuración.</p>
 </x-mail::message>

@@ -1,22 +1,36 @@
 <x-mail::message>
-# Bienvenido a Radar de Licitaciones
+## Tu prueba gratuita está lista
 
-Hola **{{ $user->name }}**, se te ha otorgado una prueba gratuita de **{{ $trialDays }} dias** en **Radar de Licitaciones**.
+Hola **{{ $user->name }}**,
 
-Aqui estan tus credenciales de acceso:
+Te hemos creado una cuenta en **{{ config('app.name') }}** con una prueba de **{{ $trialDays }} {{ $trialDays === 1 ? 'día' : 'días' }}** para monitorear licitaciones públicas y preparar ofertas con tu equipo.
 
-| | |
-|---|---|
-| **Correo** | {{ $user->email }} |
-| **Contrasena** | {{ $password }} |
+@if($trialEndsAt)
+<x-mail::panel>
+**Vence:** {{ $trialEndsAt->copy()->locale('es')->timezone('America/Santo_Domingo')->translatedFormat('d \d\e F \d\e Y') }} (hora de República Dominicana)
 
-<x-mail::button :url="$url">
-Iniciar sesion
+@if($trialParseLimit !== null)
+**Análisis de pliegos con IA incluidos en la prueba:** {{ $trialParseLimit }}
+@endif
+</x-mail::panel>
+@endif
+
+<x-mail::panel>
+**Correo:** {{ $user->email }}
+
+**Contraseña temporal:** `{{ $password }}`
+</x-mail::panel>
+
+<x-mail::button :url="$loginUrl">
+Entrar a Radar
 </x-mail::button>
 
-Al iniciar sesion, configura tu empresa para comenzar a monitorear licitaciones.
+Después de iniciar sesión, completa la **configuración de tu empresa** para empezar a recibir coincidencias según tus rubros.
 
-Te recomendamos cambiar tu contrasena despues de iniciar sesion.
+Por seguridad, te recomendamos **cambiar tu contraseña** en cuanto entres (Configuración → cuenta).
 
-— Radar de Licitaciones
+<p class="email-muted">Si no solicitaste esta cuenta, ignora este mensaje o contáctanos.</p>
+
+Saludos,<br>
+{{ config('app.name') }}
 </x-mail::message>

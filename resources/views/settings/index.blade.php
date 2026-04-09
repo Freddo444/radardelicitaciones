@@ -130,6 +130,7 @@
                                 <input type="email" name="notification_email" id="notification_email"
                                        value="{{ $settings['notification_email'] }}"
                                        placeholder="tu@correo.com"
+                                       autocomplete="off"
                                        class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                             </dd>
                         </div>

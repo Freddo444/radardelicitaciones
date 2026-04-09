@@ -30,7 +30,7 @@ class UserInvitation extends Mailable
         return new Content(
             markdown: 'mail.user-invitation',
             with: [
-                'url' => config('app.url'),
+                'loginUrl' => route('login'),
             ],
         );
     }
