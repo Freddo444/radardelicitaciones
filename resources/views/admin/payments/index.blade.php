@@ -10,7 +10,7 @@
 <form method="GET" class="mb-10 flex flex-wrap items-end gap-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-900/5">
     <div>
         <label for="status" class="block text-xs font-semibold tracking-wide text-zinc-600 uppercase">Estado</label>
-        <select name="status" id="status" class="mt-2 min-w-[10rem] rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
+        <select name="status" id="status" class="mt-2 min-w-40 rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
             <option value="">Todos</option>
             @foreach(['pending', 'completed', 'failed', 'refunded'] as $s)
                 <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
@@ -19,7 +19,7 @@
     </div>
     <div>
         <label for="gateway" class="block text-xs font-semibold tracking-wide text-zinc-600 uppercase">Gateway</label>
-        <select name="gateway" id="gateway" class="mt-2 min-w-[10rem] rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
+        <select name="gateway" id="gateway" class="mt-2 min-w-40 rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
             <option value="">Todos</option>
             @foreach(['paypal', 'azul', 'bank_transfer'] as $g)
                 <option value="{{ $g }}" {{ request('gateway') === $g ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $g)) }}</option>
