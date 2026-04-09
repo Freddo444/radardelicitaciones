@@ -2,17 +2,15 @@
 @section('title', 'Pagos')
 
 @section('content')
-<div class="sm:flex sm:items-center">
-    <div class="sm:flex-auto">
-        <h1 class="text-base font-semibold text-gray-900">Pagos</h1>
-        <p class="mt-2 text-sm text-gray-700">Historial completo de pagos de la plataforma.</p>
-    </div>
+<div class="mb-10 lg:mb-12">
+    <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">Pagos</h1>
+    <p class="mt-3 max-w-2xl text-base leading-relaxed text-zinc-600">Historial completo de pagos de la plataforma.</p>
 </div>
 
-<form method="GET" class="mt-6 flex flex-wrap items-end gap-3">
+<form method="GET" class="mb-10 flex flex-wrap items-end gap-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-900/5">
     <div>
-        <label for="status" class="block text-xs font-medium text-gray-700">Estado</label>
-        <select name="status" id="status" class="mt-1 rounded-md border-0 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600">
+        <label for="status" class="block text-xs font-semibold tracking-wide text-zinc-600 uppercase">Estado</label>
+        <select name="status" id="status" class="mt-2 min-w-[10rem] rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
             <option value="">Todos</option>
             @foreach(['pending', 'completed', 'failed', 'refunded'] as $s)
                 <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
@@ -20,43 +18,42 @@
         </select>
     </div>
     <div>
-        <label for="gateway" class="block text-xs font-medium text-gray-700">Gateway</label>
-        <select name="gateway" id="gateway" class="mt-1 rounded-md border-0 py-1.5 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600">
+        <label for="gateway" class="block text-xs font-semibold tracking-wide text-zinc-600 uppercase">Gateway</label>
+        <select name="gateway" id="gateway" class="mt-2 min-w-[10rem] rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
             <option value="">Todos</option>
             @foreach(['paypal', 'azul', 'bank_transfer'] as $g)
                 <option value="{{ $g }}" {{ request('gateway') === $g ? 'selected' : '' }}>{{ ucfirst(str_replace('_', ' ', $g)) }}</option>
             @endforeach
         </select>
     </div>
-    <button type="submit" class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500">Filtrar</button>
+    <button type="submit" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Filtrar</button>
 </form>
 
-<div class="mt-8 flow-root">
-    <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
-        <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
-            <table class="min-w-full divide-y divide-gray-300">
-                <thead>
+<div class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-zinc-900/5">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-zinc-200">
+                <thead class="bg-zinc-50/80">
                     <tr>
-                        <th class="py-3.5 pr-3 pl-4 text-left text-sm font-semibold text-gray-900 sm:pl-3">#</th>
-                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Cliente</th>
-                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Monto</th>
-                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Gateway</th>
-                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Estado</th>
-                        <th class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Fecha</th>
-                        <th class="py-3.5 pr-4 pl-3 sm:pr-3"><span class="sr-only">Acciones</span></th>
+                        <th class="py-4 pr-3 pl-5 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">#</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Cliente</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Monto</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Gateway</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Estado</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Fecha</th>
+                        <th class="py-4 pr-5 pl-3 text-right"><span class="sr-only">Acciones</span></th>
                     </tr>
                 </thead>
-                <tbody class="bg-white">
+                <tbody class="divide-y divide-zinc-100 bg-white">
                     @forelse($payments as $p)
-                    <tr class="even:bg-gray-50">
-                        <td class="py-4 pr-3 pl-4 text-sm font-medium whitespace-nowrap text-gray-900 sm:pl-3">{{ $p->id }}</td>
-                        <td class="px-3 py-4 text-sm whitespace-nowrap">
-                            <span class="font-medium text-gray-900">{{ $p->subscription?->owner?->name ?? '—' }}</span>
-                            <span class="block text-xs text-gray-400">{{ $p->subscription?->owner?->email }}</span>
+                    <tr class="hover:bg-zinc-50/50">
+                        <td class="py-5 pr-3 pl-5 text-sm font-medium whitespace-nowrap text-zinc-900">{{ $p->id }}</td>
+                        <td class="px-4 py-5 text-sm whitespace-nowrap">
+                            <span class="font-medium text-zinc-900">{{ $p->subscription?->owner?->name ?? '—' }}</span>
+                            <span class="mt-0.5 block text-xs text-zinc-500">{{ $p->subscription?->owner?->email }}</span>
                         </td>
-                        <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-900 font-medium">${{ number_format($p->amount, 2) }} {{ $p->currency }}</td>
-                        <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{{ ucfirst(str_replace('_', ' ', $p->gateway)) }}</td>
-                        <td class="px-3 py-4 text-sm whitespace-nowrap">
+                        <td class="px-4 py-5 text-sm font-semibold whitespace-nowrap text-zinc-900">${{ number_format($p->amount, 2) }} {{ $p->currency }}</td>
+                        <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">{{ ucfirst(str_replace('_', ' ', $p->gateway)) }}</td>
+                        <td class="px-4 py-5 text-sm whitespace-nowrap">
                             @if($p->status === 'completed')
                             <span class="inline-flex items-center gap-x-1.5 rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
                                 <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-green-500"><circle r="3" cx="3" cy="3" /></svg>Completado
@@ -75,26 +72,25 @@
                             </span>
                             @endif
                         </td>
-                        <td class="px-3 py-4 text-sm whitespace-nowrap text-gray-500">{{ $p->created_at->format('d/m/Y H:i') }}</td>
-                        <td class="py-4 pr-4 pl-3 text-right text-sm font-medium whitespace-nowrap sm:pr-3">
+                        <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">{{ $p->created_at->format('d/m/Y H:i') }}</td>
+                        <td class="py-5 pr-5 pl-3 text-right text-sm font-medium whitespace-nowrap">
                             @if($p->status === 'pending')
                             <form method="POST" action="{{ route('admin.payments.confirm', $p) }}">
                                 @csrf @method('PATCH')
-                                <button type="submit" class="text-indigo-600 hover:text-indigo-900">Confirmar</button>
+                                <button type="submit" class="font-semibold text-indigo-600 hover:text-indigo-800">Confirmar</button>
                             </form>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="7" class="py-10 text-center text-sm text-gray-500">No se encontraron pagos.</td>
+                        <td colspan="7" class="py-16 text-center text-sm text-zinc-500">No se encontraron pagos.</td>
                     </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
-</div>
 
-<div class="mt-6">{{ $payments->links() }}</div>
+<div class="mt-8">{{ $payments->links() }}</div>
 @endsection
