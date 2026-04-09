@@ -67,7 +67,6 @@ jobs:
           key: ${{ secrets.VULTR_KEY }}
           port: ${{ secrets.VULTR_PORT }}
           envs: GH_TOKEN,SUDO_PASS,DEPLOY_PATH
-          script_stop: true
           script: |
             set -Eeuo pipefail
             trap 'echo "Deployment failed at line $LINENO"' ERR
