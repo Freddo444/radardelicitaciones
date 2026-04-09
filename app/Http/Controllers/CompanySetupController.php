@@ -7,6 +7,7 @@ use App\Models\Rubro;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class CompanySetupController extends Controller
@@ -131,37 +132,38 @@ class CompanySetupController extends Controller
             'rubros.*.name' => 'required|string|max:255',
         ]);
 
-        $company = Company::create([
-            'owner_id' => $user->id,
-            'razon_social' => $request->razon_social,
-            'rnc' => $request->rnc,
-            'nombre_comercial' => $request->nombre_comercial,
-            'telefono' => $request->telefono,
-            'email' => $request->email,
-            'direccion' => $request->direccion,
-            'municipio' => $request->municipio,
-            'provincia' => $request->provincia,
-            'rpe_numero' => $request->rpe_numero,
-            'registro_mercantil' => $request->registro_mercantil,
-        ]);
+        $company = DB::transaction(function () use ($request, $user) {
+            $company = Company::create([
+                'owner_id' => $user->id,
+                'razon_social' => $request->razon_social,
+                'rnc' => $request->rnc,
+                'nombre_comercial' => $request->nombre_comercial,
+                'telefono' => $request->telefono,
+                'email' => $request->email,
+                'direccion' => $request->direccion,
+                'municipio' => $request->municipio,
+                'provincia' => $request->provincia,
+                'rpe_numero' => $request->rpe_numero,
+                'registro_mercantil' => $request->registro_mercantil,
+            ]);
 
-        // Attach user to company
-        $company->users()->attach($user->id, ['joined_at' => now()]);
+            $company->users()->attach($user->id, ['joined_at' => now()]);
 
-        // Create rubros from DGCP lookup
-        if ($request->rubros) {
-            foreach ($request->rubros as $rubro) {
-                Rubro::create([
-                    'company_id' => $company->id,
-                    'code' => $rubro['code'],
-                    'name' => $rubro['name'],
-                    'level' => 'familia',
-                    'active' => true,
-                ]);
+            if ($request->rubros) {
+                foreach ($request->rubros as $rubro) {
+                    Rubro::create([
+                        'company_id' => $company->id,
+                        'code' => $rubro['code'],
+                        'name' => $rubro['name'],
+                        'level' => 'familia',
+                        'active' => true,
+                    ]);
+                }
             }
-        }
 
-        // Set as current company
+            return $company;
+        });
+
         session(['current_company_id' => $company->id]);
         $user->update(['current_company_id' => $company->id]);
 

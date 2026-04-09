@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Mail\TrialInvitation;
 use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -83,26 +86,50 @@ class AdminSubscriptionController extends Controller
 
         $password = Str::random(10);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($password),
-            'email_verified_at' => now(),
-        ]);
+        try {
+            $user = DB::transaction(function () use ($request, $password) {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'password' => Hash::make($password),
+                    'email_verified_at' => now(),
+                ]);
 
-        Subscription::create([
-            'user_id' => $user->id,
-            'plan' => 'trial',
-            'status' => 'trialing',
-            'max_companies' => 1,
-            'max_users' => 2,
-            'monthly_amount' => 0,
-            'trial_ends_at' => now()->addDays((int) $request->duration),
-            'trial_parse_count' => 0,
-            'trial_parse_limit' => (int) $request->parse_limit,
-        ]);
+                Subscription::create([
+                    'user_id' => $user->id,
+                    'plan' => 'trial',
+                    'status' => 'trialing',
+                    'max_companies' => 1,
+                    'max_users' => 2,
+                    'monthly_amount' => 0,
+                    'trial_ends_at' => now()->addDays((int) $request->duration),
+                    'trial_parse_count' => 0,
+                    'trial_parse_limit' => (int) $request->parse_limit,
+                ]);
 
-        Mail::to($user->email)->send(new TrialInvitation($user, $password, (int) $request->duration));
+                return $user;
+            });
+        } catch (QueryException $e) {
+            Log::error('[Admin] createTrial failed', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->withInput($request->except('password'))
+                ->with('error', 'No se pudo crear el trial. Verifica que el correo no exista y que la base de datos esté actualizada.');
+        }
+
+        try {
+            Mail::to($user->email)->send(new TrialInvitation($user, $password, (int) $request->duration));
+        } catch (\Throwable $e) {
+            Log::error('[Admin] createTrial mail failed', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('info', "Cuenta creada para {$user->email}, pero no se pudo enviar el correo. Restablece contraseña o reenvía credenciales manualmente.");
+        }
 
         $days = (int) $request->duration;
 
