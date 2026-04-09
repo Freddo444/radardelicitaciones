@@ -91,7 +91,7 @@ jobs:
             git reset --hard origin/main
             git remote set-url origin "https://github.com/Freddo444/radardelicitaciones.git"
 
-            # Build app dependencies
+            # Build app dependencies (production excludes dev packages; Sentry is in require)
             composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
             npm ci --no-audit --fund=false
             npm run build
@@ -103,7 +103,7 @@ jobs:
             sudo_exec chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
             sudo_exec chown -R www-data:www-data "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
 
-            # Framework optimization/migrations as web user
+            # Framework optimization/migrations as web user (set SENTRY_LARAVEL_DSN in server .env for error reporting)
             sudo_exec -u www-data bash -lc "
               set -Eeuo pipefail
               cd '$DEPLOY_PATH'

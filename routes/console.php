@@ -57,5 +57,3 @@ Schedule::exec("{$php} secp:import-catalog")
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-import-catalog.log'));
-
-Schedule::exec("{$php} telescope:prune --hours=72")->daily();

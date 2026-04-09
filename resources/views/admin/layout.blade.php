@@ -78,12 +78,6 @@
                     </ul>
                 </li>
                 <li class="mt-auto space-y-1.5 border-t border-white/10 pt-6">
-                    <a href="/telescope" target="_blank" class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-400 transition-colors hover:bg-white/5 hover:text-white">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-5 shrink-0 opacity-80">
-                            <path d="M6.115 5.19l.319 1.913A6 6 0 008.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 002.288-4.042 1.087 1.087 0 00-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 01-.98-.314l-.295-.295a1.125 1.125 0 010-1.591l.13-.132a1.125 1.125 0 011.3-.21l.603.302a.809.809 0 001.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 001.528-1.732l.146-.292M6.115 5.19A9 9 0 1017.18 4.64M6.115 5.19A8.965 8.965 0 0112 3c1.929 0 3.716.607 5.18 1.64" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                        Telescope
-                    </a>
                     <a href="{{ route('dashboard') }}" class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-400 transition-colors hover:bg-white/5 hover:text-white">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-5 shrink-0 opacity-80">
                             <path d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" stroke-linecap="round" stroke-linejoin="round" />
@@ -148,7 +142,6 @@
                 <a href="{{ route('admin.users.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.users.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Usuarios</a>
                 <a href="{{ route('admin.subscriptions.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Suscripciones</a>
                 <a href="{{ route('admin.payments.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Pagos</a>
-                <a href="/telescope" target="_blank" class="block rounded-lg px-3 py-2.5 text-sm font-semibold text-slate-400">Telescope</a>
             </nav>
         </div>
     </div>
