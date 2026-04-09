@@ -15,4 +15,3 @@ return new class extends Migration
         DB::statement("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('basic','custom') DEFAULT 'basic'");
     }
 };
-

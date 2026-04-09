@@ -75,7 +75,7 @@ Route::middleware('auth')->group(function () {
         $request->fulfill();
 
         return redirect()->route('dashboard')->with('success', 'Correo verificado.');
-    })->middleware('signed')->name('verification.verify');
+    })->middleware('signed:relative')->name('verification.verify');
 
     Route::post('/email/reenviar', function (Request $request) {
         $request->user()->sendEmailVerificationNotification();
