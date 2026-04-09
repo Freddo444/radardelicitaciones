@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Subscription;
+use App\Models\User;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ class CompanySwitchController extends Controller
 {
     public function index()
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
         abort_unless($user, 403);
         $companies = $user->companies()->withCount('users')->get();
@@ -22,7 +23,7 @@ class CompanySwitchController extends Controller
 
     public function switch(Request $request, Company $company)
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
         abort_unless($user && $user->belongsToCompany($company->id), 403);
 
@@ -41,7 +42,7 @@ class CompanySwitchController extends Controller
     public function store(Request $request)
     {
         $subscription = Subscription::where('user_id', Auth::id())->first();
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = Auth::user();
         abort_unless($user, 403);
         abort_unless($subscription, 403, 'No tienes una suscripción activa para crear empresas.');
