@@ -1,77 +1,127 @@
-name: Deploy to Production
+name: Production CI/CD
 
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    name: Deploy to Vultr
+  ci:
+    name: CI Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install PHP dependencies (CI)
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Install JS dependencies (CI)
+        run: npm ci --no-audit --fund=false
+
+      - name: Build frontend assets (CI)
+        run: npm run build
+
+      - name: Lint Blade/PHP formatting
+        run: ./vendor/bin/pint --test
+
+  deploy:
+    name: Deploy to Vultr (non-atomic)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: ci
+    environment: production
+
+    steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         env:
           GH_TOKEN: ${{ secrets.GH_DEPLOY_TOKEN }}
           SUDO_PASS: ${{ secrets.VULTR_SUDO_PASS }}
+          DEPLOY_PATH: ${{ secrets.VULTR_DEPLOYMENT_PATH }}
         with:
           host: ${{ secrets.VULTR_HOST }}
           username: ${{ secrets.VULTR_USER }}
           key: ${{ secrets.VULTR_KEY }}
           port: ${{ secrets.VULTR_PORT }}
-          envs: GH_TOKEN,SUDO_PASS
+          envs: GH_TOKEN,SUDO_PASS,DEPLOY_PATH
+          script_stop: true
           script: |
-            set -e
-            export DEPLOY_PATH="${{ secrets.VULTR_DEPLOYMENT_PATH }}"
+            set -Eeuo pipefail
+            trap 'echo "Deployment failed at line $LINENO"' ERR
 
-            # Trust repo ownership for any user
-            git config --global --add safe.directory "$DEPLOY_PATH"
+            sudo_exec() {
+              echo "$SUDO_PASS" | sudo -S -p '' "$@"
+            }
 
-            # 1. Take ownership so radar can do git pull + npm
-            echo "$SUDO_PASS" | sudo -S chown -R radar:www-data "$DEPLOY_PATH"
+            if [ -z "${DEPLOY_PATH:-}" ]; then
+              echo "DEPLOY_PATH secret is empty"
+              exit 1
+            fi
 
             cd "$DEPLOY_PATH"
 
-            # 2. Pull latest code
-            git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/Freddo444/radardelicitaciones.git
-            git pull origin main
-            git remote set-url origin https://github.com/Freddo444/radardelicitaciones.git
+            # Ensure repo is writable by deploy user and readable by web group
+            sudo_exec chown -R radar:www-data "$DEPLOY_PATH"
 
-            # 3. Install JS dependencies and build assets
-            npm ci --no-audit
+            # Pull latest code cleanly from origin/main
+            git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/Freddo444/radardelicitaciones.git"
+            git fetch --prune origin
+            git reset --hard origin/main
+            git remote set-url origin "https://github.com/Freddo444/radardelicitaciones.git"
+
+            # Build app dependencies
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+            npm ci --no-audit --fund=false
             npm run build
 
-            # 4. Give www-data group ownership so PHP-FPM can read, radar user can write
-            echo "$SUDO_PASS" | sudo -S chown -R radar:www-data "$DEPLOY_PATH"
+            # Correct permissions for runtime write paths and executables
+            sudo_exec find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
+            sudo_exec find "$DEPLOY_PATH" -type d -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 755 {} +
+            sudo_exec chmod 755 "$DEPLOY_PATH/artisan"
+            sudo_exec chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
+            sudo_exec chown -R www-data:www-data "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
 
-            # 5. Fix file permissions: 644 for files, 755 for dirs, 775 for writable dirs
-            echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type f -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 644 {} +
-            echo "$SUDO_PASS" | sudo -S find "$DEPLOY_PATH" -type d -not -path '*/.git/*' -not -path '*/node_modules/*' -exec chmod 755 {} +
-            echo "$SUDO_PASS" | sudo -S chmod -R 775 "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
-            echo "$SUDO_PASS" | sudo -S chmod 755 "$DEPLOY_PATH/artisan"
-
-            # 6. Composer install as radar (owns vendor dir)
-            cd "$DEPLOY_PATH"
-            composer install --no-interaction --prefer-dist --optimize-autoloader
-
-            # 7. Ensure storage/cache writable by www-data
-            echo "$SUDO_PASS" | sudo -S chown -R www-data:www-data "$DEPLOY_PATH/storage" "$DEPLOY_PATH/bootstrap/cache"
-
-            # 8. Artisan tasks as www-data (needs to write cache files)
-            echo "$SUDO_PASS" | sudo -S -u www-data bash -c "
+            # Framework optimization/migrations as web user
+            sudo_exec -u www-data bash -lc "
+              set -Eeuo pipefail
               cd '$DEPLOY_PATH'
               php artisan migrate --force
               php artisan config:cache
               php artisan route:cache
               php artisan event:cache
-              php artisan queue:restart 2>/dev/null || true
+              php artisan view:cache
+              php artisan queue:restart || true
             "
 
-            # 9. Restart supervisor worker
-            echo "$SUDO_PASS" | sudo -S supervisorctl restart radar-worker:* 2>/dev/null || true
+            # Restart workers managed by supervisor
+            sudo_exec supervisorctl restart radar-worker:* || true
 
-            echo 'Deployment complete.'
+            # Optional health check (set APP_HEALTHCHECK_URL secret, e.g. https://radardelicitaciones.com/up)
+            if [ -n "${{ secrets.APP_HEALTHCHECK_URL }}" ]; then
+              curl --fail --silent --show-error "${{ secrets.APP_HEALTHCHECK_URL }}" >/dev/null
+            fi
+
+            echo "Deployment complete."
