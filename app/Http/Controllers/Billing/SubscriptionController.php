@@ -131,17 +131,36 @@ class SubscriptionController extends Controller
         }
 
         $accessToken = $this->getAccessToken();
-        if ($accessToken) {
-            $response = Http::withToken($accessToken)
-                ->get($this->apiUrl("/v1/billing/subscriptions/{$paypalSubId}"));
+        if (! $accessToken) {
+            Log::error('[PayPal] subscribeReturn: could not obtain access token');
 
-            if ($response->ok()) {
-                $status = $response->json('status');
-                if (! in_array($status, ['ACTIVE', 'APPROVED'])) {
-                    return redirect()->route('billing.subscribe')
-                        ->with('error', 'La suscripcion no fue aprobada.');
-                }
-            }
+            return redirect()->route('billing.subscribe')
+                ->with('error', 'No se pudo verificar el pago con PayPal. Intenta de nuevo.');
+        }
+
+        $response = Http::withToken($accessToken)
+            ->get($this->apiUrl("/v1/billing/subscriptions/{$paypalSubId}"));
+
+        if (! $response->ok()) {
+            Log::warning('[PayPal] subscribeReturn: subscription fetch failed', [
+                'id' => $paypalSubId,
+                'http_status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return redirect()->route('billing.subscribe')
+                ->with('error', 'No se pudo confirmar la suscripcion en PayPal. Intenta de nuevo.');
+        }
+
+        $status = $response->json('status');
+        if (! in_array($status, ['ACTIVE', 'APPROVED'], true)) {
+            Log::warning('[PayPal] subscribeReturn: unexpected subscription status', [
+                'id' => $paypalSubId,
+                'status' => $status,
+            ]);
+
+            return redirect()->route('billing.subscribe')
+                ->with('error', 'La suscripcion no fue aprobada.');
         }
 
         $user = Auth::user();

@@ -21,6 +21,10 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->validateCsrfTokens(except: [
+            'paypal/webhook',
+        ]);
+
         $middleware->alias([
             'tenant' => ResolveTenantMiddleware::class,
             'super-admin' => SuperAdminMiddleware::class,
