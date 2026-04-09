@@ -68,4 +68,8 @@ return [
         'widget_url' => env('TAWKTO_WIDGET_URL', ''),
     ],
 
+    'dgcp' => [
+        'allowed_document_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('DGCP_ALLOWED_DOCUMENT_HOSTS', 'datosabiertos.dgcp.gob.do,dgcp.gob.do'))))),
+    ],
+
 ];

@@ -150,8 +150,15 @@ class RegisterController extends Controller
      */
     public function paypalReturn(Request $request)
     {
-        $paypalSubId = $request->query('subscription_id') ?? session('register_paypal_subscription_id');
+        $querySubId = $request->query('subscription_id');
+        $sessionSubId = session('register_paypal_subscription_id');
+        $paypalSubId = $sessionSubId;
         $plan = session('register_plan');
+
+        if ($querySubId && $sessionSubId && $querySubId !== $sessionSubId) {
+            return redirect()->route('register.show')
+                ->with('error', 'La sesión de pago no coincide. Intenta de nuevo.');
+        }
 
         if (! $paypalSubId || ! $plan) {
             return redirect()->route('register.show')

@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Traits\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PrellenadoPackage extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
-        'bid_id', 'user_id', 'form_selections', 'resource_selections',
+        'bid_id', 'user_id', 'company_id', 'form_selections', 'resource_selections',
         'articles_data', 'zip_path', 'zip_sha256',
     ];
 

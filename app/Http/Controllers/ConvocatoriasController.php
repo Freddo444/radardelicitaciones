@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ConvocatoriasController extends Controller
 {
@@ -233,6 +234,9 @@ class ConvocatoriasController extends Controller
         if (! $url || ! str_starts_with($url, 'http')) {
             abort(400, 'URL inválida');
         }
+        if (! $this->isAllowedDocumentUrl($url)) {
+            abort(403, 'URL de documento no permitida');
+        }
 
         try {
             $response = Http::timeout(30)->get($url);
@@ -327,5 +331,31 @@ class ConvocatoriasController extends Controller
             'contracts' => $contracts,
             'articles' => $articles,
         ];
+    }
+
+    private function isAllowedDocumentUrl(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! $host) {
+            return false;
+        }
+
+        // Reject direct IP hosts (including private/link-local/local)
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return false;
+        }
+
+        $allowedHosts = config('services.dgcp.allowed_document_hosts', [
+            'datosabiertos.dgcp.gob.do',
+            'dgcp.gob.do',
+        ]);
+
+        foreach ($allowedHosts as $allowed) {
+            if ($host === $allowed || Str::endsWith($host, '.'.$allowed)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

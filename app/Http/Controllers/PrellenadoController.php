@@ -11,6 +11,8 @@ use App\Models\VaultDocument;
 use App\Services\FormGeneratorService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
 class PrellenadoController extends Controller
@@ -119,6 +121,7 @@ class PrellenadoController extends Controller
         $package = PrellenadoPackage::create([
             'bid_id' => $bid->id,
             'user_id' => Auth::id(),
+            'company_id' => currentCompany()?->id,
             'form_selections' => $selectedTemplates,
             'resource_selections' => [
                 'personnel_ids' => $personnelIds,
@@ -149,7 +152,7 @@ class PrellenadoController extends Controller
                 );
                 $files[] = $file;
             } catch (\Throwable $e) {
-                \Log::warning("Prellenado: failed to generate {$templatePath}: {$e->getMessage()}");
+                Log::warning("Prellenado: failed to generate {$templatePath}: {$e->getMessage()}");
             }
         }
 
@@ -170,11 +173,13 @@ class PrellenadoController extends Controller
                 // Add vault documents if any were uploaded
                 $vaultDocIds = $request->input('vault_doc_ids', []);
                 if (! empty($vaultDocIds)) {
-                    $vaultDocs = VaultDocument::whereIn('id', $vaultDocIds)->get();
+                    $vaultDocs = VaultDocument::where('company_id', currentCompany()?->id)
+                        ->whereIn('id', $vaultDocIds)
+                        ->get();
                     foreach ($vaultDocs as $doc) {
-                        $docPath = storage_path('app/'.$doc->path);
+                        $docPath = Storage::disk('vault')->path($doc->path);
                         if (file_exists($docPath)) {
-                            $zip->addFile($docPath, 'empresa/'.$doc->original_name);
+                            $zip->addFile($docPath, 'empresa/'.$doc->filename);
                         }
                     }
                 }
