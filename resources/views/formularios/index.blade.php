@@ -47,7 +47,7 @@
                                 'Formularios de oferta' => ['CARATULA.A','CARATULA.B','SNCC.F.033','SNCC.F.034','SNCC.F.035','SNCC.F.036','SNCC.F.037','SNCC.F.040','SNCC.F.042','SNCC.F.047','SNCC.F.056','OFERTA.TECNICA'],
                                 'Documentos técnicos'   => ['SNCC.D.038','SNCC.D.043','SNCC.D.044','SNCC.D.045','SNCC.D.048','SNCC.D.049','SNCC.D.051','SNCC.D.052'],
                                 'Cartas'                => ['CARTA.ACEPTACION','CARTA.ENTREGA','CARTA.PAGO','CARTA.GARANTIA','CARTA.PRECIO'],
-                                'Aseguradoras / Fianzas'=> ['FIANZA.CDS','FIANZA.DCS','FIANZA.DCS.FC','FIANZA.APS','FIANZA.RESERVAS'],
+                                'Aseguradoras / Fianzas'=> ['FIANZA.DCS','FIANZA.DCS.FC','FIANZA.APS'],
                                 'Declaraciones juradas' => ['DECL.JURADA','DECL.COMPROMISO_ETICO','DECL.INTEGRIDAD','DECL.CRONOGRAMA','DECL.GARANTIA','DECL.NATURALES'],
                                 'Formularios FL'        => ['FL.01','FL.02','FL.03','FL.04','FL.05','FL.06'],
                                 'Ley 47-25'            => ['LEY47.JURADA','LEY47.COLUSION','LEY47.JURIDICAS','LEY47.BENEFICIARIOS','LEY47.BENEFICIARIO.FORM','LEY47.DILIGENCIA','LEY47.SIG007'],

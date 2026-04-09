@@ -61,7 +61,7 @@ class FormGeneratorService
                 throw new \InvalidArgumentException("Unknown form code: {$formCode}");
             }
             $tpl = $this->tpl($templatePath);
-            $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens(), $params);
+            $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens($company), $params);
             $this->setImages($tpl, $company);
             $result = [$this->save($tpl, $formCode), [
                 'company' => $company->only(['razon_social', 'rnc']),
@@ -96,7 +96,7 @@ class FormGeneratorService
     ): OfferGeneratedFile {
         $company = currentCompany();
         $tpl = $this->tpl($relativePath);
-        $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($company), $this->processTokens($params), $this->dateTokens($company));
 
         // Apply extra tokens passed directly
         $extraTokens = $params['_extra_tokens'] ?? [];
@@ -246,7 +246,7 @@ class FormGeneratorService
         ];
     }
 
-    private function dateTokens(): array
+    private function dateTokens(?Company $company = null): array
     {
         $now = now();
         $meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -259,8 +259,8 @@ class FormGeneratorService
             'anio' => $now->year,
             'anio_letras' => 'dos mil '.($unidades[$now->year - 2000] ?? (string) ($now->year - 2000)),
             'fecha_larga' => $now->day.' de '.$meses[$now->month - 1].' de '.$now->year,
-            'ciudad' => 'Santo Domingo',
-            'provincia' => 'Distrito Nacional',
+            'ciudad' => $company?->municipio ?: 'Santo Domingo',
+            'provincia' => $company?->provincia ?: 'Distrito Nacional',
         ];
     }
 
@@ -270,7 +270,7 @@ class FormGeneratorService
     {
         $templatePath = OfferGeneratedFile::$templatePaths[$formCode];
         $tpl = $this->tpl($templatePath);
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c, [
             'img_firma' => ['width' => 254, 'height' => 60],
             'img_sello' => ['width' => 156, 'height' => 145],
@@ -285,7 +285,7 @@ class FormGeneratorService
     private function buildF033(Company $c, array $p): array
     {
         $tpl = $this->tpl('estandar/SNCC_F033_Of_Economica.docx');
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.033'), [
@@ -297,7 +297,7 @@ class FormGeneratorService
     private function buildF034(Company $c, array $p): array
     {
         $tpl = $this->tpl('estandar/SNCC_F034_Presentacion_de_Oferta.docx');
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.034'), [
@@ -311,7 +311,7 @@ class FormGeneratorService
         $tpl = $this->tpl('estandar/SNCC_F036_Equipos_Oferente.docx');
         $items = Equipment::where('company_id', $c->id)->active()->orderBy('descripcion')->get();
 
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.036'), [
@@ -324,7 +324,7 @@ class FormGeneratorService
     private function buildF037(Company $c, array $p): array
     {
         $tpl = $this->tpl('estandar/SNCC_F037_Personal_Oferente.docx');
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.037'), [
@@ -336,7 +336,7 @@ class FormGeneratorService
     private function buildF042(Company $c, array $p): array
     {
         $tpl = $this->tpl('estandar/SNCC_F042_Informacion_Oferente.docx');
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.F.042'), [
@@ -360,7 +360,7 @@ class FormGeneratorService
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
-            $this->dateTokens(),
+            $this->dateTokens($c),
             [
                 'persona_nombre' => $person->nombre,
                 'persona_apellidos' => $person->nombre,
@@ -387,7 +387,7 @@ class FormGeneratorService
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
-            $this->dateTokens(),
+            $this->dateTokens($c),
             [
                 'persona_nombre' => $person->nombre,
                 'persona_apellidos' => $person->nombre,
@@ -411,7 +411,7 @@ class FormGeneratorService
         $projects = Project::where('company_id', $c->id)->whereIn('id', $projectIds)->get();
         $tpl = $this->tpl('estandar/SNCC_D049_Experiencia_contratista.docx');
 
-        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens());
+        $this->set($tpl, $this->companyTokens($c), $this->processTokens($p), $this->dateTokens($c));
         $this->setImages($tpl, $c);
 
         return [$this->save($tpl, 'SNCC.D.049'), [
@@ -427,7 +427,7 @@ class FormGeneratorService
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
-            $this->dateTokens(),
+            $this->dateTokens($c),
             [
                 'rep_nacionalidad' => $p['rep_nacionalidad'] ?? 'Dominicano/a',
                 'rep_estado_civil' => $p['rep_estado_civil'] ?? '',
@@ -446,7 +446,7 @@ class FormGeneratorService
         $this->set($tpl,
             $this->companyTokens($c),
             $this->processTokens($p),
-            $this->dateTokens(),
+            $this->dateTokens($c),
             [
                 'rep_nacionalidad' => $p['rep_nacionalidad'] ?? 'Dominicano/a',
                 'rep_estado_civil' => $p['rep_estado_civil'] ?? '',

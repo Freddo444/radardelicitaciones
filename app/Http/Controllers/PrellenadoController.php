@@ -56,11 +56,9 @@ class PrellenadoController extends Controller
                 'cartas/Carta_de_compromiso_respecto_a_la_oferta_de_precio_presentada.docx' => 'Compromiso oferta de precio',
             ],
             'Aseguradoras' => [
-                'aseguradoras/SOLICITUD_DE_FIANZA_CDS_Rellenable.docx' => 'Fianza — Dominicana de Seguros',
                 'aseguradoras/DCS-FO-OP-010_SOLICITUD_DE_FIANZAS_DOMINICANA_DE_SEGUROS.docx' => 'Fianza — Dominicana de Seguros (alt)',
                 'aseguradoras/DCS-FO-OP-010_SOLICITUD_DE_FIANZAS_DOMINICANA_DE_SEGUROS_FIEL_CUMPLIMIENTO.docx' => 'Fiel cumplimiento — Dominicana',
                 'aseguradoras/FORMULARIO_SOLICITUD_DE_FIANZA_APS_formato-1.docx' => 'Fianza — APS',
-                'aseguradoras/F-SR-111_Solicitud_y_Contragarantia_para_Fianzas_Reservas.docx' => 'Fianza — Seguros Reservas',
             ],
             'Declaraciones Juradas' => [
                 'declaraciones/DECLARACION_JURADA_ART_14_PLANTILLA.docx' => 'Declaración jurada Art. 14',

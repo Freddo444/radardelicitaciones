@@ -58,11 +58,9 @@ class OfferGeneratedFile extends Model
         'CARTA.GARANTIA' => 'Carta de compromiso de garantía',
         'CARTA.PRECIO' => 'Carta de compromiso oferta de precio',
         // ── Aseguradoras ──
-        'FIANZA.CDS' => 'Fianza — CDS',
         'FIANZA.DCS' => 'Fianza — Dominicana de Seguros',
         'FIANZA.DCS.FC' => 'Fiel cumplimiento — Dominicana de Seguros',
         'FIANZA.APS' => 'Fianza — APS',
-        'FIANZA.RESERVAS' => 'Fianza — Seguros Reservas',
         // ── Declaraciones juradas ──
         'DECL.JURADA' => 'Declaración jurada (Art. 14)',
         'DECL.CRONOGRAMA' => 'Declaración jurada — Cronograma de entrega',
@@ -114,11 +112,9 @@ class OfferGeneratedFile extends Model
         'CARTA.PAGO' => 'cartas/Carta_de_aceptacion_de_condiciones_de_pago.docx',
         'CARTA.GARANTIA' => 'cartas/Carta_de_compromiso_de_garantia.docx',
         'CARTA.PRECIO' => 'cartas/Carta_de_compromiso_respecto_a_la_oferta_de_precio_presentada.docx',
-        'FIANZA.CDS' => 'aseguradoras/SOLICITUD_DE_FIANZA_CDS_Rellenable.docx',
         'FIANZA.DCS' => 'aseguradoras/DCS-FO-OP-010_SOLICITUD_DE_FIANZAS_DOMINICANA_DE_SEGUROS.docx',
         'FIANZA.DCS.FC' => 'aseguradoras/DCS-FO-OP-010_SOLICITUD_DE_FIANZAS_DOMINICANA_DE_SEGUROS_FIEL_CUMPLIMIENTO.docx',
         'FIANZA.APS' => 'aseguradoras/FORMULARIO_SOLICITUD_DE_FIANZA_APS_formato-1.docx',
-        'FIANZA.RESERVAS' => 'aseguradoras/F-SR-111_Solicitud_y_Contragarantia_para_Fianzas_Reservas.docx',
         'DECL.JURADA' => 'declaraciones/DECLARACION_JURADA_ART_14_PLANTILLA.docx',
         'DECL.CRONOGRAMA' => 'declaraciones/declaracion_jurada_personas_juridicas_cronograma.docx',
         'DECL.GARANTIA' => 'declaraciones/declaracion_jurada_personas_juridicas_garantia.docx',
