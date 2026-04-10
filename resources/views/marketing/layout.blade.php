@@ -32,11 +32,21 @@
     <style>
         :root {
             --radar-dark: #020617;
-            --radar-blue: #1e3a5f;
-            --radar-green: #10b981;
+            --radar-ink: #0f172a;
+            --radar-accent: #4f46e5;
+            --radar-mint: #10b981;
         }
         body { font-family: 'DM Sans', system-ui, sans-serif; }
         .font-display { font-family: 'Sora', system-ui, sans-serif; }
+
+        .marketing-hero-glow {
+            background: radial-gradient(ellipse 90% 60% at 50% -30%, rgba(79, 70, 229, 0.35), transparent 55%),
+                radial-gradient(ellipse 50% 40% at 100% 20%, rgba(16, 185, 129, 0.12), transparent 50%);
+        }
+        .marketing-noise {
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
 
         /* Radar sweep animation */
         @keyframes sweep {
@@ -89,9 +99,8 @@
         [data-animate][data-delay="3"] { transition-delay: 0.3s; }
         [data-animate][data-delay="4"] { transition-delay: 0.4s; }
 
-        /* Gradient text */
         .text-gradient {
-            background: linear-gradient(135deg, #60a5fa 0%, #10b981 100%);
+            background: linear-gradient(120deg, #a5b4fc 0%, #34d399 45%, #6ee7b7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -101,7 +110,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="bg-white text-gray-700 antialiased overflow-x-hidden">
+<body class="bg-white text-zinc-700 antialiased overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-950">
 
 {{-- Navbar --}}
 <nav x-data="{ scrolled: false, open: false }"
@@ -126,7 +135,7 @@
             <a href="/login" class="text-sm font-medium transition-colors"
                :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Iniciar sesión</a>
             <a href="{{ route('register.trial') }}"
-               class="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-400">
+               class="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
                 Prueba gratis
             </a>
         </div>
@@ -148,7 +157,7 @@
             <a @click="open = false" href="/precios" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Precios</a>
             <a @click="open = false" href="/#contacto" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Contacto</a>
             <a @click="open = false" href="/login" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Iniciar sesión</a>
-            <a @click="open = false" href="{{ route('register.trial') }}" class="block rounded-lg bg-emerald-500 px-3 py-3 text-center text-sm font-semibold text-white">Prueba gratis</a>
+            <a @click="open = false" href="{{ route('register.trial') }}" class="block rounded-lg bg-indigo-600 px-3 py-3 text-center text-sm font-semibold text-white shadow-md shadow-indigo-600/20">Prueba gratis</a>
         </div>
     </div>
 </nav>
@@ -156,7 +165,7 @@
 @yield('content')
 
 {{-- Footer --}}
-<footer class="relative z-10 bg-slate-950 text-slate-400">
+<footer class="relative z-10 bg-zinc-950 text-zinc-400">
     <div class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div>
@@ -182,7 +191,7 @@
                 </ul>
             </div>
         </div>
-        <div class="mt-12 border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+        <div class="mt-12 border-t border-zinc-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
             <span>&copy; {{ date('Y') }} Radar de Licitaciones. Todos los derechos reservados.</span>
             <div class="flex gap-6">
                 <a href="/terminos" class="py-2 hover:text-white transition-colors">Términos de servicio</a>
