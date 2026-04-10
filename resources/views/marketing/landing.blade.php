@@ -13,7 +13,7 @@
          style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 28px 28px;"></div>
     <div class="marketing-noise pointer-events-none absolute inset-0"></div>
     <div class="marketing-hero-glow absolute inset-0"></div>
-    <div class="absolute inset-0 bg-gradient-to-br from-indigo-950/90 via-zinc-950 to-zinc-950"></div>
+    <div class="absolute inset-0 bg-linear-to-br from-indigo-950/90 via-zinc-950 to-zinc-950"></div>
 
     <div class="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 sm:py-32 lg:py-40">
         <div class="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
@@ -62,11 +62,11 @@
             {{-- Mobile: Mini radar --}}
             <div class="mt-12 flex justify-center lg:hidden" aria-hidden="true">
                 <div class="relative h-[200px] w-[200px]">
-                    <div class="absolute inset-0 rounded-full border border-white/[0.06]"></div>
-                    <div class="absolute inset-8 rounded-full border border-white/[0.08]"></div>
-                    <div class="absolute inset-16 rounded-full border border-white/[0.10]"></div>
-                    <div class="absolute inset-0 flex items-center"><div class="w-full h-px bg-white/[0.04]"></div></div>
-                    <div class="absolute inset-0 flex justify-center"><div class="h-full w-px bg-white/[0.04]"></div></div>
+                    <div class="absolute inset-0 rounded-full border border-white/6"></div>
+                    <div class="absolute inset-8 rounded-full border border-white/8"></div>
+                    <div class="absolute inset-16 rounded-full border border-white/10"></div>
+                    <div class="absolute inset-0 flex items-center"><div class="w-full h-px bg-white/4"></div></div>
+                    <div class="absolute inset-0 flex justify-center"><div class="h-full w-px bg-white/4"></div></div>
                     <div class="absolute inset-0 rounded-full overflow-hidden">
                         <div class="radar-sweep absolute inset-0 origin-center">
                             <div class="absolute top-0 left-1/2 w-1/2 h-1/2 origin-bottom-left"
@@ -85,14 +85,14 @@
             <div class="relative mx-auto hidden lg:block" aria-hidden="true">
                 <div class="relative h-[420px] w-[420px]">
                     {{-- Concentric circles --}}
-                    <div class="absolute inset-0 rounded-full border border-white/[0.04]"></div>
-                    <div class="absolute inset-10 rounded-full border border-white/[0.06]"></div>
-                    <div class="absolute inset-20 rounded-full border border-white/[0.08]"></div>
-                    <div class="absolute inset-[120px] rounded-full border border-white/[0.10]"></div>
+                    <div class="absolute inset-0 rounded-full border border-white/4"></div>
+                    <div class="absolute inset-10 rounded-full border border-white/6"></div>
+                    <div class="absolute inset-20 rounded-full border border-white/8"></div>
+                    <div class="absolute inset-[120px] rounded-full border border-white/10"></div>
 
                     {{-- Cross lines --}}
-                    <div class="absolute inset-0 flex items-center"><div class="w-full h-px bg-white/[0.04]"></div></div>
-                    <div class="absolute inset-0 flex justify-center"><div class="h-full w-px bg-white/[0.04]"></div></div>
+                    <div class="absolute inset-0 flex items-center"><div class="w-full h-px bg-white/4"></div></div>
+                    <div class="absolute inset-0 flex justify-center"><div class="h-full w-px bg-white/4"></div></div>
 
                     {{-- Sweep --}}
                     <div class="absolute inset-0 rounded-full overflow-hidden">
@@ -180,7 +180,7 @@
                 </h2>
                 <dl class="mt-8 space-y-5">
                     <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
+                        <div class="shrink-0 mt-1">
                             <svg class="size-5 shrink-0 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                         </div>
                         <div>
@@ -189,7 +189,7 @@
                         </div>
                     </div>
                     <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
+                        <div class="shrink-0 mt-1">
                             <svg class="size-5 shrink-0 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                         </div>
                         <div>
@@ -198,7 +198,7 @@
                         </div>
                     </div>
                     <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
+                        <div class="shrink-0 mt-1">
                             <svg class="size-5 shrink-0 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                         </div>
                         <div>
@@ -207,7 +207,7 @@
                         </div>
                     </div>
                     <div class="flex gap-3">
-                        <div class="flex-shrink-0 mt-1">
+                        <div class="shrink-0 mt-1">
                             <svg class="size-5 shrink-0 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                         </div>
                         <div>
@@ -364,7 +364,7 @@
         <div class="mx-auto mt-16 max-w-3xl">
             <div class="relative space-y-12 pl-10 sm:pl-16">
                 {{-- Vertical line --}}
-                <div class="absolute left-[18px] sm:left-[26px] top-2 bottom-2 w-px bg-gradient-to-b from-indigo-700 via-indigo-500 to-emerald-400"></div>
+                <div class="absolute left-[18px] sm:left-[26px] top-2 bottom-2 w-px bg-linear-to-b from-indigo-700 via-indigo-500 to-emerald-400"></div>
 
                 <div data-animate data-delay="1" class="relative">
                     <div class="absolute -left-10 sm:-left-16 flex h-9 w-9 sm:h-[52px] sm:w-[52px] items-center justify-center rounded-full bg-indigo-700 font-display text-sm sm:text-lg font-bold text-white shadow-lg ring-2 ring-indigo-500/30">1</div>
@@ -579,7 +579,7 @@
 </section>
 
 {{-- ═══ CTA ═══ --}}
-<section class="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-zinc-950 py-24 sm:py-32">
+<section class="relative overflow-hidden bg-linear-to-br from-indigo-950 via-indigo-900 to-zinc-950 py-24 sm:py-32">
     <div class="marketing-noise absolute inset-0 opacity-[0.04]"></div>
     <div class="absolute inset-0 opacity-[0.04]"
          style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 28px 28px;"></div>

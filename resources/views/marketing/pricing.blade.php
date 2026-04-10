@@ -33,7 +33,7 @@
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-medium" :class="annual ? 'text-zinc-400' : 'text-zinc-900'">Mensual</span>
                         <button type="button" @click="annual = !annual"
-                                class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                                class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
                                 :class="annual ? 'bg-indigo-600' : 'bg-zinc-200'">
                             <span class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
                                   :class="annual ? 'translate-x-4' : 'translate-x-0'"></span>
@@ -177,7 +177,7 @@
 </section>
 
 {{-- ═══ CTA ═══ --}}
-<section class="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-zinc-950 py-24 sm:py-32">
+<section class="relative overflow-hidden bg-linear-to-br from-indigo-950 via-indigo-900 to-zinc-950 py-24 sm:py-32">
     <div class="absolute inset-0 opacity-[0.04]"
          style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 28px 28px;"></div>
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(99,102,241,0.35),transparent)]"></div>
