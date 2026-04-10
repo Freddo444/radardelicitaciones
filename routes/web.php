@@ -112,7 +112,9 @@ Route::middleware('auth')->group(function () {
     // Company setup wizard (post-payment)
     Route::get('/configurar-empresa', [CompanySetupController::class, 'show'])->name('company-setup.show');
     Route::post('/configurar-empresa', [CompanySetupController::class, 'store'])->name('company-setup.store');
-    Route::post('/configurar-empresa/lookup-rpe', [CompanySetupController::class, 'lookupRpe'])->name('company-setup.lookup-rpe');
+    Route::post('/configurar-empresa/lookup-rpe', [CompanySetupController::class, 'lookupRpe'])
+        ->middleware('throttle:30,1')
+        ->name('company-setup.lookup-rpe');
 
     // Company switcher
     Route::get('/empresas', [CompanySwitchController::class, 'index'])->name('companies.index');
@@ -132,7 +134,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
         currentCompany()->update(['onboarding_dismissed_at' => now()]);
 
         return response()->json(['ok' => true]);
-    })->name('onboarding.dismiss');
+    })->middleware('throttle:20,1')->name('onboarding.dismiss');
 
     // Convocatorias
     Route::get('/convocatorias', [ConvocatoriasController::class, 'index'])->name('convocatorias.index');

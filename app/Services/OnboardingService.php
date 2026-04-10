@@ -54,8 +54,8 @@ class OnboardingService
             ],
             [
                 'key' => 'first_poll',
-                'title' => 'Ejecutar primer sondeo',
-                'description' => 'Escanea el portal DGCP en busca de procesos',
+                'title' => 'Sondeo del sistema activo',
+                'description' => 'El radar consulta la DGCP automáticamente; aquí ves el último sondeo',
                 'url' => route('dashboard').'#sondeo',
                 'completed' => (bool) Setting::get('last_polled_at'),
             ],

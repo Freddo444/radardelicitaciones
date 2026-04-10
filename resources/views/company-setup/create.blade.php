@@ -48,8 +48,8 @@
             <p x-show="lookupError" class="mt-2 text-sm text-red-600" x-text="lookupError"></p>
 
             <div x-show="notFound" class="mt-4 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
-                No se encontro un proveedor con ese RPE. Puedes llenar los datos manualmente.
-                <button @click="formReady = true" class="mt-2 block font-semibold text-yellow-900 underline">
+                No se encontró un proveedor con ese RPE. Puedes llenar los datos manualmente.
+                <button type="button" @click="startManualEntry()" class="mt-2 block font-semibold text-yellow-900 underline">
                     Continuar sin RPE
                 </button>
             </div>
@@ -160,10 +160,14 @@
                 </template>
             </div>
 
-            <div class="flex items-center justify-between">
-                <button type="button" x-show="wasLookedUp" @click="formReady = false; wasLookedUp = false; notFound = false"
+            <div class="flex items-center justify-between gap-4">
+                <button type="button" x-show="wasLookedUp" @click="backToRpeSearch()"
                         class="text-sm font-medium text-gray-500 hover:text-gray-700">
                     ← Buscar otro RPE
+                </button>
+                <button type="button" x-show="formReady && !wasLookedUp" @click="backToRpeSearch()"
+                        class="text-sm font-medium text-gray-500 hover:text-gray-700">
+                    ← Volver al buscador RPE
                 </button>
                 <div class="ml-auto">
                     <button type="submit"
@@ -204,17 +208,33 @@ function companySetup() {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'X-Requested-With': 'XMLHttpRequest',
                     },
-                    body: JSON.stringify({ rpe: parseInt(this.rpeInput) }),
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ rpe: parseInt(this.rpeInput, 10) }),
                 });
-                const data = await res.json();
+                let data = {};
+                try {
+                    data = await res.json();
+                } catch (e) {
+                    this.lookupError = 'Respuesta inválida del servidor.';
+                    return;
+                }
+
+                if (!res.ok) {
+                    this.lookupError = data.error || data.message || 'No se pudo consultar el RPE.';
+                    return;
+                }
 
                 if (data.found) {
                     this.form = { ...this.form, ...data.company };
                     this.rubros = (data.rubros || []).map(r => ({ ...r, selected: true }));
                     this.wasLookedUp = true;
                     this.formReady = true;
+                } else if (data.error) {
+                    this.lookupError = data.error;
                 } else {
                     this.notFound = true;
                 }
@@ -223,6 +243,27 @@ function companySetup() {
             } finally {
                 this.loading = false;
             }
+        },
+
+        startManualEntry() {
+            this.notFound = false;
+            this.lookupError = null;
+            this.wasLookedUp = false;
+            this.rubros = [];
+            this.formReady = true;
+        },
+
+        backToRpeSearch() {
+            this.formReady = false;
+            this.wasLookedUp = false;
+            this.notFound = false;
+            this.lookupError = null;
+            this.rubros = [];
+            this.form = {
+                razon_social: '', rnc: '', nombre_comercial: '',
+                telefono: '', email: '', direccion: '',
+                municipio: '', provincia: '', rpe_numero: '', registro_mercantil: '',
+            };
         },
     }
 }

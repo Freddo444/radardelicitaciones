@@ -1,4 +1,9 @@
 @if(!$onboarding['dismissed'] && $onboarding['completed'] < $onboarding['total'])
+@php
+    $onboardingTotal = max(1, (int) ($onboarding['total'] ?? 1));
+    $onboardingDone = min((int) ($onboarding['completed'] ?? 0), $onboardingTotal);
+    $onboardingPct = (int) round(($onboardingDone / $onboardingTotal) * 100);
+@endphp
 <div x-data="{
         expanded: localStorage.getItem('onboarding_expanded') !== 'false',
         dismissed: false,
@@ -6,7 +11,12 @@
         dismiss() {
             fetch('{{ route('onboarding.dismiss') }}', {
                 method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content }
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
             }).then(r => { if (r.ok) this.dismissed = true; })
               .catch(() => {});
         }
@@ -28,7 +38,7 @@
                 </div>
                 <div>
                     <h2 class="text-sm font-semibold text-gray-900">Configura tu empresa</h2>
-                    <p class="text-xs text-gray-500">{{ $onboarding['completed'] }} de {{ $onboarding['total'] }} pasos completados</p>
+                    <p class="text-xs text-gray-500">{{ $onboardingDone }} de {{ $onboardingTotal }} pasos completados</p>
                 </div>
             </div>
             <button @click="toggle()" class="rounded-md p-1 text-gray-400 hover:text-gray-600">
@@ -41,7 +51,7 @@
         {{-- Progress bar --}}
         <div class="mt-3 h-1.5 w-full rounded-full bg-blue-100">
             <div class="h-1.5 rounded-full bg-blue-600 transition-all duration-500"
-                 style="width: {{ round(($onboarding['completed'] / $onboarding['total']) * 100) }}%"></div>
+                 style="width: {{ $onboardingPct }}%"></div>
         </div>
     </div>
 

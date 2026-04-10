@@ -29,13 +29,20 @@ class SendBidNotification implements ShouldQueue
 
     public function handle(): void
     {
+        if (! $this->markAsNotifiedIfPending()) {
+            return;
+        }
+
         $this->createInAppNotifications();
         $this->sendMatchEmailIfConfigured();
+    }
 
-        // Mark as notified on the company_bid pivot
-        CompanyBid::where('bid_id', $this->bid->id)
+    private function markAsNotifiedIfPending(): bool
+    {
+        return CompanyBid::where('bid_id', $this->bid->id)
             ->where('company_id', $this->company->id)
-            ->update(['notified_at' => now()]);
+            ->whereNull('notified_at')
+            ->update(['notified_at' => now()]) > 0;
     }
 
     private function sendMatchEmailIfConfigured(): void

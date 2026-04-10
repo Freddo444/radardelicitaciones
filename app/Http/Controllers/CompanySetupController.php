@@ -85,6 +85,17 @@ class CompanySetupController extends Controller
             $page++;
         } while ($page <= $totalPages);
 
+        $seenCodes = [];
+        $rubros = array_values(array_filter($rubros, function (array $r) use (&$seenCodes) {
+            $code = $r['code'] ?? '';
+            if ($code === '' || isset($seenCodes[$code])) {
+                return false;
+            }
+            $seenCodes[$code] = true;
+
+            return true;
+        }));
+
         return response()->json([
             'found' => true,
             'company' => [
@@ -150,10 +161,17 @@ class CompanySetupController extends Controller
             $company->users()->attach($user->id, ['joined_at' => now()]);
 
             if ($request->rubros) {
+                $seenCodes = [];
                 foreach ($request->rubros as $rubro) {
+                    $code = $rubro['code'] ?? '';
+                    if ($code === '' || isset($seenCodes[$code])) {
+                        continue;
+                    }
+                    $seenCodes[$code] = true;
+
                     Rubro::create([
                         'company_id' => $company->id,
-                        'code' => $rubro['code'],
+                        'code' => $code,
                         'name' => $rubro['name'],
                         'level' => 'familia',
                         'active' => true,
