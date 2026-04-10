@@ -10,6 +10,7 @@ use App\Models\Personnel;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\VaultDocument;
+use App\Services\OnboardingService;
 
 class DashboardController extends Controller
 {
@@ -71,10 +72,12 @@ class DashboardController extends Controller
             $bids = null;
         }
 
+        $onboarding = OnboardingService::getStatus($company);
+
         return view('dashboard.index', compact(
             'expiryAlerts', 'activeOffers', 'upcomingEvents', 'vaultStats',
             'lastPolledAt',
-            'bidStats', 'recentBids', 'bids', 'showAll'
+            'bidStats', 'recentBids', 'bids', 'showAll', 'onboarding'
         ));
     }
 }

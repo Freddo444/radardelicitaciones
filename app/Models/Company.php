@@ -32,10 +32,12 @@ class Company extends Model
         'firma_path',
         'sello_path',
         'logo_path',
+        'onboarding_dismissed_at',
     ];
 
     protected $casts = [
         'cpa_vence' => 'date',
+        'onboarding_dismissed_at' => 'datetime',
     ];
 
     // ── Relationships ────────────────────────────────────────────────

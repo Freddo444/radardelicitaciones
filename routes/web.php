@@ -127,6 +127,13 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Onboarding
+    Route::post('/onboarding/dismiss', function () {
+        currentCompany()->update(['onboarding_dismissed_at' => now()]);
+
+        return response()->json(['ok' => true]);
+    })->name('onboarding.dismiss');
+
     // Convocatorias
     Route::get('/convocatorias', [ConvocatoriasController::class, 'index'])->name('convocatorias.index');
     Route::get('/convocatorias/{bid}/detail', [ConvocatoriasController::class, 'detail'])->name('convocatorias.detail');

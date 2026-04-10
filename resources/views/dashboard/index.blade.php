@@ -4,6 +4,9 @@
 @section('content')
 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
 
+    {{-- ── Onboarding checklist ─────────────────────────────────────── --}}
+    @include('dashboard._onboarding-checklist', ['onboarding' => $onboarding])
+
     {{-- ── Expiry alerts banner ──────────────────────────────────────── --}}
     @if($expiryAlerts->isNotEmpty())
     <div class="mb-6 space-y-2">
@@ -231,8 +234,8 @@
         {{-- Right column: Sondeo + Bóveda (1/3 width) --}}
         <div class="space-y-6">
 
-            {{-- Sondeo status --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5">
+            {{-- Sondeo status (id for onboarding checklist anchor) --}}
+            <div id="sondeo" class="rounded-xl border border-gray-200 bg-white p-4 shadow-xs sm:p-5 scroll-mt-24">
                 <h2 class="text-sm font-semibold text-gray-900 mb-4">Estado del sondeo</h2>
 
                 <dl class="space-y-3 text-sm">
