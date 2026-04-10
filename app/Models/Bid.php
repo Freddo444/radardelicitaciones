@@ -14,6 +14,7 @@ class Bid extends Model
         'published_at', 'tender_deadline', 'secp_url',
         'raw_data', 'mipymes', 'mipymes_mujeres',
         'cached_documents', 'cached_articles', 'cached_contracts', 'cache_refreshed_at',
+        'last_known_status', 'last_known_doc_count',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class Bid extends Model
         'amount_estimated' => 'decimal:2',
         'mipymes' => 'boolean',
         'mipymes_mujeres' => 'boolean',
+        'last_known_doc_count' => 'integer',
     ];
 
     public function notificationLogs()

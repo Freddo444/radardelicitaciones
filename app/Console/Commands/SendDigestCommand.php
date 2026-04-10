@@ -55,11 +55,12 @@ class SendDigestCommand extends Command
 
             $lastDigestAt = Setting::get('last_digest_at', null, $cid);
             $since = $lastDigestAt ? new \DateTime($lastDigestAt) : new \DateTime('-24 hours');
+            $sinceStr = $since->format('Y-m-d H:i:s');
 
-            // Get company-scoped bids since last digest
+            // New matches for this company since last digest (pivot time, not global bid.created_at)
             $bids = Bid::forCompany($cid)
-                ->where('bids.created_at', '>=', $since)
-                ->orderByDesc('bids.created_at')
+                ->whereRaw('COALESCE(company_bid.first_matched_at, company_bid.created_at) >= ?', [$sinceStr])
+                ->orderByRaw('COALESCE(company_bid.first_matched_at, company_bid.created_at) DESC')
                 ->get();
 
             if ($bids->isEmpty()) {

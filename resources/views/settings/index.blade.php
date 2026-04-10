@@ -213,7 +213,7 @@
                         <div class="py-6 sm:flex sm:items-start">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">
                                 Resumen peri&oacute;dico
-                                <p class="mt-1 text-xs font-normal text-gray-500">Env&iacute;a un resumen por email y Telegram con todas las convocatorias nuevas encontradas.</p>
+                                <p class="mt-1 text-xs font-normal text-gray-500">Cuando est&aacute; activo, las <strong>nuevas coincidencias</strong> no env&iacute;an un correo por cada convocatoria (solo campana en la app); el resumen agrupa por email y Telegram seg&uacute;n la frecuencia elegida.</p>
                             </dt>
                             <dd class="mt-2 sm:mt-0 sm:flex-auto">
                                 <div class="flex items-center gap-x-4">

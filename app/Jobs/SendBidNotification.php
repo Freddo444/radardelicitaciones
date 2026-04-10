@@ -40,6 +40,10 @@ class SendBidNotification implements ShouldQueue
 
     private function sendMatchEmailIfConfigured(): void
     {
+        if (Setting::get('digest_enabled', '0', $this->company->id) === '1') {
+            return;
+        }
+
         $raw = Setting::get('notification_email', null, $this->company->id);
         $recipient = is_string($raw) ? trim($raw) : '';
 
