@@ -14,6 +14,16 @@
     <script defer src="https://analytics.radardelicitaciones.com/script.js" data-website-id="3a71e47e-8466-4078-b759-462a63b46135"></script>
 </head>
 <body class="h-full">
+@php
+    $navRouteActive = [
+        'monitor' => request()->routeIs('dashboard', 'convocatorias.*', 'tablero.*', 'rubros.*'),
+        'inteligencia' => request()->routeIs('inteligencia.*'),
+        'empresa' => request()->routeIs('empresa.*', 'documentos.*', 'personal.*', 'proyectos.*', 'equipos.*', 'financiero.*'),
+        'ofertas' => request()->routeIs('ofertas.*', 'documentos-generados.*', 'prellenado.*'),
+        'empresaActiva' => request()->routeIs('empresa.index', 'companies.*'),
+        'sistema' => request()->routeIs('logs.*', 'company-users.*', 'billing.*', 'settings.*'),
+    ];
+@endphp
 
 {{-- ── Mobile sidebar (drawer) ─────────────────────────────────────── --}}
 <el-dialog>
@@ -29,8 +39,9 @@
                         </svg>
                     </button>
                 </div>
-                <div x-data="{ sidebarCollapsed: false }" class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 px-6 pb-4">
-                    @include('layouts.sidebar-content')
+                <div x-data x-init="$store.layout.initFromPage(@js($navRouteActive))"
+                     class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 px-6 pb-4">
+                    @include('layouts.sidebar-content', ['sidebarContext' => 'mobile'])
                 </div>
             </el-dialog-panel>
         </div>
@@ -38,20 +49,19 @@
 </el-dialog>
 
 {{-- ── Desktop sidebar + Main (shared Alpine scope) ──────────────── --}}
-<div x-data="{ sidebarCollapsed: JSON.parse(localStorage.getItem('sidebarCollapsed') ?? 'false') }"
-     x-effect="localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed))">
+<div x-data x-init="$store.layout.initFromPage(@js($navRouteActive))">
 
 {{-- Desktop sidebar --}}
 <div class="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300"
-     :class="sidebarCollapsed ? 'lg:w-16' : 'lg:w-72'">
+     :class="$store.layout.sidebarCollapsed ? 'lg:w-16' : 'lg:w-72'">
     <div class="relative flex grow flex-col gap-y-5 overflow-y-auto bg-blue-800 pb-4 transition-all duration-300"
-         :class="sidebarCollapsed ? 'px-2' : 'px-6'">
-        @include('layouts.sidebar-content')
+         :class="$store.layout.sidebarCollapsed ? 'px-2' : 'px-6'">
+        @include('layouts.sidebar-content', ['sidebarContext' => 'desktop'])
     </div>
 </div>
 
 {{-- ── Main area ────────────────────────────────────────────────────── --}}
-<div class="transition-all duration-300" :class="sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'">
+<div class="transition-all duration-300" :class="$store.layout.sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'">
 
     {{-- Top bar --}}
     <div class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-xs sm:gap-x-6 sm:px-6 lg:px-8">
@@ -150,7 +160,7 @@
 
                     <div class="border-t border-gray-100 px-4 py-2">
                         <a href="{{ route('logs.index') }}" class="text-xs text-gray-500 hover:text-gray-700">
-                            Ver todos los registros &rarr;
+                            Ver historial de notificaciones &rarr;
                         </a>
                     </div>
                 </div>
@@ -264,7 +274,7 @@
             // Sistema
             'settings.index' => [['label' => 'Configuración']],
             'company-users.index' => [['label' => 'Usuarios']],
-            'logs.index' => [['label' => 'Registros']],
+            'logs.index' => [['label' => 'Historial de notificaciones']],
 
             default => [],
         };

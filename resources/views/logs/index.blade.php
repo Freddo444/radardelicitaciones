@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'Registros')
+@section('title', 'Historial de notificaciones')
 
 @section('content')
 <div class="px-4 py-10 sm:px-6 lg:px-8">
@@ -7,12 +7,12 @@
     {{-- Header --}}
     <div class="sm:flex sm:items-center">
         <div class="sm:flex-auto">
-            <h1 class="text-base font-semibold text-gray-900">Registros de notificaciones</h1>
-            <p class="mt-2 text-sm text-gray-700">Historial de todos los intentos de envío por email y Telegram.</p>
+            <h1 class="text-base font-semibold text-gray-900">Historial de notificaciones</h1>
+            <p class="mt-2 text-sm text-gray-700">Intentos de envío por correo y Telegram (incluye digest, alertas de vigilancia y otras notificaciones registradas).</p>
         </div>
         @if($logs->total() > 0)
         <div class="mt-4 sm:mt-0 sm:ml-16 sm:flex-none">
-            <span class="text-sm text-gray-500">{{ number_format($logs->total()) }} registro{{ $logs->total() !== 1 ? 's' : '' }}</span>
+            <span class="text-sm text-gray-500">{{ number_format($logs->total()) }} entrada{{ $logs->total() !== 1 ? 's' : '' }}</span>
         </div>
         @endif
     </div>
@@ -23,8 +23,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="mx-auto size-12 text-gray-400">
                 <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <h3 class="mt-2 text-sm font-semibold text-gray-900">Sin registros aún</h3>
-            <p class="mt-1 text-sm text-gray-500">Los registros aparecerán aquí después del primer sondeo con coincidencias.</p>
+            <h3 class="mt-2 text-sm font-semibold text-gray-900">Aún no hay envíos registrados</h3>
+            <p class="mt-1 text-sm text-gray-500">Cuando el sistema envíe correos o mensajes de Telegram, aparecerán aquí.</p>
         </div>
     @else
         {{-- Table --}}

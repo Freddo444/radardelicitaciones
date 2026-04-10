@@ -20,8 +20,14 @@
         </div>
     </div>
 
+    @php
+        $instEstadoOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($statuses as $st) {
+            $instEstadoOptions[] = ['value' => $st, 'label' => $st];
+        }
+    @endphp
     {{-- Filters --}}
-    <form method="GET" action="{{ route('inteligencia.instituciones') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <form id="instituciones-filters" method="GET" action="{{ route('inteligencia.instituciones') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div class="sm:col-span-2">
                 <label for="q" class="block text-xs font-medium text-gray-700">Buscar</label>
@@ -29,14 +35,7 @@
                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm">
             </div>
             <div>
-                <label for="estado" class="block text-xs font-medium text-gray-700">Estado</label>
-                <select name="estado" id="estado"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($statuses as $st)
-                        <option value="{{ $st }}" {{ request('estado') == $st ? 'selected' : '' }}>{{ $st }}</option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="instituciones-filters" name="estado" label="Estado" :options="$instEstadoOptions" />
             </div>
         </div>
         <div class="mt-4 flex items-center gap-3">

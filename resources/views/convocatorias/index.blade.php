@@ -29,8 +29,18 @@
         </nav>
     </div>
 
+    @php
+        $convEstadoOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($statuses as $s) {
+            $convEstadoOptions[] = ['value' => $s, 'label' => $s];
+        }
+        $convModalidadOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($methods as $m) {
+            $convModalidadOptions[] = ['value' => $m, 'label' => $m];
+        }
+    @endphp
     {{-- Filters --}}
-    <form method="GET" action="{{ route('convocatorias.index') }}" class="mt-4 flex flex-wrap items-end gap-3 sm:gap-4">
+    <form id="convocatorias-filters" method="GET" action="{{ route('convocatorias.index') }}" class="mt-4 flex flex-wrap items-end gap-3 sm:gap-4">
         @if(request('tab'))
             <input type="hidden" name="tab" value="{{ request('tab') }}">
         @endif
@@ -39,25 +49,11 @@
             <input type="text" name="q" id="q" value="{{ request('q') }}" placeholder="Título, entidad o código..."
                    class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm">
         </div>
-        <div>
-            <label for="estado" class="block text-xs font-medium text-gray-700">Estado</label>
-            <select name="estado" id="estado" onchange="this.form.submit()"
-                    class="mt-1 block rounded-md border-0 py-1.5 pl-3 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 text-sm focus:ring-2 focus:ring-blue-600">
-                <option value="">Todos</option>
-                @foreach($statuses as $s)
-                    <option value="{{ $s }}" @selected(request('estado') === $s)>{{ $s }}</option>
-                @endforeach
-            </select>
+        <div class="w-full min-w-[10rem] sm:w-auto sm:min-w-[11rem]">
+            <x-filter-dropdown form="convocatorias-filters" name="estado" label="Estado" :options="$convEstadoOptions" :submit-on-change="true" />
         </div>
-        <div>
-            <label for="modalidad" class="block text-xs font-medium text-gray-700">Modalidad</label>
-            <select name="modalidad" id="modalidad" onchange="this.form.submit()"
-                    class="mt-1 block rounded-md border-0 py-1.5 pl-3 pr-8 text-gray-900 ring-1 ring-inset ring-gray-300 text-sm focus:ring-2 focus:ring-blue-600">
-                <option value="">Todas</option>
-                @foreach($methods as $m)
-                    <option value="{{ $m }}" @selected(request('modalidad') === $m)>{{ $m }}</option>
-                @endforeach
-            </select>
+        <div class="w-full min-w-[10rem] sm:w-auto sm:min-w-[11rem]">
+            <x-filter-dropdown form="convocatorias-filters" name="modalidad" label="Modalidad" :options="$convModalidadOptions" :submit-on-change="true" />
         </div>
         <label class="flex items-center gap-x-2 text-sm text-gray-700">
             <input type="checkbox" name="vigentes" value="1" onchange="this.form.submit()"

@@ -1,25 +1,37 @@
+@php $__sidebarMobile = ($sidebarContext ?? 'desktop') === 'mobile'; @endphp
 {{-- Brand --}}
-<div class="flex h-16 shrink-0 items-center" :class="sidebarCollapsed ? 'justify-center' : 'gap-x-3'">
+<div class="flex h-16 shrink-0 items-center"
+     :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) ? 'justify-center' : 'gap-x-3'">
     <img src="/images/android-chrome-192x192.png" alt="Radar de Licitaciones" class="h-8 w-auto rounded">
-    <div class="sidebar-brand-text leading-tight" x-show="!sidebarCollapsed" x-cloak>
+    <div class="sidebar-brand-text leading-tight" x-show="!$store.layout.sidebarCollapsed || @js($__sidebarMobile)" x-cloak>
         <p class="text-sm font-bold text-white">Radar de Licitaciones</p>
     </div>
 </div>
 
 {{-- Collapse toggle (desktop only) --}}
-<button @click="sidebarCollapsed = !sidebarCollapsed"
+<button type="button" @click="$store.layout.toggleSidebarCollapsed()"
         class="hidden lg:flex w-full items-center justify-center rounded-md py-1.5 text-blue-300 hover:bg-blue-900 hover:text-white transition-colors -mt-3 mb-1">
-    <svg class="size-5 transition-transform duration-300" :class="sidebarCollapsed && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+    <svg class="size-5 transition-transform duration-300" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" d="m18.75 4.5-7.5 7.5 7.5 7.5m-6-15L5.25 12l7.5 7.5"/>
     </svg>
 </button>
 
-<nav class="flex flex-1 flex-col" :class="sidebarCollapsed && 'sidebar-collapsed'">
-    <ul role="list" class="flex flex-1 flex-col gap-y-7" :class="sidebarCollapsed && 'gap-y-4'">
+<nav class="flex flex-1 flex-col" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'sidebar-collapsed'">
+    <ul role="list" class="flex flex-1 flex-col gap-y-7" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'gap-y-4'">
 
         {{-- ── Monitor ───────────────────────────────────────── --}}
         <li>
-            <ul role="list" class="-mx-2 space-y-1">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('monitor', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('monitor', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Monitor</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('monitor', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 space-y-1" x-show="$store.layout.sectionOpen('monitor', @js($__sidebarMobile))" x-cloak>
                 <li>
                     <a href="{{ route('dashboard') }}" title="Inicio"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('dashboard') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
@@ -66,8 +78,18 @@
 
         {{-- ── Inteligencia ──────────────────────────────────── --}}
         <li>
-            <div class="sidebar-section-title text-xs/6 font-semibold text-blue-200">Inteligencia</div>
-            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="sidebarCollapsed && 'mt-0'">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('inteligencia', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('inteligencia', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Inteligencia</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('inteligencia', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'mt-0'"
+                x-show="$store.layout.sectionOpen('inteligencia', @js($__sidebarMobile))" x-cloak>
                 <li>
                     <a href="{{ route('inteligencia.adjudicados') }}" title="Adjudicados"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('inteligencia.adjudicados') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
@@ -123,8 +145,18 @@
 
         {{-- ── Empresa ───────────────────────────────────────── --}}
         <li>
-            <div class="sidebar-section-title text-xs/6 font-semibold text-blue-200">Empresa</div>
-            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="sidebarCollapsed && 'mt-0'">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('empresa', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('empresa', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Empresa</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('empresa', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'mt-0'"
+                x-show="$store.layout.sectionOpen('empresa', @js($__sidebarMobile))" x-cloak>
                 <li>
                     <a href="{{ route('empresa.index') }}" title="Perfil"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('empresa.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
@@ -190,8 +222,18 @@
 
         {{-- ── Ofertas ───────────────────────────────────────── --}}
         <li>
-            <div class="sidebar-section-title text-xs/6 font-semibold text-blue-200">Ofertas</div>
-            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="sidebarCollapsed && 'mt-0'">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('ofertas', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('ofertas', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Ofertas</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('ofertas', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'mt-0'"
+                x-show="$store.layout.sectionOpen('ofertas', @js($__sidebarMobile))" x-cloak>
                 <li>
                     <a href="{{ route('ofertas.index') }}" title="Preparaciones"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('ofertas.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
@@ -217,8 +259,18 @@
 
         {{-- ── Empresa activa (V3: company switcher) ────────── --}}
         <li>
-            <div class="sidebar-section-title text-xs/6 font-semibold text-blue-200">Empresa activa</div>
-            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="sidebarCollapsed && 'mt-0'">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('empresaActiva', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('empresaActiva', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Empresa activa</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('empresaActiva', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 mt-2 space-y-1" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'mt-0'"
+                x-show="$store.layout.sectionOpen('empresaActiva', @js($__sidebarMobile))" x-cloak>
                 <li>
                     @php $empresa = currentCompany(); @endphp
                     <a href="{{ route('empresa.index') }}" title="{{ $empresa->razon_social ?? 'Sin configurar' }}"
@@ -234,15 +286,25 @@
 
         {{-- ── Sistema (bottom) ─────────────────────────────── --}}
         <li class="mt-auto">
-            <ul role="list" class="-mx-2 space-y-1">
+            <button type="button"
+                    @click="$store.layout.toggleNavSection('sistema', @js($__sidebarMobile))"
+                    :aria-expanded="$store.layout.sectionOpen('sistema', @js($__sidebarMobile)) ? 'true' : 'false'"
+                    class="sidebar-section-title mb-1 flex w-full items-center justify-between rounded-md py-1.5 pr-2 pl-2 text-left text-xs/6 font-semibold text-blue-200 hover:bg-blue-900/50">
+                <span>Sistema</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-4 shrink-0 text-blue-300 transition-transform duration-200"
+                     :class="!$store.layout.sectionOpen('sistema', @js($__sidebarMobile)) && '-rotate-90'">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            </button>
+            <ul role="list" class="-mx-2 space-y-1" x-show="$store.layout.sectionOpen('sistema', @js($__sidebarMobile))" x-cloak>
                 <li>
-                    <a href="{{ route('logs.index') }}" title="Registros"
+                    <a href="{{ route('logs.index') }}" title="Historial de notificaciones enviadas (correo y Telegram)"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold {{ request()->routeIs('logs.*') ? 'bg-blue-900 text-white' : 'text-blue-200 hover:bg-blue-900 hover:text-white' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
                              class="size-6 shrink-0 {{ request()->routeIs('logs.*') ? 'text-white' : 'text-blue-200 group-hover:text-white' }}">
                             <path d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span class="sidebar-label">Registros</span>
+                        <span class="sidebar-label">Historial de notificaciones</span>
                     </a>
                 </li>
                 <li>

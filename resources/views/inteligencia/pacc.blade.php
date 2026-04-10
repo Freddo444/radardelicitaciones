@@ -20,8 +20,32 @@
         </div>
     </div>
 
+    @php
+        $paccFamiliaOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($familias as $f) {
+            $paccFamiliaOptions[] = [
+                'value' => $f->unspsc_familia,
+                'label' => $f->unspsc_familia.' — '.\Illuminate\Support\Str::limit($f->unspsc_description, 40),
+            ];
+        }
+        $paccInstitucionOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($institutions as $inst) {
+            $paccInstitucionOptions[] = [
+                'value' => $inst->institution_code,
+                'label' => \Illuminate\Support\Str::limit($inst->institution_name, 50),
+            ];
+        }
+        $paccModalidadOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($modalities as $mod) {
+            $paccModalidadOptions[] = ['value' => $mod, 'label' => $mod];
+        }
+        $paccTipoObjetoOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($objectTypes as $ot) {
+            $paccTipoObjetoOptions[] = ['value' => $ot, 'label' => $ot];
+        }
+    @endphp
     {{-- Filters --}}
-    <form method="GET" action="{{ route('inteligencia.pacc') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <form id="pacc-filters" method="GET" action="{{ route('inteligencia.pacc') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {{-- Search --}}
             <div class="sm:col-span-2">
@@ -32,58 +56,22 @@
 
             {{-- UNSPSC Familia --}}
             <div>
-                <label for="familia" class="block text-xs font-medium text-gray-700">Familia UNSPSC</label>
-                <select name="familia" id="familia"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todas</option>
-                    @foreach($familias as $f)
-                        <option value="{{ $f->unspsc_familia }}" {{ request('familia') == $f->unspsc_familia ? 'selected' : '' }}>
-                            {{ $f->unspsc_familia }} — {{ \Illuminate\Support\Str::limit($f->unspsc_description, 40) }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="pacc-filters" name="familia" label="Familia UNSPSC" :options="$paccFamiliaOptions" :button-label-max="48" />
             </div>
 
             {{-- Institution --}}
             <div>
-                <label for="institucion" class="block text-xs font-medium text-gray-700">Institución</label>
-                <select name="institucion" id="institucion"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todas</option>
-                    @foreach($institutions as $inst)
-                        <option value="{{ $inst->institution_code }}" {{ request('institucion') == $inst->institution_code ? 'selected' : '' }}>
-                            {{ \Illuminate\Support\Str::limit($inst->institution_name, 50) }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="pacc-filters" name="institucion" label="Institución" :options="$paccInstitucionOptions" :button-label-max="48" />
             </div>
 
             {{-- Modality --}}
             <div>
-                <label for="modalidad" class="block text-xs font-medium text-gray-700">Modalidad</label>
-                <select name="modalidad" id="modalidad"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todas</option>
-                    @foreach($modalities as $mod)
-                        <option value="{{ $mod }}" {{ request('modalidad') == $mod ? 'selected' : '' }}>
-                            {{ $mod }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="pacc-filters" name="modalidad" label="Modalidad" :options="$paccModalidadOptions" />
             </div>
 
             {{-- Object type --}}
             <div>
-                <label for="tipo_objeto" class="block text-xs font-medium text-gray-700">Tipo objeto</label>
-                <select name="tipo_objeto" id="tipo_objeto"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($objectTypes as $ot)
-                        <option value="{{ $ot }}" {{ request('tipo_objeto') == $ot ? 'selected' : '' }}>
-                            {{ $ot }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="pacc-filters" name="tipo_objeto" label="Tipo objeto" :options="$paccTipoObjetoOptions" />
             </div>
 
             {{-- MIPYMES checkboxes --}}

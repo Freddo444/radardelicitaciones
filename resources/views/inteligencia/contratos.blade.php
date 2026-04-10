@@ -19,8 +19,28 @@
         </div>
     </div>
 
+    @php
+        $contratosInstOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($institutions as $inst) {
+            $contratosInstOptions[] = [
+                'value' => $inst->institution_code,
+                'label' => \Illuminate\Support\Str::limit($inst->institution_name, 50),
+            ];
+        }
+        $contratosProvOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($providers as $prov) {
+            $contratosProvOptions[] = [
+                'value' => $prov->provider_rpe,
+                'label' => \Illuminate\Support\Str::limit($prov->provider_name, 50),
+            ];
+        }
+        $contratosEstadoOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($statuses as $st) {
+            $contratosEstadoOptions[] = ['value' => $st, 'label' => $st];
+        }
+    @endphp
     {{-- Filters --}}
-    <form method="GET" action="{{ route('inteligencia.contratos') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <form id="contratos-filters" method="GET" action="{{ route('inteligencia.contratos') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {{-- Search --}}
             <div class="sm:col-span-2 lg:col-span-1">
@@ -31,44 +51,17 @@
 
             {{-- Institution --}}
             <div>
-                <label for="institucion" class="block text-xs font-medium text-gray-700">Institución</label>
-                <select name="institucion" id="institucion"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todas</option>
-                    @foreach($institutions as $inst)
-                        <option value="{{ $inst->institution_code }}" {{ request('institucion') == $inst->institution_code ? 'selected' : '' }}>
-                            {{ \Illuminate\Support\Str::limit($inst->institution_name, 50) }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="contratos-filters" name="institucion" label="Institución" :options="$contratosInstOptions" :button-label-max="48" />
             </div>
 
             {{-- Provider --}}
             <div>
-                <label for="proveedor" class="block text-xs font-medium text-gray-700">Proveedor</label>
-                <select name="proveedor" id="proveedor"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($providers as $prov)
-                        <option value="{{ $prov->provider_rpe }}" {{ request('proveedor') == $prov->provider_rpe ? 'selected' : '' }}>
-                            {{ \Illuminate\Support\Str::limit($prov->provider_name, 50) }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="contratos-filters" name="proveedor" label="Proveedor" :options="$contratosProvOptions" :button-label-max="48" />
             </div>
 
             {{-- Status --}}
             <div>
-                <label for="estado" class="block text-xs font-medium text-gray-700">Estado</label>
-                <select name="estado" id="estado"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($statuses as $st)
-                        <option value="{{ $st }}" {{ request('estado') == $st ? 'selected' : '' }}>
-                            {{ $st }}
-                        </option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="contratos-filters" name="estado" label="Estado" :options="$contratosEstadoOptions" />
             </div>
 
             {{-- Amount range --}}

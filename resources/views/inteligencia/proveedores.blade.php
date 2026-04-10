@@ -19,8 +19,22 @@
         </div>
     </div>
 
+    @php
+        $provEstadoOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($statuses as $st) {
+            $provEstadoOptions[] = ['value' => $st, 'label' => $st];
+        }
+        $provTipoPersonaOptions = [['value' => '', 'label' => 'Todos']];
+        foreach ($tiposPersona as $tp) {
+            $provTipoPersonaOptions[] = ['value' => $tp, 'label' => $tp];
+        }
+        $provProvinciaOptions = [['value' => '', 'label' => 'Todas']];
+        foreach ($provinces as $prov) {
+            $provProvinciaOptions[] = ['value' => $prov, 'label' => $prov];
+        }
+    @endphp
     {{-- Filters --}}
-    <form method="GET" action="{{ route('inteligencia.proveedores') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+    <form id="proveedores-filters" method="GET" action="{{ route('inteligencia.proveedores') }}" class="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {{-- Search --}}
             <div class="sm:col-span-2">
@@ -31,38 +45,17 @@
 
             {{-- Status --}}
             <div>
-                <label for="estado" class="block text-xs font-medium text-gray-700">Estado</label>
-                <select name="estado" id="estado"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($statuses as $st)
-                        <option value="{{ $st }}" {{ request('estado') == $st ? 'selected' : '' }}>{{ $st }}</option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="proveedores-filters" name="estado" label="Estado" :options="$provEstadoOptions" />
             </div>
 
             {{-- Tipo persona --}}
             <div>
-                <label for="tipo_persona" class="block text-xs font-medium text-gray-700">Tipo persona</label>
-                <select name="tipo_persona" id="tipo_persona"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todos</option>
-                    @foreach($tiposPersona as $tp)
-                        <option value="{{ $tp }}" {{ request('tipo_persona') == $tp ? 'selected' : '' }}>{{ $tp }}</option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="proveedores-filters" name="tipo_persona" label="Tipo persona" :options="$provTipoPersonaOptions" />
             </div>
 
             {{-- Province --}}
             <div>
-                <label for="provincia" class="block text-xs font-medium text-gray-700">Provincia</label>
-                <select name="provincia" id="provincia"
-                        class="mt-1 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm">
-                    <option value="">Todas</option>
-                    @foreach($provinces as $prov)
-                        <option value="{{ $prov }}" {{ request('provincia') == $prov ? 'selected' : '' }}>{{ $prov }}</option>
-                    @endforeach
-                </select>
+                <x-filter-dropdown form="proveedores-filters" name="provincia" label="Provincia" :options="$provProvinciaOptions" />
             </div>
         </div>
 
