@@ -70,7 +70,10 @@ class RegisterController extends Controller
         $user->sendEmailVerificationNotification();
 
         return redirect()->route('company-setup.show')
-            ->with('success', '¡Prueba gratuita activada! Configura tu primera empresa.');
+            ->with(array_filter([
+                'success' => '¡Prueba gratuita activada! Configura tu primera empresa.',
+                '_umami' => umami_flash_payload('trial_started'),
+            ], fn ($v) => $v !== null));
     }
 
     /**
@@ -200,7 +203,10 @@ class RegisterController extends Controller
 
         session(['register_paypal_subscription_id' => $paypalSubId]);
 
-        return redirect()->route('register.complete');
+        return redirect()->route('register.complete')
+            ->with(array_filter([
+                '_umami' => umami_flash_payload('registration_paypal_approved'),
+            ], fn ($v) => $v !== null));
     }
 
     /**
@@ -278,7 +284,12 @@ class RegisterController extends Controller
         $user->sendEmailVerificationNotification();
 
         return redirect()->route('company-setup.show')
-            ->with('success', '¡Pago confirmado y cuenta creada! Configura tu primera empresa.');
+            ->with(array_filter([
+                'success' => '¡Pago confirmado y cuenta creada! Configura tu primera empresa.',
+                '_umami' => umami_flash_payload('registration_completed_paid', [
+                    'billing_cycle' => $billingCycle,
+                ]),
+            ], fn ($v) => $v !== null));
     }
 
     private function getAccessToken(): ?string

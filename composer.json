@@ -23,6 +23,7 @@
     },
     "autoload": {
         "files": [
+            "app/Helpers/analytics.php",
             "app/Helpers/tenant.php"
         ],
         "psr-4": {

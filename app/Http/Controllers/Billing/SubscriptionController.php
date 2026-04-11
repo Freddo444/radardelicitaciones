@@ -200,7 +200,10 @@ class SubscriptionController extends Controller
         session()->forget(['subscribe_plan', 'subscribe_paypal_id']);
 
         return redirect()->route('billing.index')
-            ->with('success', 'Suscripcion activada. Bienvenido a Radar de Licitaciones.');
+            ->with(array_filter([
+                'success' => 'Suscripcion activada. Bienvenido a Radar de Licitaciones.',
+                '_umami' => umami_flash_payload('subscription_activated', ['flow' => 'subscribe']),
+            ], fn ($v) => $v !== null));
     }
 
     public function cancel(Request $request)
@@ -222,7 +225,10 @@ class SubscriptionController extends Controller
         ]);
 
         return redirect()->route('billing.index')
-            ->with('success', 'Suscripción cancelada. Tendrás acceso hasta el final del periodo actual.');
+            ->with(array_filter([
+                'success' => 'Suscripción cancelada. Tendrás acceso hasta el final del periodo actual.',
+                '_umami' => umami_flash_payload('subscription_cancelled'),
+            ], fn ($v) => $v !== null));
     }
 
     /**
@@ -312,7 +318,10 @@ class SubscriptionController extends Controller
         $label = $type === 'company' ? 'empresa' : 'usuario';
 
         return redirect()->route('billing.index')
-            ->with('success', "1 {$label} agregado(a). Cobro prorrateado: US\${$prorated}. Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.');
+            ->with(array_filter([
+                'success' => "1 {$label} agregado(a). Cobro prorrateado: US\${$prorated}. Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.',
+                '_umami' => umami_flash_payload('subscription_addon_purchased', ['type' => $type]),
+            ], fn ($v) => $v !== null));
     }
 
     /**

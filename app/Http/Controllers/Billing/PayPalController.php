@@ -17,7 +17,10 @@ class PayPalController extends Controller
     public function return(Request $request)
     {
         return redirect()->route('billing.index')
-            ->with('success', 'Pago procesado correctamente.');
+            ->with(array_filter([
+                'success' => 'Pago procesado correctamente.',
+                '_umami' => umami_flash_payload('paypal_return_success', ['flow' => 'billing']),
+            ], fn ($v) => $v !== null));
     }
 
     /**
@@ -26,7 +29,10 @@ class PayPalController extends Controller
     public function cancel()
     {
         return redirect()->route('billing.index')
-            ->with('warning', 'Pago cancelado.');
+            ->with(array_filter([
+                'warning' => 'Pago cancelado.',
+                '_umami' => umami_flash_payload('paypal_checkout_cancelled', ['flow' => 'billing']),
+            ], fn ($v) => $v !== null));
     }
 
     /**

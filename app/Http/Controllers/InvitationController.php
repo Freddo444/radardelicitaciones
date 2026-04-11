@@ -81,6 +81,11 @@ class InvitationController extends Controller
         Auth::login($user);
 
         return redirect()->route('dashboard')
-            ->with('success', "Te has unido a {$company->razon_social}.");
+            ->with(array_filter([
+                'success' => "Te has unido a {$company->razon_social}.",
+                '_umami' => umami_flash_payload('invitation_accepted', [
+                    'new_user' => ! $existingUser,
+                ]),
+            ], fn ($v) => $v !== null));
     }
 }

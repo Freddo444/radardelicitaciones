@@ -40,6 +40,9 @@ class BankTransferController extends Controller
         ]);
 
         return redirect()->route('billing.index')
-            ->with('success', 'Comprobante enviado. Tu pago sera verificado por un administrador.');
+            ->with(array_filter([
+                'success' => 'Comprobante enviado. Tu pago sera verificado por un administrador.',
+                '_umami' => umami_flash_payload('bank_transfer_receipt_submitted'),
+            ], fn ($v) => $v !== null));
     }
 }

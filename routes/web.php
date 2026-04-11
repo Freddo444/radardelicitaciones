@@ -74,7 +74,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/email/verificar/{id}/{hash}', function (EmailVerificationRequest $request) {
         $request->fulfill();
 
-        return redirect()->route('dashboard')->with('success', 'Correo verificado.');
+        return redirect()->route('dashboard')
+            ->with(array_filter([
+                'success' => 'Correo verificado.',
+                '_umami' => umami_flash_payload('email_verified'),
+            ], fn ($v) => $v !== null));
     })->middleware('signed:relative')->name('verification.verify');
 
     Route::post('/email/reenviar', function (Request $request) {

@@ -11,7 +11,7 @@
     <link rel="shortcut icon" href="/favicon.ico">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script src="https://cdn.jsdelivr.net/npm/@tailwindplus/elements@1" type="module"></script>
-    <script defer src="https://analytics.radardelicitaciones.com/script.js" data-website-id="3a71e47e-8466-4078-b759-462a63b46135"></script>
+    <x-umami-script />
 </head>
 <body class="h-full">
 @php
@@ -375,5 +375,6 @@ function notificationBell() {
     };
 }
 </script>
+<x-umami-track />
 </body>
 </html>

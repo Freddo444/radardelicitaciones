@@ -186,6 +186,9 @@ class CompanySetupController extends Controller
         $user->update(['current_company_id' => $company->id]);
 
         return redirect()->route('dashboard')
-            ->with('success', "Empresa {$company->razon_social} creada correctamente.");
+            ->with(array_filter([
+                'success' => "Empresa {$company->razon_social} creada correctamente.",
+                '_umami' => umami_flash_payload('company_onboarding_complete'),
+            ], fn ($v) => $v !== null));
     }
 }
