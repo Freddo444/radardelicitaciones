@@ -1,8 +1,10 @@
 <?php
 
+use App\View\Components\UmamiTrack;
+
 if (! function_exists('umami_flash_payload')) {
     /**
-     * Build session payload for {@see \App\View\Components\UmamiTrack} on the next request.
+     * Build session payload for {@see UmamiTrack} on the next request.
      *
      * @return array{event: string, data: array<string, mixed>}|null
      */
