@@ -241,18 +241,22 @@ class ConvocatoriasController extends Controller
         try {
             $response = Http::timeout(30)->get($url);
             if ($response->failed()) {
-                abort(502, 'No se pudo descargar el documento');
+                // Some remote document hosts intermittently reject server-side fetches.
+                // Fall back to direct browser download for this already-validated URL.
+                return redirect()->away($url);
             }
 
-            $filename = $request->input('filename', 'documento.pdf');
+            $filename = basename((string) $request->input('filename', 'documento.pdf')) ?: 'documento.pdf';
             $contentType = $response->header('Content-Type') ?? 'application/pdf';
 
             return response($response->body(), 200, [
                 'Content-Type' => $contentType,
                 'Content-Disposition' => "attachment; filename=\"{$filename}\"",
             ]);
-        } catch (\Throwable) {
-            abort(502, 'Error descargando documento');
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()->away($url);
         }
     }
 
