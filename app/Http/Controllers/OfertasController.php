@@ -28,6 +28,8 @@ use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
 use App\Services\OfferAssemblyService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -182,7 +184,7 @@ class OfertasController extends Controller
         try {
             $gemini->reparse($oferta, $bidDoc);
         } catch (TrialLimitExceededException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'Límite de uso alcanzado para su plan actual. Actualice su suscripción para continuar.');
         }
 
         if ($oferta->estado === 'borrador') {
@@ -209,7 +211,7 @@ class OfertasController extends Controller
         try {
             $gemini->reparse($oferta, $doc);
         } catch (TrialLimitExceededException $e) {
-            return back()->with('error', $e->getMessage());
+            return back()->with('error', 'Límite de uso alcanzado para su plan actual. Actualice su suscripción para continuar.');
         }
 
         return back()->with('success', 'Re-análisis iniciado.');
@@ -267,7 +269,7 @@ class OfertasController extends Controller
             'offer_id' => $oferta->id,
             'status' => 'pending',
             'parser_version' => 'v1.0',
-            'triggered_by' => auth()->id(),
+            'triggered_by' => Auth::id(),
         ]);
 
         ParsePliegoJob::dispatch($oferta, $request->url, $request->filename, $attempt->id);
@@ -662,7 +664,7 @@ class OfertasController extends Controller
             );
             exec($cmd, $output, $exitCode);
             if ($exitCode !== 0 || ! file_exists($pdfPath)) {
-                \Log::error('LibreOffice conversion failed', ['cmd' => $cmd, 'exit' => $exitCode, 'output' => $output]);
+                Log::error('LibreOffice conversion failed', ['cmd' => $cmd, 'exit' => $exitCode, 'output' => $output]);
                 abort(500, 'Error al convertir a PDF: '.implode("\n", $output));
             }
         }

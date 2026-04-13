@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SupportController extends Controller
@@ -27,11 +28,20 @@ class SupportController extends Controller
             $request->message,
         ]);
 
-        Mail::raw($details, function ($msg) use ($request) {
-            $msg->to('support@radardelicitaciones.com')
-                ->replyTo($request->email, $request->name)
-                ->subject("Contacto: {$request->name}");
-        });
+        try {
+            Mail::raw($details, function ($msg) use ($request) {
+                $msg->to('support@radardelicitaciones.com')
+                    ->replyTo($request->email, $request->name)
+                    ->subject("Contacto: {$request->name}");
+            });
+        } catch (\Throwable $e) {
+            Log::error('support.contact_send_failed', [
+                'email' => $request->email,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'No se pudo enviar su mensaje en este momento. Intente de nuevo.');
+        }
 
         return back()->with('contact_sent', true);
     }
@@ -61,15 +71,24 @@ class SupportController extends Controller
             $request->body,
         ]);
 
-        Mail::raw($details, function ($msg) use ($request, $user, $screenshotPath) {
-            $msg->to('support@radardelicitaciones.com')
-                ->replyTo($user->email, $user->name)
-                ->subject("Soporte: {$request->subject}");
+        try {
+            Mail::raw($details, function ($msg) use ($request, $user, $screenshotPath) {
+                $msg->to('support@radardelicitaciones.com')
+                    ->replyTo($user->email, $user->name)
+                    ->subject("Soporte: {$request->subject}");
 
-            if ($screenshotPath) {
-                $msg->attach(storage_path("app/{$screenshotPath}"));
-            }
-        });
+                if ($screenshotPath) {
+                    $msg->attach(storage_path("app/{$screenshotPath}"));
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error('support.ticket_send_failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'No se pudo enviar el reporte ahora. Intente de nuevo.');
+        }
 
         return back()->with('success', 'Reporte enviado. Te contactaremos pronto.');
     }

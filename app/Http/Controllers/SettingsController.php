@@ -6,6 +6,7 @@ use App\Models\Setting;
 use App\Services\DgcpApiClient;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class SettingsController extends Controller
@@ -42,10 +43,16 @@ class SettingsController extends Controller
 
     public function update(Request $request)
     {
+        $request->merge([
+            'min_amount_value' => str_replace(',', '', (string) $request->input('min_amount_value', '')),
+            'max_amount_value' => str_replace(',', '', (string) $request->input('max_amount_value', '')),
+        ]);
+
         $request->validate([
             'notification_email' => 'nullable|email',
             'telegram_bot_token' => 'nullable|string',
             'telegram_chat_id' => 'nullable|string',
+            'digest_frequency' => 'required|in:hourly,every_2h,twice_daily,daily_9am',
 
             'min_amount_value' => 'nullable|numeric|min:0',
             'min_amount_currency' => 'required|in:DOP,USD',
@@ -102,12 +109,19 @@ class SettingsController extends Controller
         );
     }
 
-    public function testEmail()
+    public function testEmail(Request $request)
     {
-        $recipient = Setting::get('notification_email', null, currentCompany()->id);
+        $recipient = trim((string) $request->input('notification_email', ''));
+        if ($recipient === '') {
+            $recipient = (string) Setting::get('notification_email', null, currentCompany()->id);
+        }
 
         if (empty($recipient)) {
             return back()->with('error', 'Configure un correo de destino primero.');
+        }
+
+        if (! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            return back()->with('error', 'El correo de prueba no es válido.');
         }
 
         try {
@@ -117,17 +131,43 @@ class SettingsController extends Controller
 
             return back()->with('success', "Correo de prueba enviado a {$recipient}.");
         } catch (\Throwable $e) {
-            return back()->with('error', 'Error al enviar correo: '.$e->getMessage());
+            Log::error('settings.test_email_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'No se pudo enviar el correo de prueba. Verifique su configuración e intente de nuevo.');
         }
     }
 
-    public function testTelegram(TelegramService $telegram)
+    public function testTelegram(Request $request, TelegramService $telegram)
     {
+        $token = trim((string) $request->input('telegram_bot_token', ''));
+        $chatId = trim((string) $request->input('telegram_chat_id', ''));
+        if ($token === '') {
+            $token = (string) Setting::get('telegram_bot_token', null, currentCompany()->id);
+        }
+        if ($chatId === '') {
+            $chatId = (string) Setting::get('telegram_chat_id', null, currentCompany()->id);
+        }
+
+        if ($token === '' || $chatId === '') {
+            return back()->with('error', 'Configure el token del bot y el Chat ID primero.');
+        }
+
+        config([
+            'services.telegram.bot_token' => $token,
+            'services.telegram.chat_id' => $chatId,
+        ]);
+
         if (! $telegram->isConfigured()) {
             return back()->with('error', 'Configure el token del bot y el Chat ID primero.');
         }
 
-        $sent = $telegram->sendMessage('Radar de Licitaciones — Prueba de notificación exitosa.');
+        try {
+            $sent = $telegram->sendMessage('Radar de Licitaciones — Prueba de notificación exitosa.');
+        } catch (\Throwable $e) {
+            Log::error('settings.test_telegram_failed', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'No se pudo enviar el mensaje de prueba. Verifique el token y Chat ID.');
+        }
 
         return back()->with(
             $sent ? 'success' : 'error',

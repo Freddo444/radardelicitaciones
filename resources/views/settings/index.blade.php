@@ -2,6 +2,15 @@
 @section('title', 'Configuración')
 
 @section('content')
+@php
+    $formatAmount = static function ($value) {
+        $numeric = str_replace(',', '', (string) ($value ?? '0'));
+        if (! is_numeric($numeric)) {
+            return '0';
+        }
+        return number_format((float) $numeric, 0, '.', ',');
+    };
+@endphp
 <div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:flex lg:gap-x-16 lg:px-8">
 
     {{-- Sidebar nav --}}
@@ -64,8 +73,15 @@
     <main class="flex-1 px-0 lg:px-0">
         {{-- Standalone test forms (outside main form to avoid nesting) --}}
         <form id="form-test-connection" method="POST" action="{{ route('settings.test-connection') }}">@csrf</form>
-        <form id="form-test-email"      method="POST" action="{{ route('settings.test-email') }}">@csrf</form>
-        <form id="form-test-telegram"   method="POST" action="{{ route('settings.test-telegram') }}">@csrf</form>
+        <form id="form-test-email" method="POST" action="{{ route('settings.test-email') }}">
+            @csrf
+            <input type="hidden" name="notification_email" id="test_notification_email">
+        </form>
+        <form id="form-test-telegram" method="POST" action="{{ route('settings.test-telegram') }}">
+            @csrf
+            <input type="hidden" name="telegram_bot_token" id="test_telegram_bot_token">
+            <input type="hidden" name="telegram_chat_id" id="test_telegram_chat_id">
+        </form>
 
         <form method="POST" action="{{ route('settings.update') }}">
             @csrf
@@ -137,7 +153,7 @@
                         <div class="py-6 sm:flex sm:items-center">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Prueba</dt>
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <button type="submit" form="form-test-email" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50">
+                                <button type="button" onclick="submitSettingsTest('email')" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50">
                                     Enviar correo de prueba
                                 </button>
                             </dd>
@@ -176,7 +192,7 @@
                         <div class="py-6 sm:flex sm:items-center">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Prueba</dt>
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <button type="submit" form="form-test-telegram" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50">
+                                <button type="button" onclick="submitSettingsTest('telegram')" class="rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50">
                                     Enviar mensaje de prueba
                                 </button>
                             </dd>
@@ -250,8 +266,8 @@
                                 <p class="mt-1 text-xs font-normal text-gray-500">Solo mostrar convocatorias que superen este monto. Deja en 0 para desactivar.</p>
                             </dt>
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
-                                <input type="number" name="min_amount_value" id="min_amount_value"
-                                       value="{{ $settings['min_amount_value'] }}" min="0" step="1000"
+                                <input type="text" name="min_amount_value" id="min_amount_value"
+                                       value="{{ $formatAmount($settings['min_amount_value']) }}" inputmode="numeric" autocomplete="off"
                                        class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                                 <select name="min_amount_currency"
                                         class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
@@ -268,8 +284,8 @@
                                 <p class="mt-1 text-xs font-normal text-gray-500">Solo mostrar convocatorias por debajo de este monto. Deja en 0 para desactivar.</p>
                             </dt>
                             <dd class="mt-1 flex gap-x-3 sm:mt-0 sm:flex-auto">
-                                <input type="number" name="max_amount_value" id="max_amount_value"
-                                       value="{{ $settings['max_amount_value'] }}" min="0" step="1000"
+                                <input type="text" name="max_amount_value" id="max_amount_value"
+                                       value="{{ $formatAmount($settings['max_amount_value']) }}" inputmode="numeric" autocomplete="off"
                                        class="w-64 rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600"/>
                                 <select name="max_amount_currency"
                                         class="rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
@@ -373,4 +389,22 @@
     </main>
 
 </div>
+<script>
+function submitSettingsTest(type) {
+    if (type === 'email') {
+        const emailInput = document.getElementById('notification_email');
+        document.getElementById('test_notification_email').value = emailInput ? emailInput.value : '';
+        document.getElementById('form-test-email').requestSubmit();
+        return;
+    }
+
+    if (type === 'telegram') {
+        const tokenInput = document.getElementById('telegram_bot_token');
+        const chatIdInput = document.getElementById('telegram_chat_id');
+        document.getElementById('test_telegram_bot_token').value = tokenInput ? tokenInput.value : '';
+        document.getElementById('test_telegram_chat_id').value = chatIdInput ? chatIdInput.value : '';
+        document.getElementById('form-test-telegram').requestSubmit();
+    }
+}
+</script>
 @endsection

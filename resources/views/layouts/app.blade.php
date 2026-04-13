@@ -297,11 +297,17 @@ function notificationBell() {
         loading: false,
         unreadCount: 0,
         notifications: [],
+        lastError: null,
         pollInterval: null,
 
         init() {
             this.fetchCount();
             this.pollInterval = setInterval(() => this.fetchCount(), 60000);
+        },
+
+        setError(context, error) {
+            this.lastError = context;
+            console.error(`[notificationBell] ${context}`, error);
         },
 
         async fetchCount() {
@@ -312,8 +318,12 @@ function notificationBell() {
                 if (r.ok) {
                     const d = await r.json();
                     this.unreadCount = d.count;
+                } else {
+                    this.setError('fetchCount non-OK response', r.status);
                 }
-            } catch (e) {}
+            } catch (e) {
+                this.setError('fetchCount request failed', e);
+            }
         },
 
         async toggle() {
@@ -327,8 +337,12 @@ function notificationBell() {
                     if (r.ok) {
                         const d = await r.json();
                         this.notifications = d.notifications;
+                    } else {
+                        this.setError('toggle non-OK response', r.status);
                     }
-                } catch (e) {}
+                } catch (e) {
+                    this.setError('toggle request failed', e);
+                }
                 this.loading = false;
             }
         },
@@ -342,22 +356,30 @@ function notificationBell() {
                 if (r.ok) {
                     this.unreadCount = 0;
                     this.notifications = this.notifications.map(n => ({ ...n, read: true }));
+                } else {
+                    this.setError('markAllRead non-OK response', r.status);
                 }
             } catch (e) {
-                console.error('markAllRead failed:', e);
+                this.setError('markAllRead request failed', e);
             }
         },
 
         async markRead(n) {
             if (n.read) return;
             try {
-                await fetch(`/notifications/${n.id}/read`, {
+                const r = await fetch(`/notifications/${n.id}/read`, {
                     method: 'PATCH',
                     headers: { 'Accept': 'application/json', 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
                 });
-                n.read = true;
-                this.unreadCount = Math.max(0, this.unreadCount - 1);
-            } catch (e) {}
+                if (r.ok) {
+                    n.read = true;
+                    this.unreadCount = Math.max(0, this.unreadCount - 1);
+                } else {
+                    this.setError('markRead non-OK response', r.status);
+                }
+            } catch (e) {
+                this.setError('markRead request failed', e);
+            }
         },
 
         typeLabel(type) {
