@@ -57,13 +57,18 @@ class SendDigestCommand extends Command
             $since = $lastDigestAt ? new \DateTime($lastDigestAt) : new \DateTime('-24 hours');
             $sinceStr = $since->format('Y-m-d H:i:s');
 
-            // New matches for this company since last digest (pivot time, not global bid.created_at)
+            // New notifications for this company since last digest.
+            // Use company_bid.notified_at to avoid re-sending older matches that were already processed.
             $bids = Bid::forCompany($cid)
-                ->whereRaw('COALESCE(company_bid.first_matched_at, company_bid.created_at) >= ?', [$sinceStr])
-                ->orderByRaw('COALESCE(company_bid.first_matched_at, company_bid.created_at) DESC')
+                ->whereNotNull('company_bid.notified_at')
+                ->where('company_bid.notified_at', '>', $sinceStr)
+                ->orderBy('company_bid.notified_at', 'desc')
                 ->get();
 
             if ($bids->isEmpty()) {
+                // Move the digest cursor even when there is nothing new, so old windows don't repeat.
+                Setting::set('last_digest_at', now()->toDateTimeString(), $cid);
+
                 continue;
             }
 
