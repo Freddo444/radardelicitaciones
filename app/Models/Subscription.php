@@ -46,12 +46,24 @@ class Subscription extends Model
 
     public function isTrialing(): bool
     {
-        return $this->status === 'trialing' && $this->trial_ends_at && $this->trial_ends_at->isFuture();
+        if ($this->status !== 'trialing') {
+            return false;
+        }
+
+        // Legacy safety: if trial_ends_at is missing, keep access enabled.
+        if (! $this->trial_ends_at) {
+            return true;
+        }
+
+        // Treat date-only values as valid through the end of that day.
+        return $this->trial_ends_at->copy()->endOfDay()->isFuture();
     }
 
     public function trialExpired(): bool
     {
-        return $this->status === 'trialing' && $this->trial_ends_at && $this->trial_ends_at->isPast();
+        return $this->status === 'trialing'
+            && $this->trial_ends_at
+            && $this->trial_ends_at->copy()->endOfDay()->isPast();
     }
 
     public function canUseTrial(): bool
