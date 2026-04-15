@@ -15,7 +15,9 @@ class CompanySwitchController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        abort_unless($user, 403);
+        if (! $user) {
+            return redirect()->route('login');
+        }
         $companies = $user->companies()->withCount('users')->get();
 
         return view('companies.index', compact('companies'));
@@ -25,7 +27,13 @@ class CompanySwitchController extends Controller
     {
         /** @var User|null $user */
         $user = Auth::user();
-        abort_unless($user && $user->belongsToCompany($company->id), 403);
+        if (! $user) {
+            return redirect()->route('login');
+        }
+        if (! $user->belongsToCompany($company->id)) {
+            return redirect()->route('companies.index')
+                ->with('error', 'No tienes acceso a la empresa seleccionada.');
+        }
 
         session(['current_company_id' => $company->id]);
         $user->update(['current_company_id' => $company->id]);
@@ -44,8 +52,13 @@ class CompanySwitchController extends Controller
         $subscription = Subscription::where('user_id', Auth::id())->first();
         /** @var User|null $user */
         $user = Auth::user();
-        abort_unless($user, 403);
-        abort_unless($subscription, 403, 'No tienes una suscripción activa para crear empresas.');
+        if (! $user) {
+            return redirect()->route('login');
+        }
+        if (! $subscription) {
+            return redirect()->route('billing.index')
+                ->with('warning', 'No tienes una suscripción activa para crear empresas.');
+        }
         abort_unless(SubscriptionService::canAddCompany($subscription), 422, 'Has alcanzado el límite de empresas de tu plan.');
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',

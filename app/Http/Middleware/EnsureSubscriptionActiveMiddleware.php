@@ -33,21 +33,35 @@ class EnsureSubscriptionActiveMiddleware
         }
 
         if ($subscription && $subscription->trialExpired()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'La prueba gratuita de tu empresa ha expirado. Renueva para continuar.',
+                ], 402);
+            }
+
             if ($user->isSubscriptionOwner()) {
                 return redirect()->route('billing.index')
                     ->with('warning', 'Tu prueba gratuita ha expirado. Suscríbete para continuar.');
             }
 
-            abort(403, 'La prueba gratuita de tu empresa ha expirado. Contacta al administrador.');
+            return redirect()->route('billing.index')
+                ->with('warning', 'La prueba gratuita de tu empresa ha expirado. Contacta al administrador de la cuenta.');
         }
 
         if (! $subscription || ! $subscription->isActive()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'La suscripción de tu empresa no está activa. Contacta al administrador.',
+                ], 402);
+            }
+
             if ($user->isSubscriptionOwner()) {
                 return redirect()->route('billing.index')
                     ->with('warning', 'Tu suscripción no está activa. Completa el pago para continuar.');
             }
 
-            abort(403, 'La suscripción de tu empresa no está activa. Contacta al administrador.');
+            return redirect()->route('billing.index')
+                ->with('warning', 'La suscripción de tu empresa no está activa. Contacta al administrador de la cuenta.');
         }
 
         return $next($request);
