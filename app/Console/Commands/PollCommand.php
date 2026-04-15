@@ -26,6 +26,12 @@ class PollCommand extends Command
 
     private const BACKFILL_BATCH_SIZE = 50;
 
+    private const MAX_POLL_LOG_BYTES = 60000;
+
+    private const MAX_LOG_ENTRIES = 300;
+
+    private const MAX_LOG_MESSAGE_CHARS = 300;
+
     private array $logBuffer = [];
 
     public function handle(DgcpApiClient $api, BidMatchingService $matcher): int
@@ -46,9 +52,18 @@ class PollCommand extends Command
 
             return self::FAILURE;
         } finally {
-            $this->flushLog();
+            try {
+                $this->flushLog();
+            } catch (\Throwable $e) {
+                Log::error('[SECP] Poll log flush failed', ['error' => $e->getMessage()]);
+            }
+
             if (! $this->option('dry-run')) {
-                Setting::set('poll_status', 'idle');
+                try {
+                    Setting::set('poll_status', 'idle');
+                } catch (\Throwable $e) {
+                    Log::error('[SECP] Failed to reset poll_status to idle', ['error' => $e->getMessage()]);
+                }
             }
         }
     }
@@ -667,7 +682,11 @@ class PollCommand extends Command
     {
         $this->line($message);
 
-        $this->logBuffer[] = ['time' => now()->format('H:i:s'), 'msg' => $message, 'type' => $type];
+        $this->logBuffer[] = [
+            'time' => now()->format('H:i:s'),
+            'msg' => mb_strimwidth($message, 0, self::MAX_LOG_MESSAGE_CHARS, '...'),
+            'type' => $type,
+        ];
 
         if (count($this->logBuffer) >= 20) {
             $this->flushLog();
@@ -683,11 +702,21 @@ class PollCommand extends Command
         $existing = json_decode(Setting::get('poll_log', '[]'), true) ?: [];
         $merged = array_merge($existing, $this->logBuffer);
 
-        if (count($merged) > 300) {
-            $merged = array_slice($merged, -300);
+        if (count($merged) > self::MAX_LOG_ENTRIES) {
+            $merged = array_slice($merged, -self::MAX_LOG_ENTRIES);
         }
 
-        Setting::set('poll_log', json_encode($merged));
+        $encoded = json_encode($merged, JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            $encoded = '[]';
+        }
+
+        while (strlen($encoded) > self::MAX_POLL_LOG_BYTES && count($merged) > 1) {
+            array_shift($merged);
+            $encoded = json_encode($merged, JSON_UNESCAPED_UNICODE) ?: '[]';
+        }
+
+        Setting::set('poll_log', $encoded);
         $this->logBuffer = [];
     }
 
