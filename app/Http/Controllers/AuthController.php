@@ -30,6 +30,9 @@ class AuthController extends Controller
 
             // Check subscription status first
             $subscription = $user->subscription;
+            if ($subscription?->status === 'trialing' && ! $user->hasVerifiedEmail()) {
+                $user->forceFill(['email_verified_at' => now()])->save();
+            }
             if ($subscription && ! $subscription->isActive()) {
                 return redirect()->route('billing.index');
             }

@@ -39,6 +39,7 @@ class RegisterController extends Controller
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
+                    'email_verified_at' => now(),
                 ]);
 
                 Subscription::create([
@@ -66,8 +67,6 @@ class RegisterController extends Controller
         }
 
         Auth::login($user);
-
-        $user->sendEmailVerificationNotification();
 
         return redirect()->route('company-setup.show')
             ->with(array_filter([
