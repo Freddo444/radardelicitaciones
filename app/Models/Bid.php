@@ -62,6 +62,16 @@ class Bid extends Model
      */
     public function getMatchedRubrosAttribute($value): array
     {
+        if (array_key_exists('company_matched_rubros', $this->attributes)) {
+            $companyValue = $this->attributes['company_matched_rubros'];
+            if (is_array($companyValue)) {
+                return $companyValue;
+            }
+            if (is_string($companyValue)) {
+                return json_decode($companyValue, true) ?: [];
+            }
+        }
+
         if (is_array($value)) {
             return $value;
         }
@@ -75,7 +85,7 @@ class Bid extends Model
             ->addSelect(
                 'company_bid.is_bookmarked',
                 'company_bid.is_relevant',
-                'company_bid.matched_rubros',
+                'company_bid.matched_rubros as company_matched_rubros',
                 'company_bid.notified_at as company_notified_at',
             )
             ->join('company_bid', 'bids.id', '=', 'company_bid.bid_id')
