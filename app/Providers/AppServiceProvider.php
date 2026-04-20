@@ -8,10 +8,12 @@ use App\Models\Equipment;
 use App\Models\FinancialRecord;
 use App\Models\Offer;
 use App\Models\OfferParseAttempt;
+use App\Models\Payment;
 use App\Models\Personnel;
 use App\Models\Project;
 use App\Models\Rubro;
 use App\Models\VaultDocument;
+use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -26,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         date_default_timezone_set('America/Santo_Domingo');
+
+        Payment::observe(PaymentObserver::class);
 
         $tenantModels = [
             Offer::class, Personnel::class, Equipment::class,
