@@ -107,7 +107,7 @@
             <div class="flex items-center justify-center gap-3">
                 <span class="text-sm font-medium" :class="annual ? 'text-gray-400' : 'text-gray-900'">Mensual</span>
                 <button type="button" @click="annual = !annual"
-                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                        class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
                         :class="annual ? 'bg-blue-600' : 'bg-gray-200'">
                     <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
                           :class="annual ? 'translate-x-5' : 'translate-x-0'"></span>
