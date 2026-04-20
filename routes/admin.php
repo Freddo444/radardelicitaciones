@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminBillingSettingsController;
 use App\Http\Controllers\Admin\AdminCompanyController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminPaymentController;
@@ -8,6 +9,9 @@ use App\Http\Controllers\Admin\AdminUserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+Route::get('/ajustes/facturacion', [AdminBillingSettingsController::class, 'edit'])->name('billing-settings.edit');
+Route::patch('/ajustes/facturacion', [AdminBillingSettingsController::class, 'update'])->name('billing-settings.update');
 
 // Companies
 Route::get('/empresas', [AdminCompanyController::class, 'index'])->name('companies.index');

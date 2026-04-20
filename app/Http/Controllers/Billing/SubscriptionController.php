@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Services\Billing\AzulPaymentPageService;
+use App\Services\Billing\UsdDopExchange;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -139,7 +140,7 @@ class SubscriptionController extends Controller
         $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
         $chargedUsd = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
 
-        $rate = (float) config('services.azul.usd_dop_rate', 59);
+        $rate = UsdDopExchange::rate();
         $totalMinor = $azul->usdToDopMinor($chargedUsd, $rate);
         $itbisMinor = $azul->itbisFromTotalInclusiveMinor($totalMinor);
 

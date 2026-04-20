@@ -71,7 +71,7 @@ return [
             'https://pruebas.azul.com.do/paymentpage/Default.aspx'
         ),
         'sandbox' => env('AZUL_SANDBOX', true),
-        'usd_dop_rate' => (float) env('AZUL_USD_DOP_RATE', 59),
+        'usd_dop_rate' => (float) env('AZUL_USD_DOP_RATE', 62),
     ],
 
     'calendly' => [

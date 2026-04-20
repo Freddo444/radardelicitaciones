@@ -75,6 +75,16 @@
                                 Pagos
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('admin.billing-settings.edit') }}"
+                               class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.billing-settings.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                                     class="size-5 shrink-0 opacity-80">
+                                    <path d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0-4.5 4.5M21 7.5H7.5" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Tipo de cambio USD/DOP
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="mt-auto space-y-1.5 border-t border-white/10 pt-6">
@@ -142,6 +152,7 @@
                 <a href="{{ route('admin.users.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.users.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Usuarios</a>
                 <a href="{{ route('admin.subscriptions.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Suscripciones</a>
                 <a href="{{ route('admin.payments.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Pagos</a>
+                <a href="{{ route('admin.billing-settings.edit') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.billing-settings.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Tipo de cambio USD/DOP</a>
             </nav>
         </div>
     </div>
