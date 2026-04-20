@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Billing;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Services\Billing\AzulPaymentPageService;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -118,6 +119,50 @@ class SubscriptionController extends Controller
         session(['subscribe_paypal_id' => $sub['id']]);
 
         return response()->json(['approve_url' => $approveUrl]);
+    }
+
+    public function createAzulCheckout(Request $request, AzulPaymentPageService $azul)
+    {
+        $request->validate([
+            'max_companies' => 'required|integer|min:1|max:10',
+            'max_users' => 'required|integer|min:2|max:20',
+            'billing_cycle' => 'sometimes|in:monthly,annual',
+        ]);
+
+        if (! config('services.azul.merchant_id') || ! config('services.azul.auth_key')) {
+            return response()->json(['error' => 'Pago con Azul no esta configurado.'], 503);
+        }
+
+        $maxCompanies = (int) $request->max_companies;
+        $maxUsers = (int) $request->max_users;
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+        $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
+        $chargedUsd = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+
+        $rate = (float) config('services.azul.usd_dop_rate', 59);
+        $totalMinor = $azul->usdToDopMinor($chargedUsd, $rate);
+        $itbisMinor = $azul->itbisFromTotalInclusiveMinor($totalMinor);
+
+        $orderNumber = substr(str_replace('.', '', uniqid('', true)), 0, 15);
+
+        session([
+            'subscribe_plan' => [
+                'max_companies' => $maxCompanies,
+                'max_users' => $maxUsers,
+                'amount' => $monthlyAmount,
+                'billing_cycle' => $billingCycle,
+                'charged_usd' => $chargedUsd,
+            ],
+            'azul_checkout' => [
+                'order_number' => $orderNumber,
+                'amount_cents' => $totalMinor,
+                'itbis_cents' => $itbisMinor,
+                'amount_str' => $azul->formatMinorUnits($totalMinor),
+                'itbis_str' => $azul->formatMinorUnits($itbisMinor),
+            ],
+        ]);
+
+        return response()->json(['checkout_url' => route('azul.checkout', [], true)]);
     }
 
     public function subscribeReturn(Request $request)

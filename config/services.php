@@ -63,9 +63,15 @@ return [
     'azul' => [
         'merchant_id' => env('AZUL_MERCHANT_ID'),
         'auth_key' => env('AZUL_AUTH_KEY'),
-        'auth2_key' => env('AZUL_AUTH2_KEY'),
-        'domain' => env('AZUL_DOMAIN'),
+        'merchant_name' => env('AZUL_MERCHANT_NAME', 'Radar de Licitaciones'),
+        'merchant_type' => env('AZUL_MERCHANT_TYPE', 'Comercio electronico'),
+        'currency_code' => env('AZUL_CURRENCY_CODE', '$'),
+        'payment_page_url' => env(
+            'AZUL_PAYMENT_PAGE_URL',
+            'https://pruebas.azul.com.do/paymentpage/Default.aspx'
+        ),
         'sandbox' => env('AZUL_SANDBOX', true),
+        'usd_dop_rate' => (float) env('AZUL_USD_DOP_RATE', 59),
     ],
 
     'calendly' => [

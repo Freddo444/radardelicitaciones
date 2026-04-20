@@ -105,11 +105,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/suscripcion/purchase-addon', [SubscriptionController::class, 'purchaseAddon'])->name('billing.purchase-addon');
     Route::get('/paypal/return', [PayPalController::class, 'return'])->name('paypal.return');
     Route::get('/paypal/cancel', [PayPalController::class, 'cancel'])->name('paypal.cancel');
-    Route::post('/azul/pagar', [AzulController::class, 'createPayment'])->name('azul.create-payment');
+    Route::get('/azul/checkout', [AzulController::class, 'showCheckout'])->name('azul.checkout');
     Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
     Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
     Route::get('/suscribirse', [SubscriptionController::class, 'showSubscribe'])->name('billing.subscribe');
     Route::post('/suscribirse', [SubscriptionController::class, 'createSubscription'])->name('billing.subscribe.create');
+    Route::post('/suscribirse/azul', [SubscriptionController::class, 'createAzulCheckout'])->name('billing.subscribe.azul');
     Route::get('/suscribirse/return', [SubscriptionController::class, 'subscribeReturn'])->name('billing.subscribe.return');
     Route::get('/transferencia', [BankTransferController::class, 'show'])->name('billing.bank-transfer');
     Route::post('/transferencia', [BankTransferController::class, 'uploadReceipt'])->name('billing.bank-transfer.upload');

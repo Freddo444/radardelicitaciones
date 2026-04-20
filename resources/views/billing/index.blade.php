@@ -187,6 +187,14 @@
             <span class="text-sm text-gray-500">Cobro autom&aacute;tico {{ $subscription->billing_cycle === 'annual' ? 'anual' : 'mensual' }}</span>
         </div>
     </div>
+    @elseif($subscription->payment_gateway === 'azul')
+    <div class="mt-6 rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
+        <h3 class="text-sm font-semibold text-gray-900">M&eacute;todo de pago</h3>
+        <div class="mt-2 flex items-center gap-3">
+            <span class="inline-flex items-center rounded-full bg-sky-100 px-3 py-1 text-sm font-medium text-sky-900">Azul</span>
+            <span class="text-sm text-gray-500">Tarjeta &mdash; renovaci&oacute;n {{ $subscription->billing_cycle === 'annual' ? 'anual' : 'mensual' }} (contacta soporte para cambios de plan).</span>
+        </div>
+    </div>
     @endif
 
     {{-- Payment history --}}

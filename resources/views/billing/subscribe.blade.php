@@ -48,6 +48,34 @@
             } finally {
                 this.loading = false;
             }
+        },
+        async payAzul() {
+            this.loading = true;
+            this.error = null;
+            try {
+                const res = await fetch('{{ route('billing.subscribe.azul') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                    },
+                    body: JSON.stringify({
+                        max_companies: this.companies,
+                        max_users: this.users,
+                        billing_cycle: this.annual ? 'annual' : 'monthly',
+                    }),
+                });
+                const data = await res.json();
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else {
+                    this.error = data.error || 'Error al iniciar el pago con Azul.';
+                }
+            } catch (e) {
+                this.error = 'Error de conexion.';
+            } finally {
+                this.loading = false;
+            }
         }
      }">
 
@@ -117,11 +145,18 @@
         </ul>
     </div>
 
-    <button @click="pay()" :disabled="loading"
-            class="mt-6 flex w-full justify-center rounded-md bg-blue-600 px-3 py-2.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-500 disabled:opacity-50">
-        <span x-show="!loading">Pagar con PayPal</span>
-        <span x-show="loading">Redirigiendo a PayPal...</span>
-    </button>
+    <div class="mt-6 space-y-3">
+        <button type="button" @click="pay()" :disabled="loading"
+                class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-2.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-500 disabled:opacity-50">
+            <span x-show="!loading">Pagar con PayPal</span>
+            <span x-show="loading">Redirigiendo...</span>
+        </button>
+        <button type="button" @click="payAzul()" :disabled="loading"
+                class="flex w-full justify-center rounded-md bg-white px-3 py-2.5 text-sm/6 font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50">
+            <span x-show="!loading">Pagar con tarjeta (Azul)</span>
+            <span x-show="loading">Redirigiendo...</span>
+        </button>
+    </div>
 
     <p x-show="error" class="mt-3 text-center text-sm text-red-600" x-text="error"></p>
 

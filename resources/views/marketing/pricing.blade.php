@@ -128,9 +128,9 @@
                     <svg class="size-5 text-blue-600" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.656h6.21c2.062 0 3.486.462 4.232 1.372.348.425.573.886.676 1.39.109.533.11 1.168.003 1.944l-.009.058v.515l.407.228c.345.182.619.39.826.627.347.396.57.893.665 1.477.098.6.065 1.298-.098 2.073-.188.894-.495 1.671-.914 2.31a4.702 4.702 0 0 1-1.417 1.473c-.544.363-1.19.635-1.92.807-.71.168-1.516.254-2.393.254H11.09a.956.956 0 0 0-.944.805l-.032.182-1.514 9.479Z"/></svg>
                     PayPal
                 </span>
-                <span class="flex items-center gap-1.5 text-zinc-400">
-                    <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/></svg>
-                    Azul <span class="text-xs">(próximamente)</span>
+                <span class="flex items-center gap-1.5">
+                    <svg class="size-5 text-sky-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/></svg>
+                    Azul
                 </span>
                 <span class="flex items-center gap-1.5">
                     <svg class="size-5 text-zinc-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21"/></svg>
@@ -164,7 +164,7 @@
             $faqs = [
                 ['¿Qué son los rubros?', 'Son códigos UNSPSC de 8 dígitos que clasifican los bienes y servicios que usted ofrece. El sistema de la DGCP usa estos códigos para categorizar las licitaciones. Usted selecciona los que aplican a su empresa y nosotros le buscamos las oportunidades.'],
                 ['¿Puedo agregar más empresas después?', 'Sí. Cada empresa adicional cuesta $20/mes. Puede agregar o remover empresas en cualquier momento desde su panel de facturación. Cada empresa tiene su propio espacio independiente con rubros, documentos y ofertas separadas.'],
-                ['¿Cómo funciona el pago?', 'Aceptamos PayPal para pagos recurrentes automáticos y transferencia bancaria para pagos manuales. Con transferencia, sube su comprobante y lo confirmamos en horas laborables. Azul estará disponible próximamente.'],
+                ['¿Cómo funciona el pago?', 'Aceptamos PayPal para pagos recurrentes automáticos, tarjeta vía Azul (Página de Pagos, en pesos dominicanos al tipo de cambio configurado) y transferencia bancaria para pagos manuales. Con transferencia, sube su comprobante y lo confirmamos en horas laborables.'],
                 ['¿Puedo cancelar en cualquier momento?', 'Sí, sin penalidades ni compromisos de permanencia. Su acceso continúa hasta el final del período pagado.'],
                 ['¿Qué licitaciones monitorean?', 'Todas las publicadas en el portal de Compras Dominicana (DGCP). Esto incluye comparaciones de precios, licitaciones públicas y restringidas, excepciones y cualquier otro proceso publicado en el sistema.'],
                 ['¿Qué incluye el análisis con IA?', 'Nuestro sistema lee el documento del pliego completo y genera un resumen con los requisitos principales, montos estimados, plazos, documentos solicitados y condiciones especiales. Le ahorra horas de lectura.'],
