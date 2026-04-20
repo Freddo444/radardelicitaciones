@@ -27,7 +27,12 @@
 
         @php $plan = session('register_plan'); @endphp
         <div class="rounded-md bg-blue-50 px-4 py-3 text-sm text-blue-800">
-            <strong>Tu plan:</strong> {{ $plan['max_companies'] }} empresa(s), {{ $plan['max_users'] }} usuarios — US${{ number_format($plan['amount'], 2) }}/mes
+            <strong>Tu plan:</strong> {{ $plan['max_companies'] }} empresa(s), {{ $plan['max_users'] }} usuarios
+            @if(($plan['billing_cycle'] ?? 'monthly') === 'annual')
+                &mdash; facturaci&oacute;n anual (US${{ number_format($plan['amount'], 2) }}/mes equivalente)
+            @else
+                &mdash; US${{ number_format($plan['amount'], 2) }}/mes
+            @endif
         </div>
 
         @if($errors->any())

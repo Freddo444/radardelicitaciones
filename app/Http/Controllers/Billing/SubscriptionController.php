@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Billing;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
-use App\Services\Billing\AzulPaymentPageService;
-use App\Services\Billing\UsdDopExchange;
+use App\Services\Billing\AzulCheckoutBuilder;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,8 +21,12 @@ class SubscriptionController extends Controller
         $usage = $subscription ? SubscriptionService::usage($subscription) : null;
         $payments = $subscription ? $subscription->payments()->latest()->limit(10)->get() : collect();
         $isOwner = $user->isSubscriptionOwner();
+        $canPaypalProration = $subscription
+            && $subscription->gateway_subscription_id
+            && $subscription->payment_gateway === 'paypal';
+        $canAzul = (bool) config('services.azul.merchant_id') && (bool) config('services.azul.auth_key');
 
-        return view('billing.index', compact('subscription', 'usage', 'payments', 'isOwner'));
+        return view('billing.index', compact('subscription', 'usage', 'payments', 'isOwner', 'canPaypalProration', 'canAzul'));
     }
 
     public function showSubscribe()
@@ -122,7 +125,7 @@ class SubscriptionController extends Controller
         return response()->json(['approve_url' => $approveUrl]);
     }
 
-    public function createAzulCheckout(Request $request, AzulPaymentPageService $azul)
+    public function createAzulCheckout(Request $request, AzulCheckoutBuilder $builder)
     {
         $request->validate([
             'max_companies' => 'required|integer|min:1|max:10',
@@ -140,13 +143,8 @@ class SubscriptionController extends Controller
         $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
         $chargedUsd = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
 
-        $rate = UsdDopExchange::rate();
-        $totalMinor = $azul->usdToDopMinor($chargedUsd, $rate);
-        $itbisMinor = $azul->itbisFromTotalInclusiveMinor($totalMinor);
-
-        $orderNumber = substr(str_replace('.', '', uniqid('', true)), 0, 15);
-
         session([
+            'azul_intent' => 'subscribe',
             'subscribe_plan' => [
                 'max_companies' => $maxCompanies,
                 'max_users' => $maxUsers,
@@ -154,13 +152,59 @@ class SubscriptionController extends Controller
                 'billing_cycle' => $billingCycle,
                 'charged_usd' => $chargedUsd,
             ],
-            'azul_checkout' => [
-                'order_number' => $orderNumber,
-                'amount_cents' => $totalMinor,
-                'itbis_cents' => $itbisMinor,
-                'amount_str' => $azul->formatMinorUnits($totalMinor),
-                'itbis_str' => $azul->formatMinorUnits($itbisMinor),
+            'azul_checkout' => $builder->forChargedUsd($chargedUsd),
+        ]);
+
+        return response()->json(['checkout_url' => route('azul.checkout', [], true)]);
+    }
+
+    public function createAzulAddonCheckout(Request $request, AzulCheckoutBuilder $builder)
+    {
+        $request->validate(['type' => 'required|in:user,company']);
+
+        if (! config('services.azul.merchant_id') || ! config('services.azul.auth_key')) {
+            return response()->json(['error' => 'Pago con Azul no esta configurado.'], 503);
+        }
+
+        $user = Auth::user();
+        $subscription = $user->subscription;
+
+        if (! $subscription || ! $user->isSubscriptionOwner()) {
+            abort(403);
+        }
+
+        if (! $subscription->isActive() || $subscription->status === 'trialing') {
+            return response()->json(['error' => 'Suscripcion no activa.'], 422);
+        }
+
+        $type = $request->type;
+        $addonPrice = $type === 'company'
+            ? SubscriptionService::EXTRA_COMPANY_PRICE
+            : SubscriptionService::EXTRA_USER_PRICE;
+
+        $newCompanies = $subscription->max_companies + ($type === 'company' ? 1 : 0);
+        $newUsers = $subscription->max_users + ($type === 'user' ? 1 : 0);
+        $prorated = SubscriptionService::calculateProration($subscription, $addonPrice);
+        $newMonthly = SubscriptionService::calculateMonthly($newCompanies, $newUsers);
+        $newRecurring = SubscriptionService::calculatePrice($newCompanies, $newUsers, $subscription->billing_cycle ?? 'monthly');
+
+        if ($prorated <= 0) {
+            return response()->json(['error' => 'Sin cobro prorrateado: confirma desde facturacion con el boton estandar.'], 422);
+        }
+
+        session([
+            'azul_intent' => 'addon',
+            'addon_plan' => [
+                'subscription_id' => $subscription->id,
+                'user_id' => $user->id,
+                'type' => $type,
+                'new_companies' => $newCompanies,
+                'new_users' => $newUsers,
+                'new_monthly' => $newMonthly,
+                'new_recurring' => $newRecurring,
+                'prorated_usd' => $prorated,
             ],
+            'azul_checkout' => $builder->forChargedUsd($prorated),
         ]);
 
         return response()->json(['checkout_url' => route('azul.checkout', [], true)]);
@@ -317,7 +361,10 @@ class SubscriptionController extends Controller
      */
     public function purchaseAddon(Request $request)
     {
-        $request->validate(['type' => 'required|in:user,company']);
+        $request->validate([
+            'type' => 'required|in:user,company',
+            'gateway' => 'sometimes|in:paypal,azul',
+        ]);
 
         $user = Auth::user();
         $subscription = $user->subscription;
@@ -331,6 +378,7 @@ class SubscriptionController extends Controller
         }
 
         $type = $request->type;
+        $gateway = $request->input('gateway', 'paypal');
         $addonPrice = $type === 'company'
             ? SubscriptionService::EXTRA_COMPANY_PRICE
             : SubscriptionService::EXTRA_USER_PRICE;
@@ -341,20 +389,24 @@ class SubscriptionController extends Controller
         $newMonthly = SubscriptionService::calculateMonthly($newCompanies, $newUsers);
         $newRecurring = SubscriptionService::calculatePrice($newCompanies, $newUsers, $subscription->billing_cycle ?? 'monthly');
 
-        // 1. Capture prorated one-time payment via PayPal
-        if ($prorated > 0 && $subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
+        if ($prorated > 0 && $gateway === 'azul') {
+            return back()->with('error', 'Para pagar el prorrateo con Azul usa el boton Tarjeta (Azul).');
+        }
+
+        if ($prorated > 0 && $gateway === 'paypal') {
+            if (! $subscription->gateway_subscription_id || $subscription->payment_gateway !== 'paypal') {
+                return back()->with('error', 'No se puede cobrar con PayPal en esta cuenta. Usa Azul o contacta soporte.');
+            }
             $captured = $this->captureOneTimePayment($subscription, $prorated, $type);
             if (! $captured) {
                 return back()->with('error', 'Error al procesar el cobro prorrateado con PayPal. Intenta de nuevo.');
             }
         }
 
-        // 2. Revise PayPal subscription recurring amount for next cycle
         if ($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
             $this->revisePayPalSubscription($subscription->gateway_subscription_id, $newRecurring);
         }
 
-        // 3. Update local subscription limits
         $subscription->update([
             'max_companies' => $newCompanies,
             'max_users' => $newUsers,
@@ -362,10 +414,13 @@ class SubscriptionController extends Controller
         ]);
 
         $label = $type === 'company' ? 'empresa' : 'usuario';
+        $proratedNote = $prorated > 0
+            ? "Cobro prorrateado: US\${$prorated}. "
+            : '';
 
         return redirect()->route('billing.index')
             ->with(array_filter([
-                'success' => "1 {$label} agregado(a). Cobro prorrateado: US\${$prorated}. Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.',
+                'success' => "1 {$label} agregado(a). {$proratedNote}Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.',
                 '_umami' => umami_flash_payload('subscription_addon_purchased', ['type' => $type]),
             ], fn ($v) => $v !== null));
     }
@@ -412,6 +467,11 @@ class SubscriptionController extends Controller
         ]);
 
         return true;
+    }
+
+    public function revisePayPalSubscriptionAmount(string $paypalSubId, float $newAmount): void
+    {
+        $this->revisePayPalSubscription($paypalSubId, $newAmount);
     }
 
     /**

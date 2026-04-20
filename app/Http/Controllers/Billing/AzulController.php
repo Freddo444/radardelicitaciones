@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Services\Billing\AzulPaymentPageService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -19,17 +20,17 @@ class AzulController extends Controller
     public function showCheckout(Request $request)
     {
         if (! $this->isAzulConfigured()) {
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'Pago con Azul no esta configurado.');
+            return $this->redirectCheckoutMisconfigured();
         }
 
+        $intent = (string) session('azul_intent', 'subscribe');
         $checkout = session('azul_checkout');
-        $plan = session('subscribe_plan');
 
-        if (! is_array($checkout) || ! is_array($plan)) {
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'Sesion expirada. Intenta de nuevo.');
+        if (! is_array($checkout) || ! $this->hasPlanForIntent($intent)) {
+            return $this->redirectCheckoutExpired($intent);
         }
+
+        $cancelUrl = $this->cancelUrlForIntent($intent);
 
         $fields = $this->paymentPage->buildSignedFormFields([
             'order_number' => $checkout['order_number'],
@@ -37,7 +38,7 @@ class AzulController extends Controller
             'itbis_cents' => (int) $checkout['itbis_cents'],
             'approved_url' => route('azul.callback', [], true),
             'declined_url' => route('azul.callback', [], true),
-            'cancel_url' => route('billing.subscribe', [], true),
+            'cancel_url' => $cancelUrl,
             'show_transaction_result' => '0',
             'locale' => 'ES',
         ]);
@@ -47,11 +48,17 @@ class AzulController extends Controller
         return response()->view('billing.azul-checkout', compact('action', 'fields'));
     }
 
-    public function handleCallback(Request $request)
+    public function handleCallback(Request $request): RedirectResponse
     {
         if (! $this->isAzulConfigured()) {
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'Pago con Azul no esta configurado.');
+            return $this->redirectCallbackMisconfigured();
+        }
+
+        $intent = (string) session('azul_intent', 'subscribe');
+        $checkout = session('azul_checkout');
+
+        if (! is_array($checkout) || ! $this->hasPlanForIntent($intent)) {
+            return $this->redirectCallbackExpired($intent);
         }
 
         $authKey = (string) config('services.azul.auth_key');
@@ -67,31 +74,20 @@ class AzulController extends Controller
         $rrn = (string) $request->query('RRN', '');
         $receivedHash = (string) $request->query('AuthHash', '');
 
-        $checkout = session('azul_checkout');
-        $plan = session('subscribe_plan');
-
-        if (! is_array($checkout) || ! is_array($plan)) {
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'Sesion expirada. Intenta de nuevo.');
-        }
-
         if ($orderNumber === '' || $receivedHash === '') {
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'Respuesta de Azul incompleta.');
+            return $this->redirectCallbackDeclined($intent, 'Respuesta de Azul incompleta.');
         }
 
         if ($orderNumber !== ($checkout['order_number'] ?? '')) {
             Log::warning('[Azul] OrderNumber mismatch', ['expected' => $checkout['order_number'] ?? null, 'got' => $orderNumber]);
 
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'La orden no coincide con tu sesion.');
+            return $this->redirectCallbackDeclined($intent, 'La orden no coincide con tu sesion.');
         }
 
         if ($amount !== ($checkout['amount_str'] ?? '')) {
             Log::warning('[Azul] Amount mismatch', ['expected' => $checkout['amount_str'] ?? null, 'got' => $amount]);
 
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'El monto no coincide con tu sesion.');
+            return $this->redirectCallbackDeclined($intent, 'El monto no coincide con tu sesion.');
         }
 
         if (! $this->paymentPage->verifyResponseAuthHash(
@@ -109,18 +105,45 @@ class AzulController extends Controller
         )) {
             Log::warning('[Azul] AuthHash verification failed', ['order' => $orderNumber]);
 
-            return redirect()->route('billing.subscribe')
-                ->with('error', 'No se pudo verificar la respuesta de Azul.');
+            return $this->redirectCallbackDeclined($intent, 'No se pudo verificar la respuesta de Azul.');
         }
 
         if (strtoupper($isoCode) !== '00') {
-            session()->forget(['subscribe_plan', 'azul_checkout']);
+            session()->forget(['azul_checkout', 'azul_intent']);
 
-            return redirect()->route('billing.subscribe')
-                ->with('warning', 'El pago fue declinado o no aprobado. Intenta con otra tarjeta o metodo de pago.');
+            return $this->redirectCallbackDeclined($intent, 'El pago fue declinado o no aprobado. Intenta con otra tarjeta o metodo de pago.', true);
         }
 
+        return match ($intent) {
+            'addon' => $this->completeAddonPayment($orderNumber, $isoCode, $authorizationCode, $rrn),
+            'register' => $this->completeRegisterPayment($orderNumber, $isoCode, $authorizationCode, $rrn),
+            default => $this->completeSubscribePayment($orderNumber, $isoCode, $authorizationCode, $rrn),
+        };
+    }
+
+    public function handleWebhook(Request $request)
+    {
+        Log::info('[Azul] Webhook', ['payload' => $request->all()]);
+
+        return response('OK', 200);
+    }
+
+    private function completeSubscribePayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
+    {
         $user = Auth::user();
+        if (! $user) {
+            session()->forget(['subscribe_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('login')->with('error', 'Inicia sesion para finalizar.');
+        }
+
+        $plan = session('subscribe_plan');
+        if (! is_array($plan)) {
+            session()->forget(['subscribe_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('billing.subscribe')->with('error', 'Sesion expirada. Intenta de nuevo.');
+        }
+
         $subscription = $user->subscription;
         $billingCycle = $plan['billing_cycle'] ?? 'monthly';
         $chargedUsd = (float) ($plan['charged_usd'] ?? 0);
@@ -166,7 +189,7 @@ class AzulController extends Controller
             'notes' => 'Azul — IsoCode '.$isoCode.($authorizationCode !== '' ? ' — Auth '.$authorizationCode : ''),
         ]);
 
-        session()->forget(['subscribe_plan', 'azul_checkout']);
+        session()->forget(['subscribe_plan', 'azul_checkout', 'azul_intent']);
 
         return redirect()->route('billing.index')
             ->with(array_filter([
@@ -175,11 +198,167 @@ class AzulController extends Controller
             ], fn ($v) => $v !== null));
     }
 
-    public function handleWebhook(Request $request)
+    private function completeAddonPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
     {
-        Log::info('[Azul] Webhook', ['payload' => $request->all()]);
+        $user = Auth::user();
+        if (! $user) {
+            session()->forget(['addon_plan', 'azul_checkout', 'azul_intent']);
 
-        return response('OK', 200);
+            return redirect()->route('login')->with('error', 'Inicia sesion para finalizar.');
+        }
+
+        $addon = session('addon_plan');
+        if (! is_array($addon)) {
+            session()->forget(['addon_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('billing.index')->with('error', 'Sesion expirada. Intenta de nuevo.');
+        }
+
+        $subscription = Subscription::find($addon['subscription_id'] ?? 0);
+        if (! $subscription || (int) $subscription->user_id !== (int) $user->id || (int) ($addon['user_id'] ?? 0) !== (int) $user->id) {
+            session()->forget(['addon_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('billing.index')->with('error', 'Suscripcion no valida.');
+        }
+
+        $prorated = (float) ($addon['prorated_usd'] ?? 0);
+
+        $type = (string) ($addon['type'] ?? '');
+        if (! in_array($type, ['user', 'company'], true)) {
+            session()->forget(['addon_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('billing.index')->with('error', 'Tipo de complemento invalido.');
+        }
+
+        Payment::create([
+            'subscription_id' => $subscription->id,
+            'amount' => $prorated,
+            'currency' => 'USD',
+            'gateway' => 'azul',
+            'gateway_payment_id' => $rrn !== '' ? $rrn : $authorizationCode,
+            'status' => 'completed',
+            'paid_at' => now(),
+            'notes' => 'Azul prorrateo — +1 '.($type === 'company' ? 'empresa' : 'usuario').' — IsoCode '.$isoCode,
+        ]);
+
+        if ($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
+            app(SubscriptionController::class)->revisePayPalSubscriptionAmount(
+                $subscription->gateway_subscription_id,
+                (float) ($addon['new_recurring'] ?? 0)
+            );
+        }
+
+        $subscription->update([
+            'max_companies' => (int) ($addon['new_companies'] ?? $subscription->max_companies),
+            'max_users' => (int) ($addon['new_users'] ?? $subscription->max_users),
+            'monthly_amount' => (float) ($addon['new_monthly'] ?? $subscription->monthly_amount),
+        ]);
+
+        session()->forget(['addon_plan', 'azul_checkout', 'azul_intent']);
+
+        $label = $type === 'company' ? 'empresa' : 'usuario';
+        $newRecurring = (float) ($addon['new_recurring'] ?? 0);
+
+        return redirect()->route('billing.index')
+            ->with(array_filter([
+                'success' => "1 {$label} agregado(a). Cobro prorrateado: US\$".number_format($prorated, 2).'. Próximo ciclo: US\$'.number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.',
+                '_umami' => umami_flash_payload('subscription_addon_purchased', ['type' => $type, 'gateway' => 'azul']),
+            ], fn ($v) => $v !== null));
+    }
+
+    private function completeRegisterPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
+    {
+        $plan = session('register_plan');
+        if (! is_array($plan)) {
+            session()->forget(['register_plan', 'azul_checkout', 'azul_intent']);
+
+            return redirect()->route('register.show')->with('error', 'Sesion expirada. Intenta de nuevo.');
+        }
+
+        session([
+            'register_azul_order_number' => $orderNumber,
+            'register_azul_iso' => $isoCode,
+            'register_azul_auth' => $authorizationCode,
+            'register_azul_rrn' => $rrn,
+        ]);
+
+        session()->forget(['azul_checkout', 'azul_intent']);
+
+        return redirect()->route('register.complete')
+            ->with(array_filter([
+                'success' => 'Pago con Azul confirmado. Completa tu cuenta.',
+                '_umami' => umami_flash_payload('registration_azul_approved'),
+            ], fn ($v) => $v !== null));
+    }
+
+    private function hasPlanForIntent(string $intent): bool
+    {
+        return match ($intent) {
+            'subscribe' => is_array(session('subscribe_plan')),
+            'register' => is_array(session('register_plan')),
+            'addon' => is_array(session('addon_plan')),
+            default => false,
+        };
+    }
+
+    private function cancelUrlForIntent(string $intent): string
+    {
+        return match ($intent) {
+            'register' => route('register.show', [], true),
+            'addon' => route('billing.index', [], true),
+            default => route('billing.subscribe', [], true),
+        };
+    }
+
+    private function redirectCheckoutMisconfigured(): RedirectResponse
+    {
+        if (Auth::check()) {
+            return redirect()->route('billing.subscribe')->with('error', 'Pago con Azul no esta configurado.');
+        }
+
+        return redirect()->route('register.show')->with('error', 'Pago con Azul no esta configurado.');
+    }
+
+    private function redirectCheckoutExpired(string $intent): RedirectResponse
+    {
+        return match ($intent) {
+            'register' => redirect()->route('register.show')->with('error', 'Sesion expirada. Intenta de nuevo.'),
+            'addon' => redirect()->route('billing.index')->with('error', 'Sesion expirada. Intenta de nuevo.'),
+            default => redirect()->route('billing.subscribe')->with('error', 'Sesion expirada. Intenta de nuevo.'),
+        };
+    }
+
+    private function redirectCallbackMisconfigured(): RedirectResponse
+    {
+        $intent = (string) session('azul_intent', 'subscribe');
+
+        return match ($intent) {
+            'register' => redirect()->route('register.show')->with('error', 'Pago con Azul no esta configurado.'),
+            'addon' => Auth::check()
+                ? redirect()->route('billing.index')->with('error', 'Pago con Azul no esta configurado.')
+                : redirect()->route('login')->with('error', 'Pago con Azul no esta configurado.'),
+            default => Auth::check()
+                ? redirect()->route('billing.subscribe')->with('error', 'Pago con Azul no esta configurado.')
+                : redirect()->route('login')->with('error', 'Pago con Azul no esta configurado.'),
+        };
+    }
+
+    private function redirectCallbackExpired(string $intent): RedirectResponse
+    {
+        return $this->redirectCheckoutExpired($intent);
+    }
+
+    private function redirectCallbackDeclined(string $intent, string $message, bool $warning = false): RedirectResponse
+    {
+        session()->forget(['azul_checkout', 'azul_intent']);
+
+        $redirect = match ($intent) {
+            'register' => redirect()->route('register.show'),
+            'addon' => redirect()->route('billing.index'),
+            default => redirect()->route('billing.subscribe'),
+        };
+
+        return $warning ? $redirect->with('warning', $message) : $redirect->with('error', $message);
     }
 
     private function isAzulConfigured(): bool

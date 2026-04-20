@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\Billing\AzulCheckoutBuilder;
 use App\Services\SubscriptionService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -98,7 +100,17 @@ class RegisterController extends Controller
                 'max_users' => $maxUsers,
                 'amount' => $monthlyAmount,
                 'billing_cycle' => $billingCycle,
+                'charged_usd' => $amount,
             ],
+        ]);
+
+        session()->forget([
+            'register_azul_order_number',
+            'register_azul_iso',
+            'register_azul_auth',
+            'register_azul_rrn',
+            'azul_intent',
+            'azul_checkout',
         ]);
 
         $accessToken = $this->getAccessToken();
@@ -163,6 +175,41 @@ class RegisterController extends Controller
         return response()->json(['approve_url' => $approveUrl]);
     }
 
+    public function createAzulOrder(Request $request, AzulCheckoutBuilder $builder)
+    {
+        $request->validate([
+            'max_companies' => 'required|integer|min:1|max:10',
+            'max_users' => 'required|integer|min:2|max:20',
+            'billing_cycle' => 'sometimes|in:monthly,annual',
+        ]);
+
+        if (! config('services.azul.merchant_id') || ! config('services.azul.auth_key')) {
+            return response()->json(['error' => 'Pago con Azul no esta configurado.'], 503);
+        }
+
+        $maxCompanies = (int) $request->max_companies;
+        $maxUsers = (int) $request->max_users;
+        $billingCycle = $request->input('billing_cycle', 'monthly');
+        $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
+        $chargedUsd = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+
+        session([
+            'azul_intent' => 'register',
+            'register_plan' => [
+                'max_companies' => $maxCompanies,
+                'max_users' => $maxUsers,
+                'amount' => $monthlyAmount,
+                'billing_cycle' => $billingCycle,
+                'charged_usd' => $chargedUsd,
+            ],
+            'azul_checkout' => $builder->forChargedUsd($chargedUsd),
+        ]);
+
+        session()->forget('register_paypal_subscription_id');
+
+        return response()->json(['checkout_url' => route('azul.checkout', [], true)]);
+    }
+
     /**
      * Step 2: PayPal returns here after user approves subscription.
      */
@@ -213,7 +260,11 @@ class RegisterController extends Controller
      */
     public function showComplete()
     {
-        if (! session('register_paypal_subscription_id') || ! session('register_plan')) {
+        if (! session('register_plan')) {
+            return redirect()->route('register.show');
+        }
+
+        if (! session('register_paypal_subscription_id') && ! session('register_azul_order_number')) {
             return redirect()->route('register.show');
         }
 
@@ -227,8 +278,12 @@ class RegisterController extends Controller
     {
         $plan = session('register_plan');
         $paypalSubId = session('register_paypal_subscription_id');
+        $azulOrder = session('register_azul_order_number');
+        $azulIso = (string) session('register_azul_iso', '');
+        $azulAuth = (string) session('register_azul_auth', '');
+        $azulRrn = (string) session('register_azul_rrn', '');
 
-        if (! $plan || ! $paypalSubId) {
+        if (! $plan || (! $paypalSubId && ! $azulOrder)) {
             return redirect()->route('register.show')
                 ->with('error', 'Sesión expirada. Intenta de nuevo.');
         }
@@ -240,16 +295,23 @@ class RegisterController extends Controller
         ]);
 
         $billingCycle = $plan['billing_cycle'] ?? 'monthly';
+        $paymentGateway = $paypalSubId ? 'paypal' : 'azul';
+        $gatewaySubscriptionId = $paypalSubId ?? $azulOrder;
+        $chargedUsd = (float) ($plan['charged_usd'] ?? SubscriptionService::calculatePrice(
+            (int) $plan['max_companies'],
+            (int) $plan['max_users'],
+            $billingCycle
+        ));
 
         try {
-            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paypalSubId) {
+            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $azulIso, $azulAuth, $azulRrn) {
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                 ]);
 
-                Subscription::create([
+                $subscription = Subscription::create([
                     'user_id' => $user->id,
                     'plan' => 'basic',
                     'status' => 'active',
@@ -257,11 +319,24 @@ class RegisterController extends Controller
                     'max_users' => $plan['max_users'],
                     'monthly_amount' => $plan['amount'],
                     'billing_cycle' => $billingCycle,
-                    'payment_gateway' => 'paypal',
-                    'gateway_subscription_id' => $paypalSubId,
+                    'payment_gateway' => $paymentGateway,
+                    'gateway_subscription_id' => $gatewaySubscriptionId,
                     'current_period_start' => now(),
                     'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
                 ]);
+
+                if ($paymentGateway === 'azul') {
+                    Payment::create([
+                        'subscription_id' => $subscription->id,
+                        'amount' => $chargedUsd,
+                        'currency' => 'USD',
+                        'gateway' => 'azul',
+                        'gateway_payment_id' => $azulRrn !== '' ? $azulRrn : $azulAuth,
+                        'status' => 'completed',
+                        'paid_at' => now(),
+                        'notes' => 'Azul registro — IsoCode '.$azulIso.($azulAuth !== '' ? ' — Auth '.$azulAuth : ''),
+                    ]);
+                }
 
                 return $user;
             });
@@ -269,6 +344,7 @@ class RegisterController extends Controller
             Log::error('[Register] Paid registration failed', [
                 'email' => $request->email,
                 'paypal_subscription_id' => $paypalSubId,
+                'azul_order' => $azulOrder,
                 'error' => $e->getMessage(),
             ]);
 
@@ -276,7 +352,14 @@ class RegisterController extends Controller
                 ->with('error', 'No se pudo crear tu cuenta en este momento. Intenta de nuevo.');
         }
 
-        session()->forget(['register_plan', 'register_paypal_subscription_id']);
+        session()->forget([
+            'register_plan',
+            'register_paypal_subscription_id',
+            'register_azul_order_number',
+            'register_azul_iso',
+            'register_azul_auth',
+            'register_azul_rrn',
+        ]);
 
         Auth::login($user);
 
@@ -287,6 +370,7 @@ class RegisterController extends Controller
                 'success' => '¡Pago confirmado y cuenta creada! Configura tu primera empresa.',
                 '_umami' => umami_flash_payload('registration_completed_paid', [
                     'billing_cycle' => $billingCycle,
+                    'gateway' => $paymentGateway,
                 ]),
             ], fn ($v) => $v !== null));
     }

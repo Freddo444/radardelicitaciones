@@ -55,6 +55,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/registro/prueba-gratis', [RegisterController::class, 'showTrialRegister'])->name('register.trial');
     Route::post('/registro/prueba-gratis', [RegisterController::class, 'storeTrial'])->name('register.trial.store')->middleware('throttle:5,1');
     Route::post('/registro/crear-orden', [RegisterController::class, 'createOrder'])->name('register.create-order');
+    Route::post('/registro/crear-orden-azul', [RegisterController::class, 'createAzulOrder'])->name('register.create-order-azul');
     Route::get('/registro/paypal-return', [RegisterController::class, 'paypalReturn'])->name('register.paypal-return');
     Route::get('/registro/completar', [RegisterController::class, 'showComplete'])->name('register.complete');
     Route::post('/registro/completar', [RegisterController::class, 'store'])->name('register.store')->middleware('throttle:5,1');
@@ -96,6 +97,11 @@ Route::post('/invitacion/{token}', [InvitationController::class, 'accept'])->nam
 // ── PayPal webhook (no auth — verified by signature) ─────────────────
 Route::post('/paypal/webhook', [PayPalController::class, 'webhook'])->name('paypal.webhook');
 
+// ── Azul Payment Page (guest checkout + return — session-scoped) ─────
+Route::get('/azul/checkout', [AzulController::class, 'showCheckout'])->name('azul.checkout');
+Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
+Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
+
 // ── Billing & company setup (auth, no tenant required) ───────────────
 Route::middleware('auth')->group(function () {
     // Billing (redirects to settings + subscription management)
@@ -103,11 +109,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/facturacion/cancelar', [SubscriptionController::class, 'cancel'])->name('billing.cancel');
     Route::get('/suscripcion/preview-addon', [SubscriptionController::class, 'previewAddon'])->name('billing.preview-addon');
     Route::post('/suscripcion/purchase-addon', [SubscriptionController::class, 'purchaseAddon'])->name('billing.purchase-addon');
+    Route::post('/suscripcion/azul-addon', [SubscriptionController::class, 'createAzulAddonCheckout'])->name('billing.addon.azul');
     Route::get('/paypal/return', [PayPalController::class, 'return'])->name('paypal.return');
     Route::get('/paypal/cancel', [PayPalController::class, 'cancel'])->name('paypal.cancel');
-    Route::get('/azul/checkout', [AzulController::class, 'showCheckout'])->name('azul.checkout');
-    Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
-    Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
     Route::get('/suscribirse', [SubscriptionController::class, 'showSubscribe'])->name('billing.subscribe');
     Route::post('/suscribirse', [SubscriptionController::class, 'createSubscription'])->name('billing.subscribe.create');
     Route::post('/suscribirse/azul', [SubscriptionController::class, 'createAzulCheckout'])->name('billing.subscribe.azul');

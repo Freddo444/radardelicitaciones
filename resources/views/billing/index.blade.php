@@ -77,7 +77,39 @@
     @if($usage)
     <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">
         {{-- Companies usage --}}
-        <div class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5" x-data="{ showConfirm: false, preview: null, loading: false }">
+        <div class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5" x-data="{
+            showConfirm: false,
+            preview: null,
+            loading: false,
+            loadingAzul: false,
+            azulError: null,
+            addonType: 'company',
+            async payAddonAzul() {
+                this.loadingAzul = true;
+                this.azulError = null;
+                try {
+                    const res = await fetch('{{ route('billing.addon.azul') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        },
+                        body: JSON.stringify({ type: this.addonType }),
+                    });
+                    const data = await res.json();
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                    } else {
+                        this.azulError = data.error || 'No se pudo iniciar el pago con Azul.';
+                    }
+                } catch (e) {
+                    this.azulError = 'Error de conexión.';
+                } finally {
+                    this.loadingAzul = false;
+                }
+            },
+        }">
             <div class="flex items-center justify-between">
                 <p class="text-sm font-medium text-gray-500">Empresas</p>
                 <p class="text-2xl font-bold text-gray-900">{{ $usage['companies'] }} <span class="text-sm font-normal text-gray-400">/ {{ $usage['max_companies'] }}</span></p>
@@ -109,14 +141,26 @@
                             <dd class="font-semibold" x-text="'US$' + (preview?.new_recurring ?? 0).toFixed(2)"></dd>
                         </div>
                     </dl>
-                    <div class="mt-3 flex gap-2">
-                        <form method="POST" action="{{ route('billing.purchase-addon') }}">
+                    <p x-show="azulError" x-cloak class="mt-2 text-sm text-red-600" x-text="azulError"></p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('billing.purchase-addon') }}"
+                              x-show="!preview || (preview.prorated_amount ?? 0) <= 0 || @json($canPaypalProration)"
+                              x-cloak>
                             @csrf
                             <input type="hidden" name="type" value="company">
                             <button type="submit" class="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-                                Confirmar &mdash; cobrar <span x-text="'US$' + (preview?.prorated_amount ?? 0).toFixed(2)"></span>
+                                <span x-show="(preview?.prorated_amount ?? 0) > 0">Confirmar &mdash; cobrar <span x-text="'US$' + (preview?.prorated_amount ?? 0).toFixed(2)"></span></span>
+                                <span x-show="(preview?.prorated_amount ?? 0) <= 0">Confirmar (sin cargo hoy)</span>
                             </button>
                         </form>
+                        @if($canAzul)
+                        <button type="button" x-show="preview && (preview.prorated_amount ?? 0) > 0" x-cloak
+                                @click="payAddonAzul()" :disabled="loadingAzul"
+                                class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 disabled:opacity-50">
+                            <span x-show="!loadingAzul">Prorrateo con tarjeta (Azul)</span>
+                            <span x-show="loadingAzul">Preparando...</span>
+                        </button>
+                        @endif
                         <button type="button" @click="showConfirm = false" class="rounded-md px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">
                             Cancelar
                         </button>
@@ -127,7 +171,39 @@
         </div>
 
         {{-- Users usage --}}
-        <div class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5" x-data="{ showConfirm: false, preview: null, loading: false }">
+        <div class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5" x-data="{
+            showConfirm: false,
+            preview: null,
+            loading: false,
+            loadingAzul: false,
+            azulError: null,
+            addonType: 'user',
+            async payAddonAzul() {
+                this.loadingAzul = true;
+                this.azulError = null;
+                try {
+                    const res = await fetch('{{ route('billing.addon.azul') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        },
+                        body: JSON.stringify({ type: this.addonType }),
+                    });
+                    const data = await res.json();
+                    if (data.checkout_url) {
+                        window.location.href = data.checkout_url;
+                    } else {
+                        this.azulError = data.error || 'No se pudo iniciar el pago con Azul.';
+                    }
+                } catch (e) {
+                    this.azulError = 'Error de conexión.';
+                } finally {
+                    this.loadingAzul = false;
+                }
+            },
+        }">
             <div class="flex items-center justify-between">
                 <p class="text-sm font-medium text-gray-500">Usuarios</p>
                 <p class="text-2xl font-bold text-gray-900">{{ $usage['users'] }} <span class="text-sm font-normal text-gray-400">/ {{ $usage['max_users'] }}</span></p>
@@ -159,14 +235,26 @@
                             <dd class="font-semibold" x-text="'US$' + (preview?.new_recurring ?? 0).toFixed(2)"></dd>
                         </div>
                     </dl>
-                    <div class="mt-3 flex gap-2">
-                        <form method="POST" action="{{ route('billing.purchase-addon') }}">
+                    <p x-show="azulError" x-cloak class="mt-2 text-sm text-red-600" x-text="azulError"></p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <form method="POST" action="{{ route('billing.purchase-addon') }}"
+                              x-show="!preview || (preview.prorated_amount ?? 0) <= 0 || @json($canPaypalProration)"
+                              x-cloak>
                             @csrf
                             <input type="hidden" name="type" value="user">
                             <button type="submit" class="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">
-                                Confirmar &mdash; cobrar <span x-text="'US$' + (preview?.prorated_amount ?? 0).toFixed(2)"></span>
+                                <span x-show="(preview?.prorated_amount ?? 0) > 0">Confirmar &mdash; cobrar <span x-text="'US$' + (preview?.prorated_amount ?? 0).toFixed(2)"></span></span>
+                                <span x-show="(preview?.prorated_amount ?? 0) <= 0">Confirmar (sin cargo hoy)</span>
                             </button>
                         </form>
+                        @if($canAzul)
+                        <button type="button" x-show="preview && (preview.prorated_amount ?? 0) > 0" x-cloak
+                                @click="payAddonAzul()" :disabled="loadingAzul"
+                                class="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 disabled:opacity-50">
+                            <span x-show="!loadingAzul">Prorrateo con tarjeta (Azul)</span>
+                            <span x-show="loadingAzul">Preparando...</span>
+                        </button>
+                        @endif
                         <button type="button" @click="showConfirm = false" class="rounded-md px-3 py-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-100">
                             Cancelar
                         </button>
