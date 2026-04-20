@@ -54,6 +54,12 @@
     <div class="text-center">
         <h1 class="text-2xl font-bold text-gray-900">Activa tu suscripcion</h1>
         <p class="mt-2 text-sm text-gray-500">Elige tu plan para mantener acceso completo a Radar de Licitaciones.</p>
+        <div class="mt-3 flex flex-wrap items-center justify-center gap-3">
+            <img src="{{ asset('images/payments/visa.png') }}" alt="Visa" class="h-7 w-auto rounded border border-gray-200 bg-white p-1">
+            <img src="{{ asset('images/payments/mastercard.png') }}" alt="Mastercard" class="h-8 w-auto rounded border border-gray-200 bg-white p-1">
+            <img src="{{ asset('images/payments/verified-by-visa.png') }}" alt="Verified by Visa" class="h-8 w-auto rounded border border-gray-200 bg-white p-1">
+            <img src="{{ asset('images/payments/mastercard-id-check.png') }}" alt="Mastercard ID Check" class="h-8 w-auto rounded border border-gray-200 bg-white p-1">
+        </div>
     </div>
 
     @if(session('error'))
@@ -65,7 +71,7 @@
         <div class="flex items-center justify-center gap-3">
             <span class="text-sm font-medium" :class="annual ? 'text-gray-400' : 'text-gray-900'">Mensual</span>
             <button type="button" @click="annual = !annual"
-                    class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
+                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out"
                     :class="annual ? 'bg-blue-600' : 'bg-gray-200'">
                 <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
                       :class="annual ? 'translate-x-5' : 'translate-x-0'"></span>
@@ -106,6 +112,8 @@
             <li>&bull; Base: US$45/mes (1 empresa, 2 usuarios)</li>
             <li x-show="companies > 1">&bull; +US$<span x-text="(companies - 1) * 20"></span>/mes por <span x-text="companies - 1"></span> empresa(s) adicional(es)</li>
             <li x-show="users > 2">&bull; +US$<span x-text="(users - 2) * 10"></span>/mes por <span x-text="users - 2"></span> usuario(s) adicional(es)</li>
+            <li>&bull; Moneda de compra de referencia local: <strong>RD$ (DOP)</strong>.</li>
+            <li>&bull; El proveedor de pago puede mostrar el equivalente en DOP (RD$) al momento del cobro.</li>
         </ul>
     </div>
 
@@ -124,6 +132,12 @@
     <div class="mt-2 text-center">
         <a href="{{ route('billing.index') }}" class="text-sm text-gray-500 hover:text-gray-700">&larr; Volver a facturacion</a>
     </div>
+
+    <p class="mt-4 text-center text-xs text-gray-500">
+        Al continuar, aceptas nuestras <a href="{{ route('terms') }}" class="text-blue-600 hover:text-blue-500">condiciones de servicio</a> y
+        <a href="{{ route('payment-policies') }}" class="text-blue-600 hover:text-blue-500">políticas de pago y seguridad</a>.
+        También puedes consultar nuestra <a href="{{ route('privacy') }}" class="text-blue-600 hover:text-blue-500">política de privacidad</a>.
+    </p>
 
 </div>
 @endsection

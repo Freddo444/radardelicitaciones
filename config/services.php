@@ -52,6 +52,14 @@ return [
         'number' => env('WHATSAPP_NUMBER', ''),
     ],
 
+    'support' => [
+        'email' => env('SUPPORT_EMAIL', 'info@radardelicitaciones.com'),
+        'phone' => env('SUPPORT_PHONE', '+1-809-555-1234'),
+        'address_line' => env('BUSINESS_ADDRESS_LINE', 'Dirección comercial registrada'),
+        'city' => env('BUSINESS_CITY', 'Santo Domingo'),
+        'country' => env('BUSINESS_COUNTRY', 'República Dominicana'),
+    ],
+
     'azul' => [
         'merchant_id' => env('AZUL_MERCHANT_ID'),
         'auth_key' => env('AZUL_AUTH_KEY'),

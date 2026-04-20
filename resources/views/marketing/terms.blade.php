@@ -34,7 +34,7 @@
             <p>El Servicio se ofrece bajo un modelo de suscripción mensual. Los precios se publican en nuestra página de precios y pueden actualizarse con aviso previo de 30 días. El plan base incluye 1 empresa y 2 usuarios; empresas y usuarios adicionales tienen costo adicional.</p>
 
             <h2 class="font-display text-lg font-semibold text-zinc-900">5. Pagos y facturación</h2>
-            <p>Los pagos se procesan a través de PayPal o transferencia bancaria. Las suscripciones se renuevan automáticamente cada mes. Usted autoriza el cobro recurrente al suscribirse. No se emiten reembolsos por períodos parciales.</p>
+            <p>Los pagos se procesan a través de PayPal o transferencia bancaria. Las suscripciones se renuevan automáticamente cada mes. Usted autoriza el cobro recurrente al suscribirse. No se emiten reembolsos por períodos parciales. Para conocer detalles de moneda, seguridad de tarjetas, cancelación y entrega del servicio, consulte nuestras <a href="{{ route('payment-policies') }}">Políticas de pago y seguridad</a>.</p>
 
             <h2 class="font-display text-lg font-semibold text-zinc-900">6. Cancelación</h2>
             <p>Puede cancelar su suscripción en cualquier momento desde su panel de facturación. Al cancelar, su acceso continuará hasta el final del período de facturación actual. No hay penalidades por cancelación.</p>

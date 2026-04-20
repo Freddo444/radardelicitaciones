@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -9,7 +10,7 @@ class MarketingController extends Controller
 {
     public function landing()
     {
-        if (auth()->check()) {
+        if (Auth::check()) {
             return redirect()->route('dashboard');
         }
 
@@ -39,6 +40,11 @@ class MarketingController extends Controller
         return view('marketing.privacy');
     }
 
+    public function paymentPolicies()
+    {
+        return view('marketing.payment-policies');
+    }
+
     public function sitemap()
     {
         $urls = [
@@ -48,6 +54,7 @@ class MarketingController extends Controller
             ['loc' => url('/registro'), 'priority' => '0.9', 'changefreq' => 'monthly'],
             ['loc' => url('/terminos'), 'priority' => '0.3', 'changefreq' => 'yearly'],
             ['loc' => url('/privacidad'), 'priority' => '0.3', 'changefreq' => 'yearly'],
+            ['loc' => url('/politicas-pago-seguridad'), 'priority' => '0.4', 'changefreq' => 'yearly'],
             ['loc' => url('/login'), 'priority' => '0.5', 'changefreq' => 'yearly'],
         ];
 

@@ -111,6 +111,13 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-white text-zinc-700 antialiased overflow-x-hidden selection:bg-indigo-100 selection:text-indigo-950">
+@php
+    $supportEmail = config('services.support.email', 'info@radardelicitaciones.com');
+    $supportPhone = config('services.support.phone', '');
+    $addressLine = config('services.support.address_line', '');
+    $city = config('services.support.city', 'Santo Domingo');
+    $country = config('services.support.country', 'República Dominicana');
+@endphp
 
 {{-- Navbar --}}
 <nav x-data="{ scrolled: false, open: false }"
@@ -180,22 +187,31 @@
                     <li><a href="/login" class="inline-block py-1 hover:text-white transition-colors">Iniciar sesión</a></li>
                     <li><a href="/terminos" class="inline-block py-1 hover:text-white transition-colors">Términos de servicio</a></li>
                     <li><a href="/privacidad" class="inline-block py-1 hover:text-white transition-colors">Política de privacidad</a></li>
+                    <li><a href="/politicas-pago-seguridad" class="inline-block py-1 hover:text-white transition-colors">Políticas de pago y seguridad</a></li>
                 </ul>
             </div>
             <div>
                 <h4 class="font-display text-sm font-semibold text-white">Contacto</h4>
                 <ul class="mt-4 space-y-1 text-sm">
                     <li><a href="/#contacto" class="inline-block py-1 hover:text-white transition-colors">Formulario de contacto</a></li>
-                    <li><a href="mailto:info@radardelicitaciones.com" class="inline-block py-1 hover:text-white transition-colors">info@radardelicitaciones.com</a></li>
-                    <li>Santo Domingo, República Dominicana</li>
+                    <li><a href="mailto:{{ $supportEmail }}" class="inline-block py-1 hover:text-white transition-colors">{{ $supportEmail }}</a></li>
+                    <li><a href="tel:{{ preg_replace('/\s+/', '', $supportPhone) }}" class="inline-block py-1 hover:text-white transition-colors">{{ $supportPhone }}</a></li>
+                    <li>{{ trim(($addressLine ? $addressLine.', ' : '').$city.', '.$country, ', ') }}</li>
                 </ul>
             </div>
+        </div>
+        <div class="mt-8 flex flex-wrap items-center gap-3 text-[11px] text-zinc-300">
+            <img src="{{ asset('images/payments/visa.png') }}" alt="Visa" class="h-5 w-auto rounded bg-white p-0.5">
+            <img src="{{ asset('images/payments/mastercard.png') }}" alt="Mastercard" class="h-6 w-auto rounded bg-white p-0.5">
+            <img src="{{ asset('images/payments/verified-by-visa.png') }}" alt="Verified by Visa" class="h-7 w-auto rounded bg-white p-0.5">
+            <img src="{{ asset('images/payments/mastercard-id-check.png') }}" alt="Mastercard ID Check" class="h-7 w-auto rounded bg-white p-0.5">
         </div>
         <div class="mt-12 border-t border-zinc-800/80 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
             <span>&copy; {{ date('Y') }} Radar de Licitaciones. Todos los derechos reservados.</span>
             <div class="flex gap-6">
                 <a href="/terminos" class="py-2 hover:text-white transition-colors">Términos de servicio</a>
                 <a href="/privacidad" class="py-2 hover:text-white transition-colors">Política de privacidad</a>
+                <a href="/politicas-pago-seguridad" class="py-2 hover:text-white transition-colors">Pago y seguridad</a>
             </div>
         </div>
     </div>

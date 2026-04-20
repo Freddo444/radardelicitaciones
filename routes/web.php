@@ -43,6 +43,7 @@ Route::get('/', [MarketingController::class, 'landing'])->name('landing');
 Route::get('/precios', [MarketingController::class, 'pricing'])->name('pricing');
 Route::get('/terminos', [MarketingController::class, 'terms'])->name('terms');
 Route::get('/privacidad', [MarketingController::class, 'privacy'])->name('privacy');
+Route::get('/politicas-pago-seguridad', [MarketingController::class, 'paymentPolicies'])->name('payment-policies');
 Route::post('/contacto', [SupportController::class, 'contact'])->name('contact.store')->middleware('throttle:5,1');
 Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
 

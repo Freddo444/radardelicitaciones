@@ -137,6 +137,19 @@
                     Transferencia bancaria
                 </span>
             </div>
+            <div class="mt-4 flex flex-wrap items-center justify-center gap-3">
+                <img src="{{ asset('images/payments/visa.png') }}" alt="Visa" class="h-7 w-auto rounded border border-zinc-200 bg-white p-1">
+                <img src="{{ asset('images/payments/mastercard.png') }}" alt="Mastercard" class="h-8 w-auto rounded border border-zinc-200 bg-white p-1">
+                <img src="{{ asset('images/payments/verified-by-visa.png') }}" alt="Verified by Visa" class="h-8 w-auto rounded border border-zinc-200 bg-white p-1">
+                <img src="{{ asset('images/payments/mastercard-id-check.png') }}" alt="Mastercard ID Check" class="h-8 w-auto rounded border border-zinc-200 bg-white p-1">
+            </div>
+            <p class="mt-3 text-xs text-zinc-500">
+                Consulta moneda, reembolsos, cancelaciones, entrega y seguridad en nuestras
+                <a href="{{ route('payment-policies') }}" class="font-medium text-indigo-600 hover:text-indigo-500">políticas de pago y seguridad</a>.
+            </p>
+            <p class="mt-2 text-xs text-zinc-500">
+                Moneda de compra de referencia local: <span class="font-medium text-zinc-700">RD$ (DOP)</span>.
+            </p>
         </div>
     </div>
 </section>
