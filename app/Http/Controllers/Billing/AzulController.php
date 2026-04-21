@@ -114,10 +114,12 @@ class AzulController extends Controller
             return $this->redirectCallbackDeclined($intent, 'El pago fue declinado o no aprobado. Intenta con otra tarjeta o metodo de pago.', true);
         }
 
+        $cardLastFour = self::cardLastFourFromAzulMask((string) $request->query('CardNumber', ''));
+
         return match ($intent) {
-            'addon' => $this->completeAddonPayment($orderNumber, $isoCode, $authorizationCode, $rrn),
-            'register' => $this->completeRegisterPayment($orderNumber, $isoCode, $authorizationCode, $rrn),
-            default => $this->completeSubscribePayment($orderNumber, $isoCode, $authorizationCode, $rrn),
+            'addon' => $this->completeAddonPayment($orderNumber, $isoCode, $authorizationCode, $rrn, $cardLastFour),
+            'register' => $this->completeRegisterPayment($orderNumber, $isoCode, $authorizationCode, $rrn, $cardLastFour),
+            default => $this->completeSubscribePayment($orderNumber, $isoCode, $authorizationCode, $rrn, $cardLastFour),
         };
     }
 
@@ -128,7 +130,21 @@ class AzulController extends Controller
         return response('OK', 200);
     }
 
-    private function completeSubscribePayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
+    private static function cardLastFourFromAzulMask(string $value): ?string
+    {
+        if ($value === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $value);
+        if (strlen($digits) < 4) {
+            return null;
+        }
+
+        return substr($digits, -4);
+    }
+
+    private function completeSubscribePayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn, ?string $cardLastFour): RedirectResponse
     {
         $user = Auth::user();
         if (! $user) {
@@ -184,6 +200,7 @@ class AzulController extends Controller
             'currency' => 'USD',
             'gateway' => 'azul',
             'gateway_payment_id' => $rrn !== '' ? $rrn : $authorizationCode,
+            'card_last_four' => $cardLastFour,
             'status' => 'completed',
             'paid_at' => now(),
             'notes' => 'Azul — IsoCode '.$isoCode.($authorizationCode !== '' ? ' — Auth '.$authorizationCode : ''),
@@ -198,7 +215,7 @@ class AzulController extends Controller
             ], fn ($v) => $v !== null));
     }
 
-    private function completeAddonPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
+    private function completeAddonPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn, ?string $cardLastFour): RedirectResponse
     {
         $user = Auth::user();
         if (! $user) {
@@ -236,6 +253,7 @@ class AzulController extends Controller
             'currency' => 'USD',
             'gateway' => 'azul',
             'gateway_payment_id' => $rrn !== '' ? $rrn : $authorizationCode,
+            'card_last_four' => $cardLastFour,
             'status' => 'completed',
             'paid_at' => now(),
             'notes' => 'Azul prorrateo — +1 '.($type === 'company' ? 'empresa' : 'usuario').' — IsoCode '.$isoCode,
@@ -266,7 +284,7 @@ class AzulController extends Controller
             ], fn ($v) => $v !== null));
     }
 
-    private function completeRegisterPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn): RedirectResponse
+    private function completeRegisterPayment(string $orderNumber, string $isoCode, string $authorizationCode, string $rrn, ?string $cardLastFour): RedirectResponse
     {
         $plan = session('register_plan');
         if (! is_array($plan)) {
@@ -280,6 +298,7 @@ class AzulController extends Controller
             'register_azul_iso' => $isoCode,
             'register_azul_auth' => $authorizationCode,
             'register_azul_rrn' => $rrn,
+            'register_azul_card_last_four' => $cardLastFour,
         ]);
 
         session()->forget(['azul_checkout', 'azul_intent']);

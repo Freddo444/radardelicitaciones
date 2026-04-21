@@ -83,6 +83,10 @@
         <p class="muted" style="margin-top: 24px;">Referencia de pago: {{ $payment->gateway_payment_id }}</p>
     @endif
 
+    @if($payment->card_last_four)
+        <p class="muted" style="margin-top: 8px;">Tarjeta: ****{{ $payment->card_last_four }}</p>
+    @endif
+
     <p class="muted" style="margin-top: 28px; font-size: 9px;">
         Documento generado electrónicamente. Conserve este comprobante para sus registros.
     </p>

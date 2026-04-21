@@ -109,6 +109,7 @@ class RegisterController extends Controller
             'register_azul_iso',
             'register_azul_auth',
             'register_azul_rrn',
+            'register_azul_card_last_four',
             'azul_intent',
             'azul_checkout',
         ]);
@@ -282,6 +283,7 @@ class RegisterController extends Controller
         $azulIso = (string) session('register_azul_iso', '');
         $azulAuth = (string) session('register_azul_auth', '');
         $azulRrn = (string) session('register_azul_rrn', '');
+        $azulCardLastFour = session('register_azul_card_last_four');
 
         if (! $plan || (! $paypalSubId && ! $azulOrder)) {
             return redirect()->route('register.show')
@@ -304,7 +306,7 @@ class RegisterController extends Controller
         ));
 
         try {
-            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $azulIso, $azulAuth, $azulRrn) {
+            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $azulIso, $azulAuth, $azulRrn, $azulCardLastFour) {
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
@@ -332,6 +334,7 @@ class RegisterController extends Controller
                         'currency' => 'USD',
                         'gateway' => 'azul',
                         'gateway_payment_id' => $azulRrn !== '' ? $azulRrn : $azulAuth,
+                        'card_last_four' => is_string($azulCardLastFour) && preg_match('/^\d{4}$/', $azulCardLastFour) ? $azulCardLastFour : null,
                         'status' => 'completed',
                         'paid_at' => now(),
                         'notes' => 'Azul registro — IsoCode '.$azulIso.($azulAuth !== '' ? ' — Auth '.$azulAuth : ''),
@@ -359,6 +362,7 @@ class RegisterController extends Controller
             'register_azul_iso',
             'register_azul_auth',
             'register_azul_rrn',
+            'register_azul_card_last_four',
         ]);
 
         Auth::login($user);
