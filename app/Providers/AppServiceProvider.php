@@ -12,9 +12,12 @@ use App\Models\Payment;
 use App\Models\Personnel;
 use App\Models\Project;
 use App\Models\Rubro;
+use App\Models\User;
 use App\Models\VaultDocument;
 use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +31,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         date_default_timezone_set('America/Santo_Domingo');
+
+        Event::listen(Login::class, function (Login $event): void {
+            $user = $event->user;
+            if ($user instanceof User) {
+                $user->forceFill(['last_sign_in_at' => now()])->saveQuietly();
+            }
+        });
 
         Payment::observe(PaymentObserver::class);
 

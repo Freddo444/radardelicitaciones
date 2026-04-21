@@ -37,6 +37,7 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Suscripcion</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold tracking-wide text-zinc-600 uppercase">Empresas</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Registro</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Último acceso</th>
                         <th class="py-4 pr-5 pl-3 text-right"><span class="sr-only">Acciones</span></th>
                     </tr>
                 </thead>
@@ -57,6 +58,13 @@
                         </td>
                         <td class="px-4 py-5 text-sm whitespace-nowrap text-center text-zinc-600">{{ $u->companies_count }}</td>
                         <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">{{ $u->created_at->format('d/m/Y') }}</td>
+                        <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">
+                            @if($u->last_sign_in_at)
+                                {{ $u->last_sign_in_at->format('d/m/Y H:i') }}
+                            @else
+                                <span class="text-zinc-400">—</span>
+                            @endif
+                        </td>
                         <td class="py-5 pr-5 pl-3 text-right text-sm font-medium whitespace-nowrap">
                             <form method="POST" action="{{ route('admin.users.impersonate', $u) }}" class="inline">
                                 @csrf
@@ -66,7 +74,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="py-16 text-center text-sm text-zinc-500">No se encontraron usuarios.</td>
+                        <td colspan="6" class="py-16 text-center text-sm text-zinc-500">No se encontraron usuarios.</td>
                     </tr>
                     @endforelse
                 </tbody>

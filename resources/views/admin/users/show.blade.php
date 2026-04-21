@@ -11,6 +11,14 @@
         <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">{{ $user->name }}</h1>
         <p class="mt-2 text-base text-zinc-600">{{ $user->email }}</p>
         <p class="mt-1 text-sm text-zinc-500">Registrado {{ $user->created_at->format('d/m/Y H:i') }}</p>
+        <p class="mt-1 text-sm text-zinc-500">
+            Último acceso:
+            @if($user->last_sign_in_at)
+                {{ $user->last_sign_in_at->format('d/m/Y H:i') }}
+            @else
+                <span class="text-zinc-400">—</span>
+            @endif
+        </p>
     </div>
     <form method="POST" action="{{ route('admin.users.impersonate', $user) }}" class="shrink-0">
         @csrf
