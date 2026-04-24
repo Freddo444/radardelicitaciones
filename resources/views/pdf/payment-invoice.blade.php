@@ -77,6 +77,17 @@
             <td class="label">Total</td>
             <td class="amount" style="width: 22%;">{{ $payment->amountFormatted() }}</td>
         </tr>
+        @if($dopEquivalent !== null)
+            <tr>
+                <td class="label">
+                    Equivalente en DOP
+                    @if($dopRate !== null)
+                        <span class="muted">(tasa {{ number_format((float) $dopRate, 2, '.', ',') }})</span>
+                    @endif
+                </td>
+                <td class="amount" style="width: 22%;">RD${{ number_format((float) $dopEquivalent, 2, '.', ',') }}</td>
+            </tr>
+        @endif
     </table>
 
     @if($payment->gateway_payment_id)

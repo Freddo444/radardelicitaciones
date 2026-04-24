@@ -18,11 +18,22 @@ class PaymentInvoicePdfGenerator
             $logoBase64 = base64_encode(File::get($logoPath));
         }
 
+        $dopRate = null;
+        $dopEquivalent = null;
+        if ($payment->currency === 'USD') {
+            $dopRate = UsdDopExchange::rate();
+            $dopEquivalent = round((float) $payment->amount * $dopRate, 2);
+        } elseif ($payment->currency === 'DOP') {
+            $dopEquivalent = (float) $payment->amount;
+        }
+
         return Pdf::loadView('pdf.payment-invoice', [
             'payment' => $payment,
             'merchant' => config('services.support'),
             'appName' => config('app.name'),
             'logoBase64' => $logoBase64,
+            'dopRate' => $dopRate,
+            'dopEquivalent' => $dopEquivalent,
         ])
             ->setPaper('letter', 'portrait')
             ->output();
