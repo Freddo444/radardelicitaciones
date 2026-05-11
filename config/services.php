@@ -86,4 +86,9 @@ return [
         'allowed_document_hosts' => array_values(array_filter(array_map('trim', explode(',', (string) env('DGCP_ALLOWED_DOCUMENT_HOSTS', 'datosabiertos.dgcp.gob.do,dgcp.gob.do,comunidad.comprasdominicana.gob.do'))))),
     ],
 
+    'google_calendar' => [
+        'client_id' => env('GOOGLE_CALENDAR_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CALENDAR_CLIENT_SECRET'),
+    ],
+
 ];

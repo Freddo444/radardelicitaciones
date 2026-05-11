@@ -14,7 +14,7 @@ class CalendarController extends Controller
         }
 
         $summary = "Cierre: {$bid->title}";
-        $description = implode('\n', array_filter([
+        $description = implode("\n", array_filter([
             "Código: {$bid->process_code}",
             "Entidad: {$bid->buyer_name}",
             $bid->amount_estimated ? 'Monto: '.($bid->currency ?? 'DOP').' '.number_format($bid->amount_estimated, 2) : null,
@@ -38,12 +38,14 @@ class CalendarController extends Controller
 
     public function offerIcs(Offer $offer)
     {
+        abort_if($offer->company_id !== currentCompany()?->id, 403);
+
         if (! $offer->fecha_limite) {
             return back()->with('error', 'Esta oferta no tiene fecha límite.');
         }
 
         $summary = "Oferta: {$offer->proceso_nombre}";
-        $description = implode('\n', array_filter([
+        $description = implode("\n", array_filter([
             "Código: {$offer->proceso_codigo}",
             "Entidad: {$offer->entidad_nombre}",
         ]));
@@ -66,21 +68,17 @@ class CalendarController extends Controller
     private function generateIcs(string $summary, string $description, \DateTimeInterface $dtStart, string $uid): string
     {
         $now = gmdate('Ymd\THis\Z');
-        $start = $dtStart->format('Ymd\THis\Z');
+        $startUtc = \DateTimeImmutable::createFromInterface($dtStart)->setTimezone(new \DateTimeZone('UTC'));
+        $start = $startUtc->format('Ymd\THis\Z');
+        $end = $startUtc->modify('+1 hour')->format('Ymd\THis\Z');
 
-        // 1-hour event ending at the deadline
-        $end = (clone $dtStart)->modify('+1 hour')->format('Ymd\THis\Z');
-
-        // 30-minute reminder before
-        $alarm = <<<ALARM
-        BEGIN:VALARM
-        TRIGGER:-PT30M
-        ACTION:DISPLAY
-        DESCRIPTION:Recordatorio: $summary
-        END:VALARM
-        ALARM;
-
-        $alarm = implode("\r\n", array_map('trim', explode("\n", $alarm)));
+        $alarm = implode("\r\n", [
+            'BEGIN:VALARM',
+            'TRIGGER:-PT30M',
+            'ACTION:DISPLAY',
+            'DESCRIPTION:'.$this->escapeIcs('Recordatorio: '.$summary),
+            'END:VALARM',
+        ]);
 
         $lines = [
             'BEGIN:VCALENDAR',
@@ -93,8 +91,8 @@ class CalendarController extends Controller
             "DTSTAMP:{$now}",
             "DTSTART:{$start}",
             "DTEND:{$end}",
-            "SUMMARY:{$this->escapeIcs($summary)}",
-            "DESCRIPTION:{$this->escapeIcs($description)}",
+            'SUMMARY:'.$this->escapeIcs($summary),
+            'DESCRIPTION:'.$this->escapeIcs($description),
             $alarm,
             'END:VEVENT',
             'END:VCALENDAR',
@@ -105,6 +103,9 @@ class CalendarController extends Controller
 
     private function escapeIcs(string $text): string
     {
-        return str_replace([',', ';'], ['\\,', '\\;'], $text);
+        $text = str_replace('\\', '\\\\', $text);
+        $text = str_replace([',', ';'], ['\\,', '\\;'], $text);
+
+        return str_replace(["\r\n", "\r", "\n"], ['\\n', '\\n', '\\n'], $text);
     }
 }

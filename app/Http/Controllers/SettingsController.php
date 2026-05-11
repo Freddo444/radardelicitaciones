@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\GoogleCalendarToken;
 use App\Models\Setting;
 use App\Services\DgcpApiClient;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -38,7 +40,28 @@ class SettingsController extends Controller
             'catalog_last_imported_at' => Setting::get('catalog_last_imported_at'),
         ];
 
-        return view('settings.index', compact('settings'));
+        $company = currentCompany();
+        $googleToken = GoogleCalendarToken::query()
+            ->where('user_id', Auth::id())
+            ->where('company_id', $company->id)
+            ->first();
+
+        $calendarIntegration = [
+            'feed_url' => $company->calendar_feed_token
+                ? route('calendar.feed.tablero', ['token' => $company->calendar_feed_token], true)
+                : null,
+            'google_configured' => filled(config('services.google_calendar.client_id'))
+                && filled(config('services.google_calendar.client_secret')),
+            'google' => $googleToken ? [
+                'connected' => true,
+                'email' => $googleToken->google_email,
+                'sync_enabled' => $googleToken->sync_enabled,
+                'last_synced_at' => $googleToken->last_synced_at,
+                'last_sync_error' => $googleToken->last_sync_error,
+            ] : ['connected' => false],
+        ];
+
+        return view('settings.index', compact('settings', 'calendarIntegration'));
     }
 
     public function update(Request $request)

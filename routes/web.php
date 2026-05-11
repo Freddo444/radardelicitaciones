@@ -6,6 +6,8 @@ use App\Http\Controllers\Billing\BankTransferController;
 use App\Http\Controllers\Billing\PayPalController;
 use App\Http\Controllers\Billing\SubscriptionController;
 use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\CalendarFeedController;
+use App\Http\Controllers\CalendarIntegrationController;
 use App\Http\Controllers\CompanySetupController;
 use App\Http\Controllers\CompanySwitchController;
 use App\Http\Controllers\CompanyUsersController;
@@ -46,6 +48,11 @@ Route::get('/privacidad', [MarketingController::class, 'privacy'])->name('privac
 Route::get('/politicas-pago-seguridad', [MarketingController::class, 'paymentPolicies'])->name('payment-policies');
 Route::post('/contacto', [SupportController::class, 'contact'])->name('contact.store')->middleware('throttle:5,1');
 Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
+
+Route::get('/calendar/feeds/tablero-{token}.ics', [CalendarFeedController::class, 'tablero'])
+    ->where('token', '[a-f0-9]{64}')
+    ->middleware('throttle:120,1')
+    ->name('calendar.feed.tablero');
 
 // ── Auth (guest only) ────────────────────────────────────────────────
 Route::middleware('guest')->group(function () {
@@ -201,6 +208,23 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
     Route::post('/configuracion/test-connection', [SettingsController::class, 'testConnection'])->name('settings.test-connection');
     Route::post('/configuracion/test-email', [SettingsController::class, 'testEmail'])->name('settings.test-email');
     Route::post('/configuracion/test-telegram', [SettingsController::class, 'testTelegram'])->name('settings.test-telegram');
+
+    Route::post('/configuracion/calendario/feed/regenerar', [CalendarIntegrationController::class, 'regenerateFeedToken'])
+        ->middleware('throttle:10,1')
+        ->name('settings.calendar.feed.regenerate');
+    Route::get('/configuracion/calendario/google', [CalendarIntegrationController::class, 'googleRedirect'])
+        ->middleware('throttle:20,1')
+        ->name('settings.calendar.google.redirect');
+    Route::get('/configuracion/calendario/google/callback', [CalendarIntegrationController::class, 'googleCallback'])
+        ->middleware('throttle:30,1')
+        ->name('settings.calendar.google.callback');
+    Route::post('/configuracion/calendario/google/desconectar', [CalendarIntegrationController::class, 'googleDisconnect'])
+        ->name('settings.calendar.google.disconnect');
+    Route::post('/configuracion/calendario/google/sync-toggle', [CalendarIntegrationController::class, 'googleToggleSync'])
+        ->name('settings.calendar.google.sync-toggle');
+    Route::post('/configuracion/calendario/google/resync', [CalendarIntegrationController::class, 'googleResync'])
+        ->middleware('throttle:12,1')
+        ->name('settings.calendar.google.resync');
 
     // Manual poll + sondear
     Route::post('/sondeo/manual', [PollController::class, 'manual'])->name('poll.manual');

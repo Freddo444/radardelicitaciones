@@ -33,6 +33,7 @@ class Company extends Model
         'sello_path',
         'logo_path',
         'onboarding_dismissed_at',
+        'calendar_feed_token',
     ];
 
     protected $casts = [
@@ -95,10 +96,24 @@ class Company extends Model
         return $this->hasMany(Offer::class);
     }
 
+    public function googleCalendarTokens(): HasMany
+    {
+        return $this->hasMany(GoogleCalendarToken::class);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
 
     public function cpaExpiryDays(): ?int
     {
         return $this->cpa_vence ? (int) now()->diffInDays($this->cpa_vence, false) : null;
+    }
+
+    public function ensureCalendarFeedToken(): string
+    {
+        if (! $this->calendar_feed_token) {
+            $this->forceFill(['calendar_feed_token' => bin2hex(random_bytes(32))])->saveQuietly();
+        }
+
+        return (string) $this->calendar_feed_token;
     }
 }

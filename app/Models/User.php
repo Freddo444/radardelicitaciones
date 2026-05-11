@@ -8,6 +8,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -56,6 +57,11 @@ class User extends Authenticatable implements MustVerifyEmail
     public function currentCompanyRelation(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'current_company_id');
+    }
+
+    public function googleCalendarTokens(): HasMany
+    {
+        return $this->hasMany(GoogleCalendarToken::class);
     }
 
     // ── Auth helpers ─────────────────────────────────────────────────

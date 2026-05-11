@@ -7,6 +7,7 @@ use App\Models\BidWatch;
 use App\Models\Equipment;
 use App\Models\FinancialRecord;
 use App\Models\Offer;
+use App\Models\OfferEvent;
 use App\Models\OfferParseAttempt;
 use App\Models\Payment;
 use App\Models\Personnel;
@@ -14,6 +15,8 @@ use App\Models\Project;
 use App\Models\Rubro;
 use App\Models\User;
 use App\Models\VaultDocument;
+use App\Observers\OfferEventObserver;
+use App\Observers\OfferObserver;
 use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
 use Illuminate\Auth\Events\Login;
@@ -40,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Payment::observe(PaymentObserver::class);
+        Offer::observe(OfferObserver::class);
+        OfferEvent::observe(OfferEventObserver::class);
 
         $tenantModels = [
             Offer::class, Personnel::class, Equipment::class,

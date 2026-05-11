@@ -89,6 +89,10 @@ class SendBidNotification implements ShouldQueue
 
     private function createInAppNotifications(): void
     {
+        if (! Bid::whereKey($this->bid->id)->exists()) {
+            return;
+        }
+
         $pivot = CompanyBid::where('bid_id', $this->bid->id)
             ->where('company_id', $this->company->id)
             ->first();

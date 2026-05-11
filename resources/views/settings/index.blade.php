@@ -11,58 +11,66 @@
         return number_format((float) $numeric, 0, '.', ',');
     };
 @endphp
-<div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:flex lg:gap-x-16 lg:px-8">
+<div class="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:flex lg:gap-x-16 lg:px-8" x-data="settingsTabs()" x-init="initTabs()">
 
-    {{-- Sidebar nav --}}
+    {{-- Sidebar nav (tabs) --}}
     <aside class="flex overflow-x-auto border-b border-gray-900/5 pb-4 lg:block lg:w-64 lg:flex-none lg:border-0 lg:pb-0">
         <nav class="flex-none px-0 sm:px-0">
             <ul role="list" class="flex gap-x-3 gap-y-1 whitespace-nowrap lg:flex-col">
                 <li>
-                    <a href="#api" class="group flex gap-x-3 rounded-md bg-gray-50 py-2 pr-3 pl-2 text-sm/6 font-semibold text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-blue-600">
+                    <a href="#api" @click.prevent="setTab('api')" :class="navClass('api')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('api')">
                             <path d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         API DGCP
                     </a>
                 </li>
                 <li>
-                    <a href="#sondeo" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                    <a href="#sondeo" @click.prevent="setTab('sondeo')" :class="navClass('sondeo')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('sondeo')">
                             <path d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Sondeo
                     </a>
                 </li>
                 <li>
-                    <a href="#email" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                    <a href="#email" @click.prevent="setTab('email')" :class="navClass('email')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('email')">
                             <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Email
                     </a>
                 </li>
                 <li>
-                    <a href="#telegram" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                    <a href="#telegram" @click.prevent="setTab('telegram')" :class="navClass('telegram')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('telegram')">
                             <path d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Telegram
                     </a>
                 </li>
                 <li>
-                    <a href="#notificaciones" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                    <a href="#notificaciones" @click.prevent="setTab('notificaciones')" :class="navClass('notificaciones')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('notificaciones')">
                             <path d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Notificaciones
                     </a>
                 </li>
                 <li>
-                    <a href="#filtros" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold text-gray-700 hover:bg-gray-50 hover:text-blue-600">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0 text-gray-400 group-hover:text-blue-600">
+                    <a href="#filtros" @click.prevent="setTab('filtros')" :class="navClass('filtros')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('filtros')">
                             <path d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         Filtros
+                    </a>
+                </li>
+                <li>
+                    <a href="#calendario" @click.prevent="setTab('calendario')" :class="navClass('calendario')" class="group flex gap-x-3 rounded-md py-2 pr-3 pl-2 text-sm/6 font-semibold">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 shrink-0" :class="iconClass('calendario')">
+                            <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5a2.25 2.25 0 0 0 2.25-2.25m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5a2.25 2.25 0 0 1 2.25 2.25v7.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Calendario
                     </a>
                 </li>
             </ul>
@@ -86,10 +94,11 @@
         <form method="POST" action="{{ route('settings.update') }}">
             @csrf
 
+            <div x-show="tab !== 'calendario'">
             <div class="space-y-16">
 
                 {{-- API DGCP --}}
-                <div id="api">
+                <div id="api" x-show="tab === 'api'">
                     <h2 class="text-base/7 font-semibold text-gray-900">API DGCP</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">Conexión con el portal de datos abiertos de la DGCP. No requiere credenciales.</p>
 
@@ -120,7 +129,7 @@
                 </div>
 
                 {{-- Sondeo --}}
-                <div id="sondeo">
+                <div id="sondeo" x-show="tab === 'sondeo'">
                     <h2 class="text-base/7 font-semibold text-gray-900">Sondeo</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">El sistema monitorea la DGCP automáticamente cada hora y escanea el portal cada 15 minutos.</p>
 
@@ -135,7 +144,7 @@
                 </div>
 
                 {{-- Email --}}
-                <div id="email">
+                <div id="email" x-show="tab === 'email'">
                     <h2 class="text-base/7 font-semibold text-gray-900">Email</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">Correo electrónico donde se recibirán alertas cuando una convocatoria vigilada cambie.</p>
 
@@ -162,7 +171,7 @@
                 </div>
 
                 {{-- Telegram --}}
-                <div id="telegram">
+                <div id="telegram" x-show="tab === 'telegram'">
                     <h2 class="text-base/7 font-semibold text-gray-900">Telegram</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">Bot de Telegram para recibir alertas de convocatorias vigiladas. Crea un bot en @BotFather y obtén tu Chat ID con @userinfobot.</p>
 
@@ -201,7 +210,7 @@
                 </div>
 
                 {{-- Notificaciones --}}
-                <div id="notificaciones">
+                <div id="notificaciones" x-show="tab === 'notificaciones'">
                     <h2 class="text-base/7 font-semibold text-gray-900">Notificaciones</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">Cómo se entregan las alertas según el tipo de evento.</p>
 
@@ -253,7 +262,7 @@
                 </div>
 
                 {{-- Filtros --}}
-                <div id="filtros">
+                <div id="filtros" x-show="tab === 'filtros'">
                     <h2 class="text-base/7 font-semibold text-gray-900">Filtros</h2>
                     <p class="mt-1 text-sm/6 text-gray-500">Criterios adicionales para reducir el volumen de notificaciones.</p>
 
@@ -384,12 +393,50 @@
                     Guardar configuración
                 </button>
             </div>
+            </div>
         </form>
+
+        <div id="calendario" x-show="tab === 'calendario'" x-cloak class="border-t border-gray-900/10 pt-10 lg:border-t-0 lg:pt-0">
+            @include('settings._calendar')
+        </div>
 
     </main>
 
 </div>
 <script>
+function settingsTabs() {
+    return {
+        tab: 'api',
+        allowed: ['api', 'sondeo', 'email', 'telegram', 'notificaciones', 'filtros', 'calendario'],
+        initTabs() {
+            const h = window.location.hash.slice(1);
+            if (this.allowed.includes(h)) {
+                this.tab = h;
+            }
+            window.addEventListener('hashchange', () => {
+                const x = window.location.hash.slice(1);
+                if (this.allowed.includes(x)) {
+                    this.tab = x;
+                }
+            });
+        },
+        setTab(t) {
+            this.tab = t;
+            history.replaceState(null, '', '#' + t);
+        },
+        navClass(id) {
+            return this.tab === id
+                ? 'bg-gray-50 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-50 hover:text-blue-600';
+        },
+        iconClass(id) {
+            return this.tab === id
+                ? 'text-blue-600'
+                : 'text-gray-400 group-hover:text-blue-600';
+        },
+    };
+}
+
 function submitSettingsTest(type) {
     if (type === 'email') {
         const emailInput = document.getElementById('notification_email');
