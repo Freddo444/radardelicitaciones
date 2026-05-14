@@ -28,6 +28,12 @@ Schedule::exec("{$php} secp:scrape")
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-scrape.log'));
 
+Schedule::exec("{$php} secp:backfill-portal-docs")
+    ->hourly()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/secp-backfill-portal-docs.log'));
+
 Schedule::exec("{$php} secp:sync-providers")
     ->weekly()
     ->withoutOverlapping()
