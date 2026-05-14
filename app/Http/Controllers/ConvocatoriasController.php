@@ -6,6 +6,7 @@ use App\Models\Bid;
 use App\Models\BidWatch;
 use App\Models\CompanyBid;
 use App\Services\DgcpApiClient;
+use App\Services\PortalScraperService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -154,13 +155,19 @@ class ConvocatoriasController extends Controller
                 'adjudicacion' => $this->fetchAdjudicacionData($api, $bid->process_code),
             };
 
-            // Update cache
-            $bid->update([
-                $cacheField => $data,
-                'cache_refreshed_at' => now(),
-            ]);
+            $isPortalScrape = ($bid->raw_data['source'] ?? null) === 'portal_scrape';
+            $isPending = $isPortalScrape
+                && in_array($tab, ['documentos', 'articulos'], true)
+                && empty($data);
 
-            return response()->json(['data' => $data, 'cached' => false]);
+            if (! $isPending) {
+                $bid->update([
+                    $cacheField => $data,
+                    'cache_refreshed_at' => now(),
+                ]);
+            }
+
+            return response()->json(['data' => $data, 'cached' => false, 'pending' => $isPending]);
         } catch (\Throwable $e) {
             // Fall back to stale cache if available
             if ($bid->{$cacheField}) {
@@ -258,6 +265,32 @@ class ConvocatoriasController extends Controller
 
             return redirect()->away($url);
         }
+    }
+
+    public function downloadPortalDocument(Bid $bid, Request $request, PortalScraperService $scraper)
+    {
+        $fileId = (string) $request->input('fileId', '');
+        $filename = basename((string) $request->input('filename', 'documento.pdf')) ?: 'documento.pdf';
+
+        if (! preg_match('/^\d+$/', $fileId)) {
+            abort(400, 'ID de documento inválido');
+        }
+
+        $noticeUid = $bid->raw_data['notice_uid'] ?? null;
+        if (! $noticeUid) {
+            abort(404, 'Documento no disponible');
+        }
+
+        $file = $scraper->downloadPortalDocument($noticeUid, $fileId);
+
+        if (! $file) {
+            return redirect()->away($bid->secp_url ?? 'https://comunidad.comprasdominicana.gob.do');
+        }
+
+        return response($file['body'], 200, [
+            'Content-Type' => $file['content_type'],
+            'Content-Disposition' => 'attachment; filename="'.($file['filename'] ?: $filename).'"',
+        ]);
     }
 
     private function buildCronograma(Bid $bid): array

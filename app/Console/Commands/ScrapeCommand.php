@@ -74,8 +74,9 @@ class ScrapeCommand extends Command
                 continue;
             }
 
-            // Fetch detail page to get UNSPSC codes
-            $unspscCodes = $scraper->fetchDetailUnspsc($notice['notice_uid']);
+            // Fetch detail page to get UNSPSC codes and documents
+            $detail = $scraper->fetchDetail($notice['notice_uid']);
+            $unspscCodes = $detail['unspsc'];
 
             if (empty($unspscCodes)) {
                 $this->line("  SKIP {$notice['process_code']} — no UNSPSC codes found");
@@ -150,6 +151,8 @@ class ScrapeCommand extends Command
                     'tender_deadline' => $notice['tender_deadline'],
                     'secp_url' => $notice['portal_url'],
                     'raw_data' => ['source' => 'portal_scrape', 'notice_uid' => $notice['notice_uid'], 'unspsc' => $unspscCodes],
+                    'cached_documents' => $detail['documents'] ?: null,
+                    'cache_refreshed_at' => $detail['documents'] ? now() : null,
                 ]);
 
                 $saved++;

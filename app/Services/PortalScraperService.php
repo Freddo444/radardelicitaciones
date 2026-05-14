@@ -141,6 +141,18 @@ class PortalScraperService
      */
     public function fetchDetailUnspsc(string $noticeUid): array
     {
+        return $this->fetchDetail($noticeUid)['unspsc'];
+    }
+
+    /**
+     * Fetch a notice detail page and return both UNSPSC codes and the document list.
+     *
+     * @return array{unspsc: string[], documents: list<array{nombre_documento: string, tipo_documento: string, portal_file_id: string}>}
+     */
+    public function fetchDetail(string $noticeUid): array
+    {
+        $empty = ['unspsc' => [], 'documents' => []];
+
         try {
             $response = Http::timeout(30)
                 ->withHeaders(['Accept' => 'text/html'])
@@ -149,23 +161,136 @@ class PortalScraperService
                 ]);
 
             if ($response->failed()) {
-                return [];
+                return $empty;
             }
 
             $html = $response->body();
 
-            // Extract UNSPSC codes from CategoryCode hidden fields
-            // Pattern: CategoryCode_LookupHiddenText" disabled="disabled" type="hidden" value="42192201"
-            if (preg_match_all('/CategoryCode_LookupHiddenText"[^>]*value="(\d{8})"/', $html, $matches)) {
-                return array_unique($matches[1]);
-            }
-
-            return [];
+            return [
+                'unspsc' => $this->parseUnspsc($html),
+                'documents' => $this->parseDocuments($html),
+            ];
         } catch (\Throwable $e) {
             Log::warning("[PortalScraper] Detail fetch failed for {$noticeUid}: {$e->getMessage()}");
 
-            return [];
+            return $empty;
         }
+    }
+
+    /**
+     * Download a portal document by re-fetching the detail page for a fresh session + mkey,
+     * then proxying the file stream.
+     *
+     * @return array{body: string, content_type: string, filename: string}|null
+     */
+    public function downloadPortalDocument(string $noticeUid, string $fileId): ?array
+    {
+        try {
+            // Fetch detail page to obtain a valid session cookie and mkey
+            $detailRes = Http::timeout(30)
+                ->withHeaders(['Accept' => 'text/html'])
+                ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
+                    'noticeUID' => $noticeUid,
+                ]);
+
+            if ($detailRes->failed()) {
+                return null;
+            }
+
+            // Extract mkey from the page
+            if (! preg_match("/['\"]mkey['\"][^'\"]*['\"]([a-f0-9_]+)['\"]/", $detailRes->body(), $m)) {
+                return null;
+            }
+            $mkey = $m[1];
+
+            // Build session cookie jar
+            $cookieJar = CookieJar::fromArray(
+                ['PublicSessionCookie' => $detailRes->cookies()->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
+                'comunidad.comprasdominicana.gob.do'
+            );
+
+            $fileRes = Http::timeout(60)
+                ->withOptions(['cookies' => $cookieJar])
+                ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/DownloadFile', [
+                    'documentFileId' => $fileId,
+                    'mkey' => $mkey,
+                ]);
+
+            if ($fileRes->failed()) {
+                return null;
+            }
+
+            $contentType = $fileRes->header('Content-Type') ?? 'application/octet-stream';
+
+            // Reject HTML responses — means the file wasn't accessible
+            if (str_starts_with($contentType, 'text/html')) {
+                return null;
+            }
+
+            $disposition = $fileRes->header('Content-Disposition') ?? '';
+            $filename = '';
+            if (preg_match('/filename[^;=\n]*=[\'""]?([^\'""\n;]+)/', $disposition, $fm)) {
+                $filename = trim($fm[1], ' "\'');
+            }
+
+            return [
+                'body' => $fileRes->body(),
+                'content_type' => $contentType,
+                'filename' => $filename ?: "document-{$fileId}",
+            ];
+        } catch (\Throwable $e) {
+            Log::warning("[PortalScraper] Download failed for fileId={$fileId}: {$e->getMessage()}");
+
+            return null;
+        }
+    }
+
+    private function parseUnspsc(string $html): array
+    {
+        if (preg_match_all('/CategoryCode_LookupHiddenText"[^>]*value="(\d{8})"/', $html, $matches)) {
+            return array_unique($matches[1]);
+        }
+
+        return [];
+    }
+
+    private function parseDocuments(string $html): array
+    {
+        $names = [];
+        $types = [];
+        $fileIds = [];
+
+        // Document names: spnDocumentName_N
+        if (preg_match_all('/spnDocumentName_(\d+)"[^>]*>\s*([^<]+?)\s*<\/span>/', $html, $m)) {
+            foreach ($m[1] as $i => $idx) {
+                $names[(int) $idx] = html_entity_decode(trim($m[2][$i]), ENT_QUOTES, 'UTF-8');
+            }
+        }
+
+        // Document types: spnDocumentTypeSpan_N
+        if (preg_match_all('/spnDocumentTypeSpan_(\d+)"[^>]*>\s*([^<]+?)\s*<\/span>/', $html, $m)) {
+            foreach ($m[1] as $i => $idx) {
+                $types[(int) $idx] = html_entity_decode(trim($m[2][$i]), ENT_QUOTES, 'UTF-8');
+            }
+        }
+
+        // File IDs from onclick: 'documentFileId=' + '12788758'
+        if (preg_match_all("/lnkDownloadLinkP3Gen_(\d+)[^>]*documentFileId='\s*\+\s*'(\d+)'/", $html, $m)) {
+            foreach ($m[1] as $i => $idx) {
+                $fileIds[(int) $idx] = $m[2][$i];
+            }
+        }
+
+        $documents = [];
+        foreach ($names as $idx => $name) {
+            $documents[] = [
+                'nombre_documento' => $name,
+                'tipo_documento' => $types[$idx] ?? '',
+                'portal_file_id' => $fileIds[$idx] ?? '',
+            ];
+        }
+
+        return $documents;
     }
 
     /**

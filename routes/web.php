@@ -160,6 +160,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
     Route::patch('/convocatorias/{bid}/bookmark', [ConvocatoriasController::class, 'bookmark'])->name('convocatorias.bookmark');
     Route::patch('/convocatorias/{bid}/watch', [ConvocatoriasController::class, 'watch'])->name('convocatorias.watch');
     Route::get('/convocatorias/{bid}/download-doc', [ConvocatoriasController::class, 'downloadDocument'])->name('convocatorias.download-doc');
+    Route::get('/convocatorias/{bid}/portal-doc', [ConvocatoriasController::class, 'downloadPortalDocument'])->name('convocatorias.portal-doc');
 
     // Calendar .ics export
     Route::get('/calendar/bid/{bid}.ics', [CalendarController::class, 'bidIcs'])->name('calendar.bid');

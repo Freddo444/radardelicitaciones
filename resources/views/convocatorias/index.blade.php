@@ -645,7 +645,13 @@
                                             {{-- Artículos tab --}}
                                             <template x-if="!tabLoading && activeTab === 'articulos'">
                                                 <div>
-                                                    <template x-if="tabData.length === 0">
+                                                    <template x-if="tabData.length === 0 && tabPending">
+                                                        <div class="rounded-md bg-amber-50 p-4">
+                                                            <p class="text-sm text-amber-800">Publicada recientemente en el portal. Los artículos estarán disponibles en la API abierta en unas horas.</p>
+                                                            <a x-show="bid.secp_url" :href="bid.secp_url" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-medium text-amber-700 underline hover:text-amber-900">Ver en portal DGCP →</a>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="tabData.length === 0 && !tabPending">
                                                         <p class="text-sm text-gray-500 py-4">Sin artículos disponibles.</p>
                                                     </template>
                                                     <template x-if="tabData.length > 0">
@@ -680,7 +686,13 @@
                                             {{-- Documentos tab --}}
                                             <template x-if="!tabLoading && activeTab === 'documentos'">
                                                 <div>
-                                                    <template x-if="tabData.length === 0">
+                                                    <template x-if="tabData.length === 0 && tabPending">
+                                                        <div class="rounded-md bg-amber-50 p-4">
+                                                            <p class="text-sm text-amber-800">Publicada recientemente en el portal. Los documentos estarán disponibles en la API abierta en unas horas.</p>
+                                                            <a x-show="bid.secp_url" :href="bid.secp_url" target="_blank" rel="noopener" class="mt-2 inline-flex text-xs font-medium text-amber-700 underline hover:text-amber-900">Ver en portal DGCP →</a>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="tabData.length === 0 && !tabPending">
                                                         <p class="text-sm text-gray-500 py-4">Sin documentos disponibles.</p>
                                                     </template>
                                                     <template x-if="tabData.length > 0">
@@ -693,6 +705,12 @@
                                                                     </div>
                                                                     <template x-if="doc.url_documento">
                                                                         <a :href="'/convocatorias/' + bid.id + '/download-doc?url=' + encodeURIComponent(doc.url_documento) + '&filename=' + encodeURIComponent(doc.nombre_documento || 'documento.pdf')"
+                                                                           class="ml-4 shrink-0 rounded bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
+                                                                            Descargar
+                                                                        </a>
+                                                                    </template>
+                                                                    <template x-if="!doc.url_documento && doc.portal_file_id">
+                                                                        <a :href="'/convocatorias/' + bid.id + '/portal-doc?fileId=' + doc.portal_file_id + '&filename=' + encodeURIComponent(doc.nombre_documento || 'documento.pdf')"
                                                                            class="ml-4 shrink-0 rounded bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100">
                                                                             Descargar
                                                                         </a>
@@ -813,6 +831,7 @@ function convocatorias() {
         activeTab: 'articulos',
         tabData: [],
         tabLoading: false,
+        tabPending: false,
         tabCache: {},
         showAllCronograma: false,
         copied: false,
@@ -826,6 +845,7 @@ function convocatorias() {
             this.institution = {};
             this.activeTab = 'articulos';
             this.tabData = [];
+            this.tabPending = false;
             this.tabCache = {};
             this.showAllCronograma = false;
 
@@ -867,20 +887,24 @@ function convocatorias() {
 
         async loadTab(tab, forceRefresh = false) {
             if (!this.bid) return;
-            if (!forceRefresh && this.tabCache[tab]) {
-                this.tabData = this.tabCache[tab];
+            if (!forceRefresh && this.tabCache[tab] !== undefined) {
+                this.tabData = this.tabCache[tab].data;
+                this.tabPending = this.tabCache[tab].pending;
                 return;
             }
 
             this.tabLoading = true;
+            this.tabPending = false;
             try {
                 const refreshParam = forceRefresh ? '&refresh=1' : '';
                 const res = await fetch(`/convocatorias/${this.bid.id}/tab?tab=${tab}${refreshParam}`);
                 const json = await res.json();
                 this.tabData = json.data || [];
-                this.tabCache[tab] = this.tabData;
+                this.tabPending = json.pending || false;
+                this.tabCache[tab] = { data: this.tabData, pending: this.tabPending };
             } catch (e) {
                 this.tabData = [];
+                this.tabPending = false;
                 console.error('Error loading tab:', e);
             } finally {
                 this.tabLoading = false;
