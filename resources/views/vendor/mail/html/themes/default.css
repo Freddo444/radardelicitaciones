@@ -1,4 +1,4 @@
-/* Radar de Licitaciones — aligned with app (indigo / zinc) */
+/* Radar de Licitaciones — same blue accent scale as the web app (Tailwind blue) */
 
 body,
 body *:not(html):not(style):not(br):not(tr):not(code) {
@@ -28,7 +28,7 @@ blockquote {
 }
 
 a {
-    color: #4f46e5;
+    color: #2563eb;
 }
 
 a img {
@@ -118,7 +118,7 @@ img {
 }
 
 .header a.header-brand:hover {
-    color: #4f46e5;
+    color: #3b82f6;
 }
 
 .body {
@@ -142,7 +142,7 @@ img {
     border-radius: 12px;
     border-style: solid;
     border-width: 1px;
-    border-top: 4px solid #4f46e5;
+    border-top: 4px solid #2563eb;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
     margin: 0 auto;
     padding: 0;
@@ -246,20 +246,20 @@ img {
 
 .button-blue,
 .button-primary {
-    background-color: #4f46e5;
-    border-bottom: 10px solid #4f46e5;
-    border-left: 22px solid #4f46e5;
-    border-right: 22px solid #4f46e5;
-    border-top: 10px solid #4f46e5;
+    background-color: #2563eb;
+    border-bottom: 10px solid #2563eb;
+    border-left: 22px solid #2563eb;
+    border-right: 22px solid #2563eb;
+    border-top: 10px solid #2563eb;
 }
 
 .button-green,
 .button-success {
-    background-color: #4f46e5;
-    border-bottom: 10px solid #4f46e5;
-    border-left: 22px solid #4f46e5;
-    border-right: 22px solid #4f46e5;
-    border-top: 10px solid #4f46e5;
+    background-color: #2563eb;
+    border-bottom: 10px solid #2563eb;
+    border-left: 22px solid #2563eb;
+    border-right: 22px solid #2563eb;
+    border-top: 10px solid #2563eb;
 }
 
 .button-red,
@@ -272,7 +272,7 @@ img {
 }
 
 .panel {
-    border-left: #4f46e5 solid 4px;
+    border-left: #2563eb solid 4px;
     margin: 22px 0;
     border-radius: 0 8px 8px 0;
 }
