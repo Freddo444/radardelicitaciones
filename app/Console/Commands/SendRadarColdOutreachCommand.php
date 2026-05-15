@@ -6,6 +6,7 @@ use App\Mail\RadarColdOutreachMail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Symfony\Component\Console\Helper\ProgressBar;
 
 class SendRadarColdOutreachCommand extends Command
 {
@@ -72,9 +73,13 @@ class SendRadarColdOutreachCommand extends Command
         $skipped = 0;
         $failed = 0;
         $sent = 0;
+        $startedAt = microtime(true);
 
         $this->info('CSV: '.$csvPath.($dryRun ? ' (dry-run)' : ''));
         $this->info("Target: {$max} successful send(s); batch {$batch} then {$batchSleep}s pause; delay {$minDelay}-{$maxDelay}s.");
+
+        $bar = $this->createOutreachProgressBar($max);
+        $bar->start();
 
         while (($row = fgetcsv($fh)) !== false) {
             if ($sent >= $max) {
@@ -91,14 +96,18 @@ class SendRadarColdOutreachCommand extends Command
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $skipped++;
                 Log::info('[RadarColdOutreach] skipped_invalid_email', ['email' => $email]);
+                $bar->clear();
                 $this->line("SKIP invalid email: {$email}");
+                $bar->display();
 
                 continue;
             }
 
             try {
                 if ($dryRun) {
+                    $bar->clear();
                     $this->line("[DRY] → {$email} ({$companyName})");
+                    $bar->display();
                 } else {
                     Mail::to($email)->send(new RadarColdOutreachMail($companyName, $trackingUrl));
                 }
@@ -108,14 +117,17 @@ class SendRadarColdOutreachCommand extends Command
                     'company' => $companyName,
                     'count' => $sent,
                 ]);
-                $this->info("[{$sent}/{$max}] Sent → {$email}");
+                $bar->setMessage($this->progressMessage($sent, $max, $startedAt, $email));
+                $bar->advance();
             } catch (\Throwable $e) {
                 $failed++;
                 Log::error('[RadarColdOutreach] failed', [
                     'email' => $email,
                     'error' => $e->getMessage(),
                 ]);
+                $bar->clear();
                 $this->warn("FAIL {$email}: {$e->getMessage()}");
+                $bar->display();
 
                 continue;
             }
@@ -129,17 +141,24 @@ class SendRadarColdOutreachCommand extends Command
             }
 
             if ($sent % $batch === 0) {
+                $bar->setMessage("pausa de lote {$batchSleep}s tras {$sent} envíos");
+                $bar->display();
+                $bar->clear();
                 $this->warn("{$sent} enviado(s): pausa de lote ({$batchSleep}s)...");
                 if ($batchSleep > 0) {
                     sleep($batchSleep);
                 }
+                $bar->setMessage($this->progressMessage($sent, $max, $startedAt, 'reanudando'));
+                $bar->display();
             } elseif ($minDelay > 0 || $maxDelay > 0) {
                 $delay = random_int($minDelay, $maxDelay);
-                $this->line("Espera {$delay}s...");
+                $bar->setMessage("espera {$delay}s — ETA ".$this->formatEta($sent, $max, $startedAt));
+                $bar->display();
                 sleep($delay);
             }
         }
 
+        $bar->finish();
         fclose($fh);
 
         if ($sent < $max) {
@@ -147,7 +166,7 @@ class SendRadarColdOutreachCommand extends Command
         }
 
         $this->newLine();
-        $this->info("Done. sent={$sent}, skipped={$skipped}, failed={$failed}");
+        $this->info("Done. sent={$sent}, skipped={$skipped}, failed={$failed}, elapsed=".$this->formatDuration(microtime(true) - $startedAt));
         Log::info('[RadarColdOutreach] run_complete', [
             'sent' => $sent,
             'skipped' => $skipped,
@@ -156,6 +175,53 @@ class SendRadarColdOutreachCommand extends Command
         ]);
 
         return self::SUCCESS;
+    }
+
+    private function createOutreachProgressBar(int $max): ProgressBar
+    {
+        $bar = $this->output->createProgressBar($max);
+        $bar->setFormat(
+            ' %current%/%max% [%bar%] %percent:3s%% — %elapsed:6s% / ~%estimated:-6s% — %message%'
+        );
+
+        return $bar;
+    }
+
+    private function progressMessage(int $sent, int $max, float $startedAt, string $detail): string
+    {
+        $eta = $this->formatEta($sent, $max, $startedAt);
+
+        return "último: {$detail}".($eta !== null ? " — restante ~{$eta}" : '');
+    }
+
+    private function formatEta(int $sent, int $max, float $startedAt): ?string
+    {
+        if ($sent <= 0 || $sent >= $max) {
+            return null;
+        }
+
+        $elapsed = microtime(true) - $startedAt;
+        $remaining = ($elapsed / $sent) * ($max - $sent);
+
+        return $this->formatDuration($remaining);
+    }
+
+    private function formatDuration(float $seconds): string
+    {
+        $seconds = max(0, (int) round($seconds));
+        $h = intdiv($seconds, 3600);
+        $m = intdiv($seconds % 3600, 60);
+        $s = $seconds % 60;
+
+        if ($h > 0) {
+            return sprintf('%dh %02dm', $h, $m);
+        }
+
+        if ($m > 0) {
+            return sprintf('%dm %02ds', $m, $s);
+        }
+
+        return "{$s}s";
     }
 
     private function resolvePath(string $path): string
