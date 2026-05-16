@@ -63,3 +63,7 @@ Schedule::exec("{$php} secp:import-catalog")
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-import-catalog.log'));
+
+Schedule::exec("{$php} billing:reconcile-azul-orphans")
+    ->daily()
+    ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));

@@ -39,3 +39,5 @@ Route::post('/suscripciones/create-trial', [AdminSubscriptionController::class, 
 // Payments
 Route::get('/pagos', [AdminPaymentController::class, 'index'])->name('payments.index');
 Route::patch('/pagos/{payment}/confirm', [AdminPaymentController::class, 'confirm'])->name('payments.confirm');
+Route::get('/pagos/huerfanos', [AdminPaymentController::class, 'orphans'])->name('payments.orphans');
+Route::patch('/pagos/huerfanos/{pendingRegistration}/refunded', [AdminPaymentController::class, 'markRefunded'])->name('payments.orphans.refunded');

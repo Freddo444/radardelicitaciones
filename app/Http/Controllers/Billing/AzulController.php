@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\PendingRegistration;
 use App\Models\Subscription;
 use App\Services\Billing\AzulPaymentPageService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Sentry\Severity;
 
 class AzulController extends Controller
 {
@@ -111,6 +113,16 @@ class AzulController extends Controller
         if (strtoupper($isoCode) !== '00') {
             session()->forget(['azul_checkout', 'azul_intent']);
 
+            \Sentry\captureMessage('Azul payment declined', Severity::warning(), [
+                'extra' => [
+                    'intent' => $intent,
+                    'order_number' => $orderNumber,
+                    'iso_code' => $isoCode,
+                    'response_message' => $responseMessage,
+                    'error_description' => $errorDescription,
+                ],
+            ]);
+
             return $this->redirectCallbackDeclined($intent, 'El pago fue declinado o no aprobado. Intenta con otra tarjeta o metodo de pago.', true);
         }
 
@@ -125,7 +137,59 @@ class AzulController extends Controller
 
     public function handleWebhook(Request $request)
     {
-        Log::info('[Azul] Webhook', ['payload' => $request->all()]);
+        $payload = $request->all();
+        Log::info('[Azul] Webhook', ['payload' => $payload]);
+
+        $orderNumber = (string) ($payload['OrderNumber'] ?? '');
+        $isoCode = strtoupper((string) ($payload['IsoCode'] ?? $payload['ISOCode'] ?? ''));
+
+        if ($orderNumber === '' || $isoCode !== '00') {
+            return response('OK', 200);
+        }
+
+        $authKey = (string) config('services.azul.auth_key');
+        if (! empty($payload['AuthHash']) && $authKey) {
+            $valid = $this->paymentPage->verifyResponseAuthHash(
+                $orderNumber,
+                (string) ($payload['Amount'] ?? ''),
+                (string) ($payload['AuthorizationCode'] ?? ''),
+                (string) ($payload['DateTime'] ?? ''),
+                (string) ($payload['ResponseCode'] ?? ''),
+                $isoCode,
+                (string) ($payload['ResponseMessage'] ?? ''),
+                (string) ($payload['ErrorDescription'] ?? ''),
+                (string) ($payload['RRN'] ?? ''),
+                $authKey,
+                (string) $payload['AuthHash'],
+            );
+
+            if (! $valid) {
+                Log::warning('[Azul] Webhook AuthHash invalid', ['order' => $orderNumber]);
+
+                return response('OK', 200);
+            }
+        }
+
+        if (PendingRegistration::where('order_number', $orderNumber)->exists()) {
+            return response('OK', 200);
+        }
+
+        // Browser died before the callback redirect completed — record the orphan
+        PendingRegistration::create([
+            'order_number' => $orderNumber,
+            'rrn' => ($payload['RRN'] ?? '') ?: null,
+            'auth_code' => ($payload['AuthorizationCode'] ?? '') ?: null,
+            'iso_code' => $isoCode,
+            'card_last_four' => self::cardLastFourFromAzulMask((string) ($payload['CardNumber'] ?? '')),
+            'plan' => [],
+            'expires_at' => now()->addHours(48),
+        ]);
+
+        \Sentry\captureMessage('[Azul] Orphan payment recorded via webhook — admin reconciliation needed', Severity::warning(), [
+            'extra' => ['order_number' => $orderNumber],
+        ]);
+
+        Log::warning('[Azul] Webhook: orphan payment recorded', ['order' => $orderNumber]);
 
         return response('OK', 200);
     }
@@ -293,7 +357,20 @@ class AzulController extends Controller
             return redirect()->route('register.show')->with('error', 'Sesion expirada. Intenta de nuevo.');
         }
 
+        $pending = PendingRegistration::firstOrCreate(
+            ['order_number' => $orderNumber],
+            [
+                'rrn' => $rrn ?: null,
+                'auth_code' => $authorizationCode ?: null,
+                'iso_code' => $isoCode,
+                'card_last_four' => $cardLastFour,
+                'plan' => $plan,
+                'expires_at' => now()->addHours(48),
+            ]
+        );
+
         session([
+            'register_pending_id' => $pending->id,
             'register_azul_order_number' => $orderNumber,
             'register_azul_iso' => $isoCode,
             'register_azul_auth' => $authorizationCode,

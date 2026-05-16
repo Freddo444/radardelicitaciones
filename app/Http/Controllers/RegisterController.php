@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
+use App\Models\PendingRegistration;
 use App\Models\Subscription;
 use App\Models\User;
 use App\Services\Billing\AzulCheckoutBuilder;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Sentry\Severity;
 
 class RegisterController extends Controller
 {
@@ -67,6 +69,8 @@ class RegisterController extends Controller
                 'email' => $request->email,
                 'error' => $e->getMessage(),
             ]);
+
+            \Sentry\captureException($e, ['extra' => ['email' => $request->email, 'flow' => 'trial_register']]);
 
             return back()->withInput($request->except('password', 'password_confirmation'))
                 ->with('error', 'No se pudo crear tu cuenta en este momento. Intenta de nuevo.');
@@ -284,14 +288,35 @@ class RegisterController extends Controller
         $plan = session('register_plan');
         $paypalSubId = session('register_paypal_subscription_id');
         $azulOrder = session('register_azul_order_number');
-        $azulIso = (string) session('register_azul_iso', '');
-        $azulAuth = (string) session('register_azul_auth', '');
-        $azulRrn = (string) session('register_azul_rrn', '');
-        $azulCardLastFour = session('register_azul_card_last_four');
 
         if (! $plan || (! $paypalSubId && ! $azulOrder)) {
             return redirect()->route('register.show')
                 ->with('error', 'Sesión expirada. Intenta de nuevo.');
+        }
+
+        $paymentGateway = $paypalSubId ? 'paypal' : 'azul';
+
+        // For Azul, resolve payment details from the pending_registrations row —
+        // never rely solely on session values that disappear if the browser closes.
+        $pending = null;
+        if ($paymentGateway === 'azul') {
+            $pendingId = session('register_pending_id');
+            $pending = $pendingId
+                ? PendingRegistration::find($pendingId)
+                : PendingRegistration::where('order_number', $azulOrder)->first();
+
+            if (! $pending) {
+                \Sentry\captureMessage('Azul registration reached store() with no pending_registrations row', Severity::error(), [
+                    'extra' => ['azul_order' => $azulOrder, 'email' => $request->input('email')],
+                ]);
+                Log::error('[Register] Azul payment with no pending_registration row', ['order' => $azulOrder]);
+
+                return back()->withInput($request->except('password', 'password_confirmation'))
+                    ->with('error', 'No se encontró el registro de pago. Contacta soporte con tu orden: '.$azulOrder);
+            }
+
+            // Use plan from the pending row (authoritative) if session plan is gone
+            $plan = $pending->plan ?: $plan;
         }
 
         $request->validate([
@@ -301,7 +326,6 @@ class RegisterController extends Controller
         ]);
 
         $billingCycle = $plan['billing_cycle'] ?? 'monthly';
-        $paymentGateway = $paypalSubId ? 'paypal' : 'azul';
         $gatewaySubscriptionId = $paypalSubId ?? $azulOrder;
         $chargedUsd = (float) ($plan['charged_usd'] ?? SubscriptionService::calculatePrice(
             (int) $plan['max_companies'],
@@ -310,7 +334,7 @@ class RegisterController extends Controller
         ));
 
         try {
-            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $azulIso, $azulAuth, $azulRrn, $azulCardLastFour) {
+            $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $pending) {
                 $wantsNewsletter = $request->boolean('newsletter');
 
                 $user = User::create([
@@ -335,17 +359,26 @@ class RegisterController extends Controller
                     'current_period_end' => $billingCycle === 'annual' ? now()->addYear() : now()->addMonth(),
                 ]);
 
-                if ($paymentGateway === 'azul') {
+                if ($paymentGateway === 'azul' && $pending) {
+                    $azulRrn = (string) ($pending->rrn ?? '');
+                    $azulAuth = (string) ($pending->auth_code ?? '');
+                    $azulIso = (string) ($pending->iso_code ?? '');
+
                     Payment::create([
                         'subscription_id' => $subscription->id,
                         'amount' => $chargedUsd,
                         'currency' => 'USD',
                         'gateway' => 'azul',
                         'gateway_payment_id' => $azulRrn !== '' ? $azulRrn : $azulAuth,
-                        'card_last_four' => is_string($azulCardLastFour) && preg_match('/^\d{4}$/', $azulCardLastFour) ? $azulCardLastFour : null,
+                        'card_last_four' => $pending->card_last_four,
                         'status' => 'completed',
                         'paid_at' => now(),
                         'notes' => 'Azul registro — IsoCode '.$azulIso.($azulAuth !== '' ? ' — Auth '.$azulAuth : ''),
+                    ]);
+
+                    $pending->update([
+                        'claimed_at' => now(),
+                        'claimed_by_user_id' => $user->id,
                     ]);
                 }
 
@@ -359,12 +392,22 @@ class RegisterController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
+            \Sentry\captureException($e, [
+                'extra' => [
+                    'email' => $request->input('email'),
+                    'gateway' => $paymentGateway,
+                    'azul_order' => $azulOrder,
+                    'flow' => 'paid_register',
+                ],
+            ]);
+
             return back()->withInput($request->except('password', 'password_confirmation'))
                 ->with('error', 'No se pudo crear tu cuenta en este momento. Intenta de nuevo.');
         }
 
         session()->forget([
             'register_plan',
+            'register_pending_id',
             'register_paypal_subscription_id',
             'register_azul_order_number',
             'register_azul_iso',

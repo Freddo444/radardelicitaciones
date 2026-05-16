@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Models\PendingRegistration;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 
@@ -24,6 +25,23 @@ class AdminPaymentController extends Controller
         $payments = $query->latest('created_at')->paginate(25)->withQueryString();
 
         return view('admin.payments.index', compact('payments'));
+    }
+
+    public function orphans()
+    {
+        $orphans = PendingRegistration::whereNull('claimed_at')
+            ->whereNull('refunded_at')
+            ->latest()
+            ->get();
+
+        return view('admin.payments.orphans', compact('orphans'));
+    }
+
+    public function markRefunded(PendingRegistration $pendingRegistration)
+    {
+        $pendingRegistration->update(['refunded_at' => now()]);
+
+        return back()->with('success', "Orden {$pendingRegistration->order_number} marcada como reembolsada.");
     }
 
     public function confirm(Payment $payment)
