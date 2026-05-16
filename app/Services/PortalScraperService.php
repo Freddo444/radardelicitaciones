@@ -151,7 +151,7 @@ class PortalScraperService
      */
     public function fetchDetail(string $noticeUid): array
     {
-        $empty = ['unspsc' => [], 'documents' => []];
+        $empty = ['unspsc' => [], 'documents' => [], 'articles' => []];
 
         try {
             $response = Http::timeout(30)
@@ -169,6 +169,7 @@ class PortalScraperService
             return [
                 'unspsc' => $this->parseUnspsc($html),
                 'documents' => $this->parseDocuments($html),
+                'articles' => $this->parseArticles($html),
             ];
         } catch (\Throwable $e) {
             Log::warning("[PortalScraper] Detail fetch failed for {$noticeUid}: {$e->getMessage()}");
@@ -291,6 +292,63 @@ class PortalScraperService
         }
 
         return $documents;
+    }
+
+    private function parseArticles(string $html): array
+    {
+        preg_match_all(
+            '/<tr[^>]+id="(incQuestionnaire[^"]+_BILN_\d+)"[^>]+class="[^"]*PriceListLine Item/',
+            $html,
+            $idMatches
+        );
+
+        if (empty($idMatches[1])) {
+            return [];
+        }
+
+        $articles = [];
+        foreach ($idMatches[1] as $rowId) {
+            $p = preg_quote($rowId, '/');
+
+            $unspsc = '';
+            if (preg_match('/'.$p.'_CategoryCode_LookupHiddenText"[^>]+value="(\d+)"/', $html, $m)) {
+                $unspsc = $m[1];
+            }
+
+            $desc = '';
+            if (preg_match('/'.$p.'_Description"[^>]*data-prop="Desc"[^>]*>([^<]+)<\/span>/', $html, $m)) {
+                $desc = html_entity_decode(trim($m[1]), ENT_QUOTES, 'UTF-8');
+            }
+
+            $qty = null;
+            if (preg_match('/'.$p.'_Quantity"[^>]*data-prop="Qtd"[^>]*>([^<]+)<\/span>/', $html, $m)) {
+                $qty = (float) str_replace(',', '', trim($m[1]));
+            }
+
+            $unitPrice = null;
+            if (preg_match('/'.$p.'_CeilingPrice"[^>]*data-prop="ClnP"[^>]*>([^<]+)<\/span>/', $html, $m)) {
+                $unitPrice = (float) str_replace(',', '', trim($m[1]));
+            }
+
+            $totalPrice = null;
+            if (preg_match('/'.$p.'_CeilingPriceTotal"[^>]*data-prop="ClnPT"[^>]*>([^<]+)<\/span>/', $html, $m)) {
+                $totalPrice = (float) str_replace(',', '', trim($m[1]));
+            }
+
+            if ($desc === '' && $unspsc === '') {
+                continue;
+            }
+
+            $articles[] = [
+                'subclase' => $unspsc,
+                'descripcion_articulo' => $desc,
+                'cantidad' => $qty,
+                'precio_unitario_estimado' => $unitPrice,
+                'precio_total_estimado' => $totalPrice,
+            ];
+        }
+
+        return $articles;
     }
 
     /**

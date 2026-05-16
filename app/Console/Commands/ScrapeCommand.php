@@ -152,7 +152,8 @@ class ScrapeCommand extends Command
                     'secp_url' => $notice['portal_url'],
                     'raw_data' => ['source' => 'portal_scrape', 'notice_uid' => $notice['notice_uid'], 'unspsc' => $unspscCodes],
                     'cached_documents' => $detail['documents'] ?: null,
-                    'cache_refreshed_at' => $detail['documents'] ? now() : null,
+                    'cached_articles' => $detail['articles'] ?: null,
+                    'cache_refreshed_at' => ($detail['documents'] || $detail['articles']) ? now() : null,
                 ]);
 
                 $saved++;
