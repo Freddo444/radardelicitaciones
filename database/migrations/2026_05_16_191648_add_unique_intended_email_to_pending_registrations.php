@@ -15,13 +15,13 @@ return new class extends Migration
             return;
         }
 
-        DB::statement("
+        DB::statement('
             ALTER TABLE pending_registrations
             ADD COLUMN active_email VARCHAR(255)
                 AS (IF(claimed_at IS NULL AND refunded_at IS NULL, intended_email, NULL))
                 STORED,
             ADD UNIQUE INDEX unique_active_pending_email (active_email)
-        ");
+        ');
     }
 
     public function down(): void
