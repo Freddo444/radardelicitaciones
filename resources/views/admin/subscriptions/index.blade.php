@@ -68,7 +68,7 @@
 <form method="GET" class="mb-10 flex flex-wrap items-end gap-4 rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-900/5">
     <div>
         <label for="status" class="block text-xs font-semibold tracking-wide text-zinc-600 uppercase">Estado</label>
-        <select name="status" id="status" class="mt-2 min-w-[11rem] rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
+        <select name="status" id="status" class="mt-2 min-w-44 rounded-lg border-0 py-2.5 pl-3 pr-8 text-sm text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
             <option value="">Todos</option>
             @foreach(['pending', 'active', 'trialing', 'past_due', 'cancelled', 'suspended'] as $s)
                 <option value="{{ $s }}" {{ request('status') === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
@@ -93,7 +93,7 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Monto</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Estado</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Vence</th>
-                        <th class="min-w-[14rem] py-4 pr-5 pl-3 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Acciones</th>
+                        <th class="min-w-56 py-4 pr-5 pl-3 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-zinc-100 bg-white">
@@ -106,7 +106,11 @@
                         <td class="px-4 py-5 align-top text-sm whitespace-nowrap text-zinc-600">{{ ucfirst($sub->plan) }}</td>
                         <td class="px-4 py-5 align-top text-sm font-semibold whitespace-nowrap text-zinc-900">${{ number_format($sub->monthly_amount, 2) }}</td>
                         <td class="px-4 py-5 align-top text-sm whitespace-nowrap">
-                            @if($sub->status === 'active')
+                            @if($sub->trialExpired())
+                            <span class="inline-flex items-center gap-x-1.5 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800 ring-1 ring-inset ring-red-200/80">
+                                <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-red-600"><circle r="3" cx="3" cy="3" /></svg>Expirada
+                            </span>
+                            @elseif($sub->status === 'active')
                             <span class="inline-flex items-center gap-x-1.5 rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
                                 <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-green-500"><circle r="3" cx="3" cy="3" /></svg>Activa
                             </span>
@@ -122,8 +126,8 @@
                                 <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-yellow-500"><circle r="3" cx="3" cy="3" /></svg>Pendiente
                             </span>
                             @elseif($sub->status === 'cancelled')
-                            <span class="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                                <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-gray-400"><circle r="3" cx="3" cy="3" /></svg>Cancelada
+                            <span class="inline-flex items-center gap-x-1.5 rounded-md bg-orange-50 px-2 py-1 text-xs font-medium text-orange-900 ring-1 ring-inset ring-orange-200/90">
+                                <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-orange-500"><circle r="3" cx="3" cy="3" /></svg>Cancelada
                             </span>
                             @else
                             <span class="inline-flex items-center gap-x-1.5 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
@@ -143,7 +147,7 @@
                                 {{-- Status change --}}
                                 <form method="POST" action="{{ route('admin.subscriptions.update-status', $sub) }}" class="flex flex-col gap-2 sm:flex-row sm:items-center">
                                     @csrf @method('PATCH')
-                                    <select name="status" class="min-w-[8.5rem] rounded-lg border-0 py-2 pl-2.5 pr-8 text-xs font-medium text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
+                                    <select name="status" class="min-w-34 rounded-lg border-0 py-2 pl-2.5 pr-8 text-xs font-medium text-zinc-900 shadow-sm ring-1 ring-inset ring-zinc-300 focus:ring-2 focus:ring-indigo-600">
                                         @foreach(['pending', 'active', 'trialing', 'past_due', 'cancelled', 'suspended'] as $s)
                                             <option value="{{ $s }}" {{ $sub->status === $s ? 'selected' : '' }}>{{ ucfirst($s) }}</option>
                                         @endforeach
