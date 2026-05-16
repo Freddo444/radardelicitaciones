@@ -155,10 +155,9 @@ class ConvocatoriasController extends Controller
                 'adjudicacion' => $this->fetchAdjudicacionData($api, $bid->process_code),
             };
 
-            $isPortalScrape = ($bid->raw_data['source'] ?? null) === 'portal_scrape';
-            $isPending = $isPortalScrape
-                && in_array($tab, ['documentos', 'articulos'], true)
-                && empty($data);
+            $isPending = in_array($tab, ['documentos', 'articulos'], true)
+                && empty($data)
+                && $bid->resolveNoticeUid() !== null;
 
             if (! $isPending) {
                 $bid->update([
@@ -276,7 +275,7 @@ class ConvocatoriasController extends Controller
             abort(400, 'ID de documento inválido');
         }
 
-        $noticeUid = $bid->raw_data['notice_uid'] ?? null;
+        $noticeUid = $bid->resolveNoticeUid();
         if (! $noticeUid) {
             abort(404, 'Documento no disponible');
         }

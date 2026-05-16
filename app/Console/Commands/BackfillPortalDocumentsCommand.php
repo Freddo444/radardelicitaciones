@@ -12,19 +12,28 @@ class BackfillPortalDocumentsCommand extends Command
                             {--limit=50 : Max bids to process per run}
                             {--dry-run : Show what would be fetched without saving}';
 
-    protected $description = 'Backfill cached_documents for portal_scrape bids that have no documents yet';
+    protected $description = 'Backfill cached_documents for bids with a resolvable notice_uid but no documents yet';
 
     public function handle(PortalScraperService $scraper): int
     {
-        $bids = Bid::whereRaw("JSON_EXTRACT(raw_data, '$.source') = 'portal_scrape'")
-            ->whereRaw("JSON_EXTRACT(raw_data, '$.notice_uid') IS NOT NULL")
-            ->whereNull('cached_documents')
+        $bids = Bid::where(function ($q) {
+            $q->whereRaw("JSON_EXTRACT(raw_data, '$.notice_uid') IS NOT NULL")
+                ->orWhereRaw("JSON_EXTRACT(raw_data, '$.url') LIKE '%noticeUID=%'");
+        })
+            ->where(function ($q) {
+                $q->whereNull('cached_documents')
+                    ->orWhereRaw('JSON_LENGTH(cached_documents) = 0');
+            })
+            ->where(function ($q) {
+                $q->whereNull('tender_deadline')
+                    ->orWhere('tender_deadline', '>=', now());
+            })
             ->orderByDesc('published_at')
             ->limit((int) $this->option('limit'))
-            ->get(['id', 'process_code', 'raw_data']);
+            ->get(['id', 'process_code', 'raw_data', 'secp_url', 'tender_deadline']);
 
         if ($bids->isEmpty()) {
-            $this->info('No portal_scrape bids with missing documents.');
+            $this->info('No bids with missing documents found.');
 
             return self::SUCCESS;
         }
@@ -35,7 +44,11 @@ class BackfillPortalDocumentsCommand extends Command
         $empty = 0;
 
         foreach ($bids as $bid) {
-            $noticeUid = $bid->raw_data['notice_uid'];
+            $noticeUid = $bid->resolveNoticeUid();
+
+            if (! $noticeUid) {
+                continue;
+            }
             $detail = $scraper->fetchDetail($noticeUid);
 
             if ($this->option('dry-run')) {

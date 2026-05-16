@@ -31,6 +31,22 @@ class Bid extends Model
         'last_known_doc_count' => 'integer',
     ];
 
+    public function resolveNoticeUid(): ?string
+    {
+        $raw = $this->raw_data ?? [];
+
+        if (! empty($raw['notice_uid'])) {
+            return $raw['notice_uid'];
+        }
+
+        $url = $raw['url'] ?? $this->secp_url ?? '';
+        if ($url && preg_match('/noticeUID=([A-Z0-9.]+)/i', $url, $m)) {
+            return $m[1];
+        }
+
+        return null;
+    }
+
     public function notificationLogs()
     {
         return $this->hasMany(NotificationLog::class);
