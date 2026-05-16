@@ -56,6 +56,16 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ route('admin.newsletter.index') }}"
+                               class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.newsletter.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                                     class="size-5 shrink-0 opacity-80">
+                                    <path d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Lista de novedades
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ route('admin.subscriptions.index') }}"
                                class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
@@ -102,7 +112,7 @@
 
 <div class="lg:pl-80">
     {{-- Top bar --}}
-    <div class="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-200/80 bg-white/90 px-4 shadow-sm backdrop-blur-md sm:gap-x-6 sm:px-6 lg:px-10">
+    <div class="flex h-16 shrink-0 items-center gap-x-4 border-b border-zinc-200/80 bg-white/90 px-4 shadow-sm backdrop-blur-md sm:gap-x-6 sm:px-6 lg:px-10">
         <button type="button" onclick="document.getElementById('mobile-sidebar').classList.toggle('hidden')" class="-m-2.5 rounded-lg p-2.5 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 lg:hidden">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6">
                 <path d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -150,6 +160,7 @@
                 <a href="{{ route('admin.dashboard') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.dashboard') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Dashboard</a>
                 <a href="{{ route('admin.companies.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.companies.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Empresas</a>
                 <a href="{{ route('admin.users.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.users.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Usuarios</a>
+                <a href="{{ route('admin.newsletter.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.newsletter.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Lista de novedades</a>
                 <a href="{{ route('admin.subscriptions.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Suscripciones</a>
                 <a href="{{ route('admin.payments.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Pagos</a>
                 <a href="{{ route('admin.billing-settings.edit') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.billing-settings.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Tipo de cambio USD/DOP</a>

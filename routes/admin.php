@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminBillingSettingsController;
 use App\Http\Controllers\Admin\AdminCompanyController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminNewsletterController;
 use App\Http\Controllers\Admin\AdminPaymentController;
 use App\Http\Controllers\Admin\AdminSubscriptionController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -23,6 +24,11 @@ Route::post('/impersonate/stop', [AdminCompanyController::class, 'stopImpersonat
 Route::get('/usuarios', [AdminUserController::class, 'index'])->name('users.index');
 Route::get('/usuarios/{user}', [AdminUserController::class, 'show'])->name('users.show');
 Route::post('/usuarios/{user}/impersonate', [AdminUserController::class, 'impersonate'])->name('users.impersonate');
+
+// Newsletter (product updates / marketing list)
+Route::get('/newsletter', [AdminNewsletterController::class, 'index'])->name('newsletter.index');
+Route::get('/newsletter/export', [AdminNewsletterController::class, 'export'])->name('newsletter.export');
+Route::patch('/newsletter/{user}', [AdminNewsletterController::class, 'update'])->name('newsletter.update');
 
 // Subscriptions
 Route::get('/suscripciones', [AdminSubscriptionController::class, 'index'])->name('subscriptions.index');

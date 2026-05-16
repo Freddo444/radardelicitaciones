@@ -37,11 +37,15 @@ class RegisterController extends Controller
 
         try {
             $user = DB::transaction(function () use ($request) {
+                $wantsNewsletter = $request->boolean('newsletter');
+
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
                     'email_verified_at' => now(),
+                    'newsletter_subscribed' => $wantsNewsletter,
+                    'newsletter_consented_at' => $wantsNewsletter ? now() : null,
                 ]);
 
                 Subscription::create([
@@ -307,10 +311,14 @@ class RegisterController extends Controller
 
         try {
             $user = DB::transaction(function () use ($request, $plan, $billingCycle, $paymentGateway, $gatewaySubscriptionId, $chargedUsd, $azulIso, $azulAuth, $azulRrn, $azulCardLastFour) {
+                $wantsNewsletter = $request->boolean('newsletter');
+
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'password' => Hash::make($request->password),
+                    'newsletter_subscribed' => $wantsNewsletter,
+                    'newsletter_consented_at' => $wantsNewsletter ? now() : null,
                 ]);
 
                 $subscription = Subscription::create([

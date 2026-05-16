@@ -25,6 +25,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_super_admin',
         'current_company_id',
         'last_sign_in_at',
+        'newsletter_subscribed',
+        'newsletter_consented_at',
     ];
 
     protected $hidden = [
@@ -39,6 +41,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'last_sign_in_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
+            'newsletter_subscribed' => 'boolean',
+            'newsletter_consented_at' => 'datetime',
         ];
     }
 
