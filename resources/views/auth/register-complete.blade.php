@@ -45,6 +45,8 @@
         </div>
         @endif
 
+        @php $sessionEmail = session('register_intended_email', ''); @endphp
+
         <form method="POST" action="{{ route('register.store') }}" class="space-y-5">
             @csrf
 
@@ -56,8 +58,14 @@
 
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700">Correo electrónico</label>
+                @if($sessionEmail)
+                <input id="email" type="email" name="email" required value="{{ old('email', $sessionEmail) }}" autocomplete="email" readonly
+                       class="mt-1 block w-full rounded-md bg-gray-50 px-3 py-1.5 text-base text-gray-700 outline-1 -outline-offset-1 outline-gray-300 sm:text-sm/6 cursor-not-allowed"/>
+                <p class="mt-1 text-xs text-gray-500">Ingresado en el paso anterior.</p>
+                @else
                 <input id="email" type="email" name="email" required value="{{ old('email') }}" autocomplete="email"
                        class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
+                @endif
             </div>
 
             <div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Billing;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AzulRegistrationRecovery;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
 use App\Models\Subscription;
@@ -11,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Sentry\Severity;
 
 class AzulController extends Controller
@@ -365,9 +367,21 @@ class AzulController extends Controller
                 'iso_code' => $isoCode,
                 'card_last_four' => $cardLastFour,
                 'plan' => $plan,
+                'intended_email' => session('register_intended_email'),
                 'expires_at' => now()->addHours(48),
             ]
         );
+
+        if ($pending->wasRecentlyCreated && $pending->intended_email) {
+            try {
+                Mail::queue(new AzulRegistrationRecovery($pending));
+            } catch (\Throwable $e) {
+                Log::warning('[Azul] Failed to queue registration recovery email', [
+                    'order' => $orderNumber,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         session([
             'register_pending_id' => $pending->id,

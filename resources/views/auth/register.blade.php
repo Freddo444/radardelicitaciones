@@ -21,6 +21,7 @@
         annual: false,
         loading: false,
         error: null,
+        email: '',
         get monthlyPrice() {
             return 45 + Math.max(0, this.companies - 1) * 20 + Math.max(0, this.users - 2) * 10;
         },
@@ -33,7 +34,23 @@
         get displayPrice() {
             return this.annual ? this.annualPrice : this.monthlyPrice;
         },
+        validateEmail() {
+            if (!this.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email)) {
+                this.error = 'Ingresa un correo electrónico válido.';
+                return false;
+            }
+            return true;
+        },
+        extractError(data, fallback) {
+            if (data.error) return data.error;
+            if (data.errors) {
+                const first = Object.values(data.errors)[0];
+                return Array.isArray(first) ? first[0] : first;
+            }
+            return fallback;
+        },
         async payAzul() {
+            if (!this.validateEmail()) return;
             this.loading = true;
             this.error = null;
             try {
@@ -44,6 +61,7 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                     },
                     body: JSON.stringify({
+                        email: this.email,
                         max_companies: this.companies,
                         max_users: this.users,
                         billing_cycle: this.annual ? 'annual' : 'monthly',
@@ -53,7 +71,7 @@
                 if (data.checkout_url) {
                     window.location.href = data.checkout_url;
                 } else {
-                    this.error = data.error || 'Error al iniciar el pago con Azul.';
+                    this.error = this.extractError(data, 'Error al iniciar el pago con Azul.');
                 }
             } catch (e) {
                 this.error = 'Error de conexión.';
@@ -62,6 +80,7 @@
             }
         },
         async pay() {
+            if (!this.validateEmail()) return;
             this.loading = true;
             this.error = null;
             try {
@@ -72,6 +91,7 @@
                         'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
                     },
                     body: JSON.stringify({
+                        email: this.email,
                         max_companies: this.companies,
                         max_users: this.users,
                         billing_cycle: this.annual ? 'annual' : 'monthly',
@@ -81,7 +101,7 @@
                 if (data.approve_url) {
                     window.location.href = data.approve_url;
                 } else {
-                    this.error = data.error || 'Error al crear la orden.';
+                    this.error = this.extractError(data, 'Error al crear la orden.');
                 }
             } catch (e) {
                 this.error = 'Error de conexión.';
@@ -155,6 +175,14 @@
                 <li x-show="companies > 1">• +US$<span x-text="(companies - 1) * 20"></span>/mes por <span x-text="companies - 1"></span> empresa(s) adicional(es)</li>
                 <li x-show="users > 2">• +US$<span x-text="(users - 2) * 10"></span>/mes por <span x-text="users - 2"></span> usuario(s) adicional(es)</li>
             </ul>
+        </div>
+
+        <div>
+            <label for="email" class="block text-sm font-medium text-gray-700">Correo electrónico</label>
+            <input id="email" type="email" x-model="email" required autocomplete="email"
+                   placeholder="tu@empresa.com"
+                   class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600 sm:text-sm/6"/>
+            <p class="mt-1 text-xs text-gray-500">Lo usarás para iniciar sesión. Se pre-llenará en el siguiente paso.</p>
         </div>
 
         <button @click="pay()" :disabled="loading"

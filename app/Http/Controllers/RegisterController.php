@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\AzulRegistrationRecovery;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
 use App\Models\Subscription;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Sentry\Severity;
 
 class RegisterController extends Controller
@@ -91,16 +93,21 @@ class RegisterController extends Controller
     public function createOrder(Request $request)
     {
         $request->validate([
+            'email' => 'required|email|max:255|unique:users,email',
             'max_companies' => 'required|integer|min:1|max:10',
             'max_users' => 'required|integer|min:2|max:20',
             'billing_cycle' => 'sometimes|in:monthly,annual',
         ]);
+
+        $this->refuseIfPendingPaymentExists($request->input('email'));
 
         $maxCompanies = (int) $request->max_companies;
         $maxUsers = (int) $request->max_users;
         $billingCycle = $request->input('billing_cycle', 'monthly');
         $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
         $amount = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+
+        session(['register_intended_email' => $request->input('email')]);
 
         session([
             'register_plan' => [
@@ -187,6 +194,7 @@ class RegisterController extends Controller
     public function createAzulOrder(Request $request, AzulCheckoutBuilder $builder)
     {
         $request->validate([
+            'email' => 'required|email|max:255|unique:users,email',
             'max_companies' => 'required|integer|min:1|max:10',
             'max_users' => 'required|integer|min:2|max:20',
             'billing_cycle' => 'sometimes|in:monthly,annual',
@@ -196,11 +204,15 @@ class RegisterController extends Controller
             return response()->json(['error' => 'Pago con Azul no esta configurado.'], 503);
         }
 
+        $this->refuseIfPendingPaymentExists($request->input('email'));
+
         $maxCompanies = (int) $request->max_companies;
         $maxUsers = (int) $request->max_users;
         $billingCycle = $request->input('billing_cycle', 'monthly');
         $monthlyAmount = SubscriptionService::calculateMonthly($maxCompanies, $maxUsers);
         $chargedUsd = SubscriptionService::calculatePrice($maxCompanies, $maxUsers, $billingCycle);
+
+        session(['register_intended_email' => $request->input('email')]);
 
         session([
             'azul_intent' => 'register',
@@ -407,6 +419,7 @@ class RegisterController extends Controller
 
         session()->forget([
             'register_plan',
+            'register_intended_email',
             'register_pending_id',
             'register_paypal_subscription_id',
             'register_azul_order_number',
@@ -428,6 +441,51 @@ class RegisterController extends Controller
                     'gateway' => $paymentGateway,
                 ]),
             ], fn ($v) => $v !== null));
+    }
+
+    public function showRecovery(Request $request, PendingRegistration $pending)
+    {
+        if (! $request->hasValidSignature()) {
+            return redirect()->route('register.show')
+                ->with('error', 'El enlace expiró o no es válido. Contacta soporte si necesitas ayuda.');
+        }
+
+        if ($pending->claimed_at) {
+            return redirect()->route('login')
+                ->with('success', 'Tu cuenta ya fue creada. Inicia sesión para continuar.');
+        }
+
+        if ($pending->refunded_at) {
+            return redirect()->route('register.show')
+                ->with('error', 'Este pago fue reembolsado. Si crees que es un error, contacta soporte.');
+        }
+
+        $plan = $pending->plan ?: [];
+
+        session([
+            'register_plan' => $plan,
+            'register_pending_id' => $pending->id,
+            'register_azul_order_number' => $pending->order_number,
+            'register_intended_email' => $pending->intended_email,
+        ]);
+
+        return redirect()->route('register.complete')
+            ->with('success', 'Pago verificado. Completa tu cuenta.');
+    }
+
+    private function refuseIfPendingPaymentExists(string $email): void
+    {
+        $existing = PendingRegistration::where('intended_email', $email)
+            ->whereNull('claimed_at')
+            ->whereNull('refunded_at')
+            ->where('created_at', '>', now()->subDays(2))
+            ->first();
+
+        if ($existing) {
+            abort(response()->json([
+                'error' => 'Ya tienes un pago pendiente con este correo. Revisa tu bandeja de entrada para el enlace de recuperación de registro.',
+            ], 422));
+        }
     }
 
     private function getAccessToken(): ?string

@@ -66,6 +66,7 @@ Route::middleware('guest')->group(function () {
     Route::get('/registro/paypal-return', [RegisterController::class, 'paypalReturn'])->name('register.paypal-return');
     Route::get('/registro/completar', [RegisterController::class, 'showComplete'])->name('register.complete');
     Route::post('/registro/completar', [RegisterController::class, 'store'])->name('register.store')->middleware('throttle:5,1');
+    Route::get('/registro/recuperar/{pending}', [RegisterController::class, 'showRecovery'])->name('register.recover')->middleware('signed');
 
     Route::get('/forgot-password', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email')->middleware('throttle:3,1');
