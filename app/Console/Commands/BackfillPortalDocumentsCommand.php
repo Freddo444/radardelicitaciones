@@ -10,24 +10,28 @@ class BackfillPortalDocumentsCommand extends Command
 {
     protected $signature = 'secp:backfill-portal-docs
                             {--limit=50 : Max bids to process per run}
+                            {--stale-hours=6 : Re-scrape bids not refreshed within this many hours}
                             {--dry-run : Show what would be fetched without saving}';
 
-    protected $description = 'Backfill cached_documents and cached_articles for bids with a resolvable notice_uid';
+    protected $description = 'Backfill and periodically refresh cached_documents and cached_articles from the portal';
 
     public function handle(PortalScraperService $scraper): int
     {
+        $staleHours = (int) $this->option('stale-hours');
+        $staleCutoff = now()->subHours($staleHours);
+
         $bids = Bid::where(function ($q) {
             $q->whereRaw("JSON_EXTRACT(raw_data, '$.notice_uid') IS NOT NULL")
                 ->orWhereRaw("JSON_EXTRACT(raw_data, '$.url') LIKE '%noticeUID=%'");
         })
-            ->where(function ($q) {
+            ->where(function ($q) use ($staleCutoff) {
                 $q->where(function ($inner) {
                     $inner->whereNull('cached_documents')
                         ->orWhereRaw('JSON_LENGTH(cached_documents) = 0');
                 })->orWhere(function ($inner) {
                     $inner->whereNull('cached_articles')
                         ->orWhereRaw('JSON_LENGTH(cached_articles) = 0');
-                });
+                })->orWhere('cache_refreshed_at', '<', $staleCutoff);
             })
             ->where(function ($q) {
                 $q->whereNull('tender_deadline')
@@ -88,7 +92,7 @@ class BackfillPortalDocumentsCommand extends Command
                 $empty++;
             }
 
-            usleep(300_000);
+            usleep(1_500_000);
         }
 
         $this->info("Done. Filled: {$filled} | Still empty: {$empty}");

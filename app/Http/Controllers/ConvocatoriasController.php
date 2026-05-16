@@ -125,7 +125,7 @@ class ConvocatoriasController extends Controller
     /**
      * Fetch documents/articles/contracts from API (lazy-loaded by drawer tabs).
      */
-    public function tabData(Bid $bid, Request $request, DgcpApiClient $api)
+    public function tabData(Bid $bid, Request $request, DgcpApiClient $api, PortalScraperService $scraper)
     {
         $tab = $request->input('tab', 'documentos');
         $forceRefresh = $request->boolean('refresh');
@@ -141,34 +141,47 @@ class ConvocatoriasController extends Controller
             return response()->json(['error' => 'Invalid tab'], 400);
         }
 
-        // Use cache if fresh
-        $cacheStale = ! $bid->cache_refreshed_at || $bid->cache_refreshed_at->lt(now()->subHour());
-        if (! $forceRefresh && ! $cacheStale && $bid->{$cacheField}) {
+        // Documents and articles: background backfill owns freshness.
+        // Serve from cache unless the user explicitly force-refreshes.
+        if (in_array($tab, ['documentos', 'articulos'], true) && $bid->{$cacheField} && ! $forceRefresh) {
             return response()->json(['data' => $bid->{$cacheField}, 'cached' => true]);
         }
 
-        // Fetch from API
+        // Adjudicacion: standard TTL cache
+        if ($tab === 'adjudicacion') {
+            $cacheStale = ! $bid->cache_refreshed_at || $bid->cache_refreshed_at->lt(now()->subHour());
+            if (! $forceRefresh && ! $cacheStale && $bid->{$cacheField}) {
+                return response()->json(['data' => $bid->{$cacheField}, 'cached' => true]);
+            }
+        }
+
         try {
-            $data = match ($tab) {
-                'documentos' => $api->fetchDocuments($bid->process_code),
-                'articulos' => $api->fetchProcessArticles($bid->process_code),
-                'adjudicacion' => $this->fetchAdjudicacionData($api, $bid->process_code),
-            };
+            if (in_array($tab, ['documentos', 'articulos'], true)) {
+                $noticeUid = $bid->resolveNoticeUid();
 
-            $isPending = in_array($tab, ['documentos', 'articulos'], true)
-                && empty($data)
-                && $bid->resolveNoticeUid() !== null;
+                if ($noticeUid) {
+                    $detail = $scraper->fetchDetail($noticeUid);
+                    $data = $tab === 'documentos' ? $detail['documents'] : $detail['articles'];
+                } else {
+                    $data = $tab === 'documentos'
+                        ? $api->fetchDocuments($bid->process_code)
+                        : $api->fetchProcessArticles($bid->process_code);
+                }
 
-            if (! $isPending) {
-                $bid->update([
-                    $cacheField => $data,
-                    'cache_refreshed_at' => now(),
-                ]);
+                $isPending = empty($data) && $noticeUid !== null;
+
+                if (! $isPending) {
+                    $bid->update([$cacheField => $data, 'cache_refreshed_at' => now()]);
+                }
+
+                return response()->json(['data' => $data, 'cached' => false, 'pending' => $isPending]);
             }
 
-            return response()->json(['data' => $data, 'cached' => false, 'pending' => $isPending]);
+            $data = $this->fetchAdjudicacionData($api, $bid->process_code);
+            $bid->update([$cacheField => $data, 'cache_refreshed_at' => now()]);
+
+            return response()->json(['data' => $data, 'cached' => false]);
         } catch (\Throwable $e) {
-            // Fall back to stale cache if available
             if ($bid->{$cacheField}) {
                 return response()->json(['data' => $bid->{$cacheField}, 'cached' => true, 'error' => 'API error, showing cached data']);
             }
