@@ -195,14 +195,14 @@
 
             {{-- PayPal --}}
             <button @click="pay()" :disabled="loading"
-                    class="group flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-yellow-300 hover:shadow-md active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">
-                <div class="flex h-12 w-14 shrink-0 items-center justify-center rounded-xl bg-[#FFC439]">
-                    {{-- PayPal PP mark --}}
+                    class="group flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-blue-300 hover:shadow-md active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#003087]">
+                <div class="flex h-12 w-14 shrink-0 items-center justify-center rounded-xl bg-[#EBF4FF]">
+                    {{-- PayPal PP mark (blue variant) --}}
                     <svg viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-5 w-auto">
                         <path d="M3.5 17L5.7 3h4.8c2.3 0 3.8.6 4.4 1.8.5.9.5 2.2-.1 3.7-.7 2.1-2.2 3.2-4.5 3.2H8.1L7.1 17H3.5z" fill="#003087"/>
-                        <path d="M8.9 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4H8.9z" fill="#fff" opacity=".9"/>
+                        <path d="M8.9 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4H8.9z" fill="#EBF4FF" opacity=".9"/>
                         <path d="M10 17L12.2 3H17c2.3 0 3.8.6 4.4 1.8.5.9.5 2.2-.1 3.7-.7 2.1-2.2 3.2-4.5 3.2h-2.2L13.6 17H10z" fill="#009CDE"/>
-                        <path d="M15.4 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4h-1.5z" fill="#fff" opacity=".9"/>
+                        <path d="M15.4 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4h-1.5z" fill="#EBF4FF" opacity=".9"/>
                     </svg>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -213,7 +213,7 @@
                     <svg x-show="loadingGateway !== 'paypal'" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
                         <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
                     </svg>
-                    <svg x-show="loadingGateway === 'paypal'" class="h-5 w-5 animate-spin text-yellow-500" fill="none" viewBox="0 0 24 24">
+                    <svg x-show="loadingGateway === 'paypal'" class="h-5 w-5 animate-spin text-[#003087]" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>

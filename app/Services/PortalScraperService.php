@@ -179,15 +179,17 @@ class PortalScraperService
     }
 
     /**
-     * Download a portal document by re-fetching the detail page for a fresh session + mkey,
-     * then proxying the file stream.
+     * Download a portal document via the two-hop flow the portal uses:
+     *   1. Fetch the notice detail page → session cookie + per-file mkey
+     *   2. Hit DownloadFile → 200 HTML with a JS window.location.href redirect
+     *   3. Follow that URL → actual file bytes
      *
      * @return array{body: string, content_type: string, filename: string}|null
      */
     public function downloadPortalDocument(string $noticeUid, string $fileId): ?array
     {
         try {
-            // Fetch detail page to obtain a valid session cookie and mkey
+            // Step 1: Fetch detail page — get session cookie and page HTML
             $detailRes = Http::timeout(30)
                 ->withHeaders(['Accept' => 'text/html'])
                 ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
@@ -198,24 +200,44 @@ class PortalScraperService
                 return null;
             }
 
-            // Extract mkey from the page
-            if (! preg_match("/['\"]mkey['\"][^'\"]*['\"]([a-f0-9_]+)['\"]/", $detailRes->body(), $m)) {
+            // Step 2: Extract the per-file mkey from the onclick handler for this fileId.
+            // Portal format: 'documentFileId=' + '12788233' + '&mkey=826ed0b5_822b_4799_8a9f_0e299a5381ca'
+            $mkeyPattern = "/documentFileId='\\s*\\+\\s*'".preg_quote($fileId, '/')."'\\s*\\+\\s*'&mkey=([a-f0-9_]+)'/";
+            if (! preg_match($mkeyPattern, $detailRes->body(), $m)) {
                 return null;
             }
             $mkey = $m[1];
 
-            // Build session cookie jar
+            // Reuse this session for all subsequent requests — the mkey is bound to it
             $cookieJar = CookieJar::fromArray(
                 ['PublicSessionCookie' => $detailRes->cookies()->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
                 'comunidad.comprasdominicana.gob.do'
             );
 
-            $fileRes = Http::timeout(60)
+            // Step 3: Hit DownloadFile — returns HTTP 200 with an HTML body containing a JS redirect,
+            // not the file itself. Do not reject HTML here.
+            $hopRes = Http::timeout(30)
                 ->withOptions(['cookies' => $cookieJar])
                 ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/DownloadFile', [
                     'documentFileId' => $fileId,
                     'mkey' => $mkey,
                 ]);
+
+            if ($hopRes->failed()) {
+                return null;
+            }
+
+            // Step 4: Parse the JS redirect URL from the body
+            // e.g. <script>window.location.href = '/Public/Archive/RetrieveFile/Index?DocumentId=...'</script>
+            if (! preg_match("/window\\.location\\.href\\s*=\\s*['\"]([^'\"]+)['\"]/", $hopRes->body(), $r)) {
+                return null;
+            }
+            $fileUrl = 'https://comunidad.comprasdominicana.gob.do'.$r[1];
+
+            // Step 5: Fetch the actual file
+            $fileRes = Http::timeout(120)
+                ->withOptions(['cookies' => $cookieJar])
+                ->get($fileUrl);
 
             if ($fileRes->failed()) {
                 return null;
@@ -223,7 +245,7 @@ class PortalScraperService
 
             $contentType = $fileRes->header('Content-Type') ?? 'application/octet-stream';
 
-            // Reject HTML responses — means the file wasn't accessible
+            // Only reject HTML at this final step — a real file should never be HTML
             if (str_starts_with($contentType, 'text/html')) {
                 return null;
             }
