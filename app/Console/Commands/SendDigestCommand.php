@@ -62,6 +62,10 @@ class SendDigestCommand extends Command
             $bids = Bid::forCompany($cid)
                 ->whereNotNull('company_bid.notified_at')
                 ->where('company_bid.notified_at', '>', $sinceStr)
+                ->where(function ($q) {
+                    $q->whereNull('tender_deadline')
+                        ->orWhere('tender_deadline', '>', now());
+                })
                 ->orderBy('company_bid.notified_at', 'desc')
                 ->get();
 

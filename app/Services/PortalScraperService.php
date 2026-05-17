@@ -60,6 +60,13 @@ class PortalScraperService
                     continue;
                 }
 
+                // Skip notices whose offer deadline has already passed — portal doesn't
+                // update estado_proceso on deadline, so we cannot trust that field
+                $deadline = $notice['tender_deadline'] ? new \DateTime($notice['tender_deadline']) : null;
+                if ($deadline && $deadline <= new \DateTime) {
+                    continue;
+                }
+
                 $seenCodes->push($notice['process_code']);
                 $allNotices->push($notice);
             }

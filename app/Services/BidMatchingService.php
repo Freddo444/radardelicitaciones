@@ -94,6 +94,11 @@ class BidMatchingService
         $amount = $bid->amount_estimated;
         $modality = $bid->procurement_method;
 
+        // Unconditional: never notify for a bid the user can no longer bid on
+        if ($bid->tender_deadline && $bid->tender_deadline <= now()) {
+            return false;
+        }
+
         if (Setting::get('min_amount_filter', '0', $companyId) === '1') {
             $min = (float) Setting::get('min_amount_value', '0', $companyId);
             if ($min > 0 && $amount !== null && (float) $amount < $min) {
@@ -111,12 +116,6 @@ class BidMatchingService
         $excluded = json_decode(Setting::get('excluded_modalities', '[]', $companyId), true) ?: [];
         if ($modality && in_array($modality, $excluded)) {
             return false;
-        }
-
-        if (Setting::get('open_deadline_filter', '0', $companyId) === '1') {
-            if ($bid->tender_deadline && $bid->tender_deadline < now()) {
-                return false;
-            }
         }
 
         return true;
