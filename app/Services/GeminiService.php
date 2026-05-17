@@ -10,6 +10,7 @@ use App\Models\OfferParseAttempt;
 use App\Models\OfferRequirement;
 use App\Models\Subscription;
 use Carbon\Carbon;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,8 @@ class GeminiService
     private string $apiKey;
 
     private string $model = 'gemini-2.5-flash';
+
+    private string $fallbackModel = 'gemini-2.0-flash';
 
     private string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -189,19 +192,15 @@ PROMPT;
         try {
             $base64Pdf = base64_encode($pdfContent);
 
-            $response = Http::timeout(120)
-                ->post("{$this->apiUrl}/{$this->model}:generateContent?key={$this->apiKey}", [
-                    'contents' => [[
-                        'parts' => [
-                            ['text' => $this->prompt],
-                            ['inline_data' => ['mime_type' => 'application/pdf', 'data' => $base64Pdf]],
-                        ],
-                    ]],
-                    'generationConfig' => [
-                        'response_mime_type' => 'application/json',
-                        'temperature' => 0.1,
-                    ],
+            $response = $this->callGemini($this->model, $base64Pdf);
+
+            if ($response->status() === 503) {
+                Log::warning('Gemini 503 on primary model, retrying with fallback', [
+                    'offer_id' => $attempt->offer_id,
+                    'fallback_model' => $this->fallbackModel,
                 ]);
+                $response = $this->callGemini($this->fallbackModel, $base64Pdf);
+            }
 
             if (! $response->successful()) {
                 throw new \RuntimeException('Gemini HTTP '.$response->status().': '.$response->body());
@@ -402,6 +401,23 @@ PROMPT;
         if ($offer->estado === 'borrador') {
             $offer->update(['estado' => 'en_preparacion']);
         }
+    }
+
+    private function callGemini(string $model, string $base64Pdf): Response
+    {
+        return Http::timeout(120)
+            ->post("{$this->apiUrl}/{$model}:generateContent?key={$this->apiKey}", [
+                'contents' => [[
+                    'parts' => [
+                        ['text' => $this->prompt],
+                        ['inline_data' => ['mime_type' => 'application/pdf', 'data' => $base64Pdf]],
+                    ],
+                ]],
+                'generationConfig' => [
+                    'response_mime_type' => 'application/json',
+                    'temperature' => 0.1,
+                ],
+            ]);
     }
 
     private function downloadPdf(string $url): string
