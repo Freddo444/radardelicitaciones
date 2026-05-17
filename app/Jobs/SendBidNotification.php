@@ -22,36 +22,49 @@ class SendBidNotification implements ShouldQueue
 
     public int $backoff = 60;
 
-    public function __construct(
-        public Bid $bid,
-        public Company $company,
-    ) {}
+    public int $bidId;
+
+    public int $companyId;
+
+    public function __construct(Bid $bid, Company $company)
+    {
+        $this->bidId = $bid->id;
+        $this->companyId = $company->id;
+    }
 
     public function handle(): void
     {
-        if (! $this->markAsNotifiedIfPending()) {
+        $bid = Bid::find($this->bidId);
+        $company = Company::find($this->companyId);
+
+        if (! $bid || ! $company) {
+            // Raced with cleanup or company deletion — notification is moot
             return;
         }
 
-        $this->createInAppNotifications();
-        $this->sendMatchEmailIfConfigured();
+        if (! $this->markAsNotifiedIfPending($bid, $company)) {
+            return;
+        }
+
+        $this->createInAppNotifications($bid, $company);
+        $this->sendMatchEmailIfConfigured($bid, $company);
     }
 
-    private function markAsNotifiedIfPending(): bool
+    private function markAsNotifiedIfPending(Bid $bid, Company $company): bool
     {
-        return CompanyBid::where('bid_id', $this->bid->id)
-            ->where('company_id', $this->company->id)
+        return CompanyBid::where('bid_id', $bid->id)
+            ->where('company_id', $company->id)
             ->whereNull('notified_at')
             ->update(['notified_at' => now()]) > 0;
     }
 
-    private function sendMatchEmailIfConfigured(): void
+    private function sendMatchEmailIfConfigured(Bid $bid, Company $company): void
     {
-        if (Setting::get('digest_enabled', '0', $this->company->id) === '1') {
+        if (Setting::get('digest_enabled', '0', $company->id) === '1') {
             return;
         }
 
-        $raw = Setting::get('notification_email', null, $this->company->id);
+        $raw = Setting::get('notification_email', null, $company->id);
         $recipient = is_string($raw) ? trim($raw) : '';
 
         if ($recipient === '' || ! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
@@ -59,20 +72,20 @@ class SendBidNotification implements ShouldQueue
         }
 
         try {
-            Mail::to($recipient)->send(new BidNotificationMail($this->bid));
+            Mail::to($recipient)->send(new BidNotificationMail($bid));
 
             NotificationLog::create([
-                'company_id' => $this->company->id,
-                'bid_id' => $this->bid->id,
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
                 'channel' => 'email',
                 'status' => 'sent',
-                'error_message' => 'Nueva coincidencia: '.$this->bid->process_code,
+                'error_message' => 'Nueva coincidencia: '.$bid->process_code,
                 'created_at' => now(),
             ]);
         } catch (\Throwable $e) {
             NotificationLog::create([
-                'company_id' => $this->company->id,
-                'bid_id' => $this->bid->id,
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
                 'channel' => 'email',
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
@@ -80,46 +93,42 @@ class SendBidNotification implements ShouldQueue
             ]);
 
             Log::error('[SendBidNotification] Email failed', [
-                'company_id' => $this->company->id,
-                'bid_id' => $this->bid->id,
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
                 'error' => $e->getMessage(),
             ]);
         }
     }
 
-    private function createInAppNotifications(): void
+    private function createInAppNotifications(Bid $bid, Company $company): void
     {
-        if (! Bid::whereKey($this->bid->id)->exists()) {
-            return;
-        }
-
-        $pivot = CompanyBid::where('bid_id', $this->bid->id)
-            ->where('company_id', $this->company->id)
+        $pivot = CompanyBid::where('bid_id', $bid->id)
+            ->where('company_id', $company->id)
             ->first();
 
         $rubros = collect($pivot?->matched_rubros ?? [])
             ->pluck('name')
             ->join(', ');
 
-        $amount = $this->bid->amount_estimated
-            ? ($this->bid->currency ?? 'DOP').' '.number_format($this->bid->amount_estimated, 2)
+        $amount = $bid->amount_estimated
+            ? ($bid->currency ?? 'DOP').' '.number_format($bid->amount_estimated, 2)
             : null;
 
-        $body = $this->bid->buyer_name ?? '';
+        $body = $bid->buyer_name ?? '';
         if ($amount) {
             $body .= " — {$amount}";
         }
 
-        foreach ($this->company->users as $user) {
+        foreach ($company->users as $user) {
             InAppNotification::create([
-                'company_id' => $this->company->id,
+                'company_id' => $company->id,
                 'user_id' => $user->id,
-                'bid_id' => $this->bid->id,
+                'bid_id' => $bid->id,
                 'type' => 'new_match',
-                'title' => $this->bid->title,
+                'title' => $bid->title,
                 'body' => $body,
                 'data' => [
-                    'process_code' => $this->bid->process_code,
+                    'process_code' => $bid->process_code,
                     'rubros' => $rubros,
                 ],
             ]);
