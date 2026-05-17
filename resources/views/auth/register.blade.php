@@ -19,9 +19,10 @@
         companies: 1,
         users: 2,
         annual: false,
-        loading: false,
+        loadingGateway: null,
         error: null,
         email: '',
+        get loading() { return this.loadingGateway !== null; },
         get monthlyPrice() {
             return 45 + Math.max(0, this.companies - 1) * 20 + Math.max(0, this.users - 2) * 10;
         },
@@ -51,7 +52,7 @@
         },
         async payAzul() {
             if (!this.validateEmail()) return;
-            this.loading = true;
+            this.loadingGateway = 'azul';
             this.error = null;
             try {
                 const res = await fetch('{{ route('register.create-order-azul') }}', {
@@ -76,12 +77,12 @@
             } catch (e) {
                 this.error = 'Error de conexión.';
             } finally {
-                this.loading = false;
+                this.loadingGateway = null;
             }
         },
         async pay() {
             if (!this.validateEmail()) return;
-            this.loading = true;
+            this.loadingGateway = 'paypal';
             this.error = null;
             try {
                 const res = await fetch('{{ route('register.create-order') }}', {
@@ -106,7 +107,7 @@
             } catch (e) {
                 this.error = 'Error de conexión.';
             } finally {
-                this.loading = false;
+                this.loadingGateway = null;
             }
         }
      }">
@@ -185,21 +186,67 @@
             <p class="mt-1 text-xs text-gray-500">Lo usarás para iniciar sesión. Se pre-llenará en el siguiente paso.</p>
         </div>
 
-        <button @click="pay()" :disabled="loading"
-                class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-2.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50">
-            <span x-show="!loading">Pagar con PayPal</span>
-            <span x-show="loading">Redirigiendo a PayPal...</span>
-        </button>
+        {{-- Payment method cards --}}
+        <div class="space-y-3">
+            <div class="relative">
+                <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+                <div class="relative flex justify-center"><span class="bg-white px-3 text-xs font-medium uppercase tracking-widest text-gray-400">Método de pago</span></div>
+            </div>
 
-        @if(config('services.azul.merchant_id') && config('services.azul.auth_key'))
-        <button type="button" @click="payAzul()" :disabled="loading"
-                class="flex w-full justify-center rounded-md bg-sky-600 px-3 py-2.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-sky-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:opacity-50">
-            <span x-show="!loading">Pagar con tarjeta (Azul)</span>
-            <span x-show="loading">Preparando pago...</span>
-        </button>
-        @endif
+            {{-- PayPal --}}
+            <button @click="pay()" :disabled="loading"
+                    class="group flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-yellow-300 hover:shadow-md active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400">
+                <div class="flex h-12 w-14 shrink-0 items-center justify-center rounded-xl bg-[#FFC439]">
+                    {{-- PayPal PP mark --}}
+                    <svg viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-5 w-auto">
+                        <path d="M3.5 17L5.7 3h4.8c2.3 0 3.8.6 4.4 1.8.5.9.5 2.2-.1 3.7-.7 2.1-2.2 3.2-4.5 3.2H8.1L7.1 17H3.5z" fill="#003087"/>
+                        <path d="M8.9 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4H8.9z" fill="#fff" opacity=".9"/>
+                        <path d="M10 17L12.2 3H17c2.3 0 3.8.6 4.4 1.8.5.9.5 2.2-.1 3.7-.7 2.1-2.2 3.2-4.5 3.2h-2.2L13.6 17H10z" fill="#009CDE"/>
+                        <path d="M15.4 9.7l.4-2.4h1.9c1 0 1.5.4 1.5 1.2 0 .9-.8 1.4-2.3 1.4h-1.5z" fill="#fff" opacity=".9"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900" x-text="loadingGateway === 'paypal' ? 'Redirigiendo a PayPal…' : 'PayPal'"></p>
+                    <p class="text-xs text-gray-400">Paga con tu cuenta PayPal</p>
+                </div>
+                <div class="shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors">
+                    <svg x-show="loadingGateway !== 'paypal'" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                        <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+                    </svg>
+                    <svg x-show="loadingGateway === 'paypal'" class="h-5 w-5 animate-spin text-yellow-500" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </div>
+            </button>
 
-        <p x-show="error" class="text-center text-sm text-red-600" x-text="error"></p>
+            {{-- Azul (card payment) --}}
+            @if(config('services.azul.merchant_id') && config('services.azul.auth_key'))
+            <button type="button" @click="payAzul()" :disabled="loading"
+                    class="group flex w-full items-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-left shadow-sm transition-all duration-150 hover:border-blue-300 hover:shadow-md active:scale-[.99] disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+                <div class="flex h-12 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00539B]">
+                    <svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-gray-900" x-text="loadingGateway === 'azul' ? 'Preparando pago…' : 'Tarjeta de crédito / débito'"></p>
+                    <p class="text-xs text-gray-400">Visa · Mastercard · procesado por Azul</p>
+                </div>
+                <div class="shrink-0 text-gray-300 group-hover:text-gray-500 transition-colors">
+                    <svg x-show="loadingGateway !== 'azul'" viewBox="0 0 20 20" fill="currentColor" class="h-5 w-5">
+                        <path fill-rule="evenodd" d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+                    </svg>
+                    <svg x-show="loadingGateway === 'azul'" class="h-5 w-5 animate-spin text-[#00539B]" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                </div>
+            </button>
+            @endif
+        </div>
+
+        <p x-show="error" x-cloak class="rounded-lg bg-red-50 px-4 py-2.5 text-center text-sm text-red-600" x-text="error"></p>
 
         <p class="text-center text-sm text-gray-500">
             ¿Quieres probar primero?
