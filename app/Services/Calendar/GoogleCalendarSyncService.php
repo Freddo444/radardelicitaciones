@@ -179,7 +179,7 @@ class GoogleCalendarSyncService
 
     public function fullResync(GoogleCalendarToken $token): void
     {
-        GoogleCalendarEventMap::query()->where('google_calendar_token_id', $token->id)->delete();
+        $this->deleteAllMappedGoogleEvents($token);
 
         $offers = Offer::query()
             ->where('company_id', $token->company_id)
@@ -196,12 +196,25 @@ class GoogleCalendarSyncService
 
     public function disconnect(GoogleCalendarToken $token): void
     {
+        $this->deleteAllMappedGoogleEvents($token);
+        $token->newQuery()->whereKey($token->getKey())->delete();
+    }
+
+    /**
+     * Remove every Google event we previously created for this token, then clear local maps.
+     * Required before full resync; otherwise each resync leaves orphan events in Google Calendar.
+     */
+    private function deleteAllMappedGoogleEvents(GoogleCalendarToken $token): void
+    {
         $client = $this->refreshClient($token);
         $calendarId = $token->calendar_id ?: 'primary';
 
         if ($client) {
             $calendar = new Calendar($client);
             foreach ($token->eventMap()->cursor() as $map) {
+                if (! $map->google_event_id) {
+                    continue;
+                }
                 try {
                     $calendar->events->delete($calendarId, $map->google_event_id);
                 } catch (\Throwable) {
@@ -211,7 +224,6 @@ class GoogleCalendarSyncService
         }
 
         $token->eventMap()->delete();
-        $token->newQuery()->whereKey($token->getKey())->delete();
     }
 
     private function deleteMapped(GoogleCalendarToken $token, string $type, int $syncableId): void
