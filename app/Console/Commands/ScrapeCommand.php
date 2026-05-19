@@ -6,6 +6,7 @@ use App\Jobs\SendBidNotification;
 use App\Models\Bid;
 use App\Models\Company;
 use App\Models\CompanyBid;
+use App\Models\Setting;
 use App\Services\BidMatchingService;
 use App\Services\PortalScraperService;
 use Illuminate\Console\Command;
@@ -187,6 +188,8 @@ class ScrapeCommand extends Command
 
             usleep(300_000);
         }
+
+        Setting::set('last_scraped_at', now()->toDateTimeString());
 
         $summary = "Portal scrape complete. Checked: {$newNotices->count()} | Saved: {$saved} | Notified: {$notified}";
         $this->info($summary);

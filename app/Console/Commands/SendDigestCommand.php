@@ -7,6 +7,7 @@ use App\Models\Bid;
 use App\Models\Company;
 use App\Models\NotificationLog;
 use App\Models\Setting;
+use App\Services\BidMatchingService;
 use App\Services\TelegramService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,7 @@ class SendDigestCommand extends Command
 
     protected $description = 'Send a periodic digest email/Telegram summarizing new bids found since the last digest, per company';
 
-    public function handle(TelegramService $telegram): int
+    public function handle(TelegramService $telegram, BidMatchingService $matcher): int
     {
         $companies = Company::all();
 
@@ -68,6 +69,8 @@ class SendDigestCommand extends Command
                 })
                 ->orderBy('company_bid.notified_at', 'desc')
                 ->get();
+
+            $bids = $bids->filter(fn ($bid) => $matcher->shouldNotify($bid, $cid))->values();
 
             if ($bids->isEmpty()) {
                 // Move the digest cursor even when there is nothing new, so old windows don't repeat.

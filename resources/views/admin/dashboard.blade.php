@@ -175,34 +175,152 @@
     </div>
 </div>
 
-{{-- Poll health --}}
+{{-- System & Queue Health --}}
+@php
+    $sh = $systemHealth;
+    $statusConfig = match($sh['status']) {
+        'critical' => ['bg' => 'bg-red-500',    'ring' => 'ring-red-200',    'dot' => 'bg-red-500',    'text' => 'text-red-700',    'badge' => 'bg-red-100 text-red-700',    'label' => 'Atención requerida'],
+        'warning'  => ['bg' => 'bg-amber-400',  'ring' => 'ring-amber-200',  'dot' => 'bg-amber-400',  'text' => 'text-amber-700',  'badge' => 'bg-amber-100 text-amber-700','label' => 'Advertencia'],
+        default    => ['bg' => 'bg-emerald-500', 'ring' => 'ring-emerald-200','dot' => 'bg-emerald-500','text' => 'text-emerald-700', 'badge' => 'bg-emerald-100 text-emerald-700','label' => 'Operativo'],
+    };
+    $fmtAge = function(?int $min): string {
+        if ($min === null) return 'Nunca';
+        if ($min < 1)   return 'Ahora mismo';
+        if ($min < 60)  return "hace {$min}m";
+        $h = intdiv($min, 60); $m = $min % 60;
+        return $m > 0 ? "hace {$h}h {$m}m" : "hace {$h}h";
+    };
+    $pollAgeClass = match(true) {
+        $sh['pollAgeMin'] === null                   => 'text-zinc-400',
+        $sh['pollAgeMin'] > 360                      => 'text-red-600 font-semibold',
+        $sh['pollAgeMin'] > 120                      => 'text-amber-600 font-semibold',
+        default                                      => 'text-emerald-600 font-semibold',
+    };
+    $scrapeAgeClass = match(true) {
+        $sh['scrapeAgeMin'] === null                 => 'text-zinc-400',
+        $sh['scrapeAgeMin'] > 720                    => 'text-red-600 font-semibold',
+        $sh['scrapeAgeMin'] > 240                    => 'text-amber-600 font-semibold',
+        default                                      => 'text-emerald-600 font-semibold',
+    };
+@endphp
 <div class="mt-14 lg:mt-16">
-    <h2 class="text-lg font-semibold tracking-tight text-zinc-900">Estado del polling</h2>
-    <div class="mt-6 rounded-xl bg-white p-8 shadow-sm ring-1 ring-zinc-900/5">
-        <dl class="grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-10">
-            <div>
-                <dt class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Ultimo sondeo</dt>
-                <dd class="mt-2 text-base font-semibold text-zinc-900">{{ $pollHealth['last_polled_at'] ?? 'Nunca' }}</dd>
+    <div class="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 {{ $statusConfig['ring'] }}">
+
+        {{-- Header bar --}}
+        <div class="flex items-center justify-between border-b border-zinc-100 px-6 py-4">
+            <div class="flex items-center gap-3">
+                <div class="flex size-9 shrink-0 items-center justify-center rounded-lg {{ $statusConfig['bg'] }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="size-5 text-white" aria-hidden="true">
+                        <path d="M21 10.5h.375c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125H21M3.75 18h15A2.25 2.25 0 0 0 21 15.75v-6a2.25 2.25 0 0 0-2.25-2.25h-15A2.25 2.25 0 0 0 1.5 9.75v6A2.25 2.25 0 0 0 3.75 18Z" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-sm font-semibold text-zinc-900">Sistema &amp; Cola</p>
+                    <p class="text-xs text-zinc-500">Estado operativo en tiempo real</p>
+                </div>
             </div>
-            <div>
-                <dt class="text-xs font-semibold tracking-wide text-zinc-500 uppercase">Estado</dt>
-                <dd class="mt-2">
-                    @if($pollHealth['poll_status'] === 'running')
-                    <span class="inline-flex items-center gap-x-1.5 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
-                        <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-blue-500"><circle r="3" cx="3" cy="3" /></svg>Ejecutando
+            <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold {{ $statusConfig['badge'] }}">
+                <span class="relative flex size-2">
+                    @if($sh['status'] === 'ok')
+                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full {{ $statusConfig['dot'] }} opacity-50"></span>
+                    @endif
+                    <span class="relative inline-flex size-2 rounded-full {{ $statusConfig['dot'] }}"></span>
+                </span>
+                {{ $statusConfig['label'] }}
+            </span>
+        </div>
+
+        {{-- Metric grid --}}
+        <div class="grid grid-cols-2 divide-x divide-y divide-zinc-100 sm:grid-cols-3 lg:grid-cols-5">
+
+            {{-- Last poll --}}
+            <div class="flex flex-col gap-1 px-5 py-5">
+                <p class="text-xs font-medium tracking-wide text-zinc-400 uppercase">Último poll</p>
+                <p class="mt-1 text-xl font-bold leading-tight {{ $pollAgeClass }}">
+                    {{ $fmtAge($sh['pollAgeMin']) }}
+                </p>
+                @if($sh['lastPolledAt'])
+                <p class="text-xs text-zinc-400">{{ \Carbon\Carbon::parse($sh['lastPolledAt'])->format('d/m H:i') }}</p>
+                @endif
+            </div>
+
+            {{-- Poll status --}}
+            <div class="flex flex-col gap-1 px-5 py-5">
+                <p class="text-xs font-medium tracking-wide text-zinc-400 uppercase">Estado poll</p>
+                <div class="mt-1">
+                    @if($sh['pollStuck'])
+                    <span class="inline-flex items-center gap-1.5 rounded-md bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                        <span class="size-1.5 rounded-full bg-red-500"></span>Atascado
                     </span>
-                    @elseif($pollHealth['poll_status'] === 'idle')
-                    <span class="inline-flex items-center gap-x-1.5 rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                        <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-gray-400"><circle r="3" cx="3" cy="3" /></svg>Inactivo
+                    @elseif($sh['pollStatus'] === 'running')
+                    <span class="inline-flex items-center gap-1.5 rounded-md bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                        <span class="relative flex size-1.5"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span><span class="relative size-1.5 rounded-full bg-blue-500"></span></span>Ejecutando
                     </span>
                     @else
-                    <span class="inline-flex items-center gap-x-1.5 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-700">
-                        <svg viewBox="0 0 6 6" aria-hidden="true" class="size-1.5 fill-red-500"><circle r="3" cx="3" cy="3" /></svg>{{ $pollHealth['poll_status'] }}
+                    <span class="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-500">
+                        <span class="size-1.5 rounded-full bg-zinc-400"></span>Inactivo
                     </span>
                     @endif
-                </dd>
+                </div>
             </div>
-        </dl>
+
+            {{-- Last scrape --}}
+            <div class="flex flex-col gap-1 px-5 py-5">
+                <p class="text-xs font-medium tracking-wide text-zinc-400 uppercase">Último scrape</p>
+                <p class="mt-1 text-xl font-bold leading-tight {{ $scrapeAgeClass }}">
+                    {{ $fmtAge($sh['scrapeAgeMin']) }}
+                </p>
+                @if($sh['lastScrapedAt'])
+                <p class="text-xs text-zinc-400">{{ \Carbon\Carbon::parse($sh['lastScrapedAt'])->format('d/m H:i') }}</p>
+                @endif
+            </div>
+
+            {{-- Pending jobs --}}
+            <div class="flex flex-col gap-1 px-5 py-5">
+                <p class="text-xs font-medium tracking-wide text-zinc-400 uppercase">Cola pendiente</p>
+                <p class="mt-1 text-3xl font-bold leading-tight {{ $sh['pendingJobs'] > 0 ? 'text-amber-600' : 'text-zinc-900' }}">
+                    {{ number_format($sh['pendingJobs']) }}
+                </p>
+                @if($sh['workerDown'])
+                <p class="text-xs font-medium text-red-600">Worker posiblemente caído</p>
+                @elseif($sh['pendingJobs'] > 0 && $sh['oldestJobTs'])
+                @php $ageMin = (int) round((now()->timestamp - $sh['oldestJobTs']) / 60); @endphp
+                <p class="text-xs text-zinc-400">más antiguo: {{ $ageMin }}m</p>
+                @endif
+            </div>
+
+            {{-- Failed jobs --}}
+            <div class="flex flex-col gap-1 px-5 py-5">
+                <p class="text-xs font-medium tracking-wide text-zinc-400 uppercase">Jobs fallidos</p>
+                <p class="mt-1 text-3xl font-bold leading-tight {{ $sh['failedJobs'] > 0 ? ($sh['failedJobs'] >= 10 ? 'text-red-600' : 'text-amber-600') : 'text-zinc-900' }}">
+                    {{ number_format($sh['failedJobs']) }}
+                </p>
+                @if($sh['failedJobs'] > 0)
+                <div class="mt-0.5 flex flex-wrap gap-1">
+                    @foreach($sh['failedByQueue']->take(3) as $q)
+                    <span class="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-500">{{ $q->queue }}: {{ $q->count }}</span>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+
+        </div>
+
+        {{-- Footer hint when there are failures --}}
+        @if($sh['failedJobs'] > 0 || $sh['workerDown'] || $sh['pollStuck'])
+        <div class="border-t border-zinc-100 bg-zinc-50/70 px-6 py-3">
+            <p class="text-xs text-zinc-500">
+                @if($sh['workerDown'])
+                    <span class="font-semibold text-red-600">Worker posiblemente caído</span> — verificar con <code class="rounded bg-zinc-200 px-1 py-0.5">php artisan queue:work</code> o el proceso supervisor.
+                @elseif($sh['pollStuck'])
+                    <span class="font-semibold text-red-600">Poll atascado</span> — ejecutar <code class="rounded bg-zinc-200 px-1 py-0.5">php artisan secp:poll --reset</code> para liberar.
+                @elseif($sh['failedJobs'] > 0)
+                    Jobs fallidos presentes — revisar con <code class="rounded bg-zinc-200 px-1 py-0.5">php artisan queue:failed</code> y reintentar o limpiar con <code class="rounded bg-zinc-200 px-1 py-0.5">queue:flush</code>.
+                @endif
+            </p>
+        </div>
+        @endif
+
     </div>
 </div>
 @endsection
