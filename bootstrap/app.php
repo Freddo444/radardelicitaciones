@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CaptureUtmAttributionMiddleware;
 use App\Http\Middleware\EnsureSubscriptionActiveMiddleware;
 use App\Http\Middleware\ResolveTenantMiddleware;
 use App\Http\Middleware\SuperAdminMiddleware;
@@ -26,6 +27,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'paypal/webhook',
             'azul/webhook',
+        ]);
+
+        $middleware->web(append: [
+            CaptureUtmAttributionMiddleware::class,
         ]);
 
         $middleware->alias([

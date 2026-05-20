@@ -63,6 +63,7 @@ class SendRadarColdOutreachCommand extends Command
         $header = array_map(fn ($h) => strtolower(trim((string) $h)), $header);
         $emailKey = $this->pickColumn($header, ['email', 'correo']);
         $nameKey = $this->pickColumn($header, ['company_name', 'razon_social', 'nombre', 'empresa']);
+        $firstNameKey = $this->pickColumn($header, ['first_name', 'nombre_pila', 'primer_nombre']);
         if ($emailKey === null) {
             fclose($fh);
             $this->error('CSV must include an email column (email or correo).');
@@ -92,6 +93,8 @@ class SendRadarColdOutreachCommand extends Command
             if ($companyName === '') {
                 $companyName = 'su empresa';
             }
+            $firstName = $firstNameKey !== null ? trim((string) ($data[$firstNameKey] ?? '')) : '';
+            $firstName = $firstName !== '' ? $firstName : null;
 
             if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $skipped++;
@@ -106,10 +109,11 @@ class SendRadarColdOutreachCommand extends Command
             try {
                 if ($dryRun) {
                     $bar->clear();
-                    $this->line("[DRY] → {$email} ({$companyName})");
+                    $detail = $firstName ? "{$firstName} @ {$companyName}" : $companyName;
+                    $this->line("[DRY] → {$email} ({$detail})");
                     $bar->display();
                 } else {
-                    Mail::to($email)->send(new RadarColdOutreachMail($companyName, $trackingUrl));
+                    Mail::to($email)->send(new RadarColdOutreachMail($companyName, $trackingUrl, $firstName));
                 }
                 $sent++;
                 Log::info('[RadarColdOutreach] sent', [

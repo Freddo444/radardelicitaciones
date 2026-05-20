@@ -1,92 +1,31 @@
 <x-mail::message>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 28px 0; border-collapse: collapse;">
-<tr>
-<td style="background-color: #1e40af; background-image: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #1d4ed8 100%); border-radius: 10px; padding: 22px 24px;">
-<p style="margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.88);">
-{{ config('app.name') }}
-</p>
-<p style="margin: 10px 0 0; font-size: 19px; font-weight: 700; line-height: 1.25; color: #ffffff; letter-spacing: -0.03em;">
-Menos ruido. Más oportunidades que importan.
-</p>
-<p style="margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: rgba(255,255,255,0.92);">
-Monitoreo inteligente de licitaciones públicas para equipos que ya compiten — o están listos para hacerlo.
-</p>
-</td>
-</tr>
-</table>
+Hola {{ $greeting }},
 
-## Hola {{ $companyName }},
+Soy **Frederick López**, desarrollador dominicano. Construí {{ config('app.name') }} porque vi a constructoras y proveedores en el país perder procesos del DGCP por enterarse tarde — o no enterarse del todo.
 
-En compras públicas, **enterarse tarde** de una convocatoria suele significar **una oportunidad menos** — aunque el equipo haya trabajado bien en otras cosas.
+**Lo que hace, en una línea:** monitorea las compras públicas del DGCP en tiempo real, le avisa por correo o Telegram cuando aparece algo que encaja con {{ $companyName }}, y le ayuda a analizar pliegos con IA.
 
-<p style="margin: 0 0 8px; font-size: 15px; font-weight: 600; color: #18181b;">
-{{ config('app.name') }} le ayuda a:
-</p>
+Si ya compiten en licitaciones (o están dando los primeros pasos), pueden probarlo **14 días gratis**. Toma 2 minutos abrir cuenta.
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 4px; border-collapse: separate; border-spacing: 0 10px;">
-<tr>
-<td>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e4e4e7; border-radius: 10px; background-color: #fafafa;">
-<tr>
-<td style="padding: 16px 18px; border-left: 4px solid #2563eb; border-radius: 10px;">
-<p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #2563eb;">01 — Detectar</p>
-<p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: #3f3f46;">Procesos que encajan con lo que su empresa ofrece, sin depender solo de revisar el portal a mano.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e4e4e7; border-radius: 10px; background-color: #fafafa;">
-<tr>
-<td style="padding: 16px 18px; border-left: 4px solid #3b82f6; border-radius: 10px;">
-<p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #3b82f6;">02 — Analizar</p>
-<p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: #3f3f46;">Pliegos más rápido con IA como apoyo (no sustituto del criterio jurídico y técnico de ustedes).</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-<tr>
-<td>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border: 1px solid #e4e4e7; border-radius: 10px; background-color: #fafafa;">
-<tr>
-<td style="padding: 16px 18px; border-left: 4px solid #1d4ed8; border-radius: 10px;">
-<p style="margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #1d4ed8;">03 — Organizar</p>
-<p style="margin: 8px 0 0; font-size: 15px; line-height: 1.5; color: #3f3f46;">Seguimiento y plazos sin perder versiones de documentos.</p>
-</td>
-</tr>
-</table>
-</td>
-</tr>
-</table>
-
-<x-mail::panel>
-Puede <strong>probar Radar gratis</strong> hoy y comprobar en casos reales si les ahorra tiempo frente al flujo actual.
-</x-mail::panel>
-
-<x-mail::button :url="$trackingUrl">
-Probar gratis ahora
+<x-mail::button :url="$trackingUrl" color="primary">
+Probar 14 días gratis
 </x-mail::button>
 
-<p style="margin: 20px 0 0; font-size: 15px; line-height: 1.55; color: #52525b;">
-Si ya compiten en licitaciones — o están dando los primeros pasos — esta herramienta está hecha para <strong>reducir fricción</strong> y <strong>detectar oportunidades antes</strong>.
-</p>
+Si prefiere, **responda directo a este correo** — yo soy el que lee.
 
-<hr style="border: none; border-top: 1px solid #e4e4e7; margin: 28px 0 20px;">
-
-<p style="margin: 0; font-size: 15px; line-height: 1.55; color: #3f3f46;">
+<p style="margin: 24px 0 0; font-size: 15px; line-height: 1.55; color: #18181b;">
 Saludos,<br>
-<span style="font-weight: 700; color: #18181b;">Equipo {{ config('app.name') }}</span>
+<strong>Frederick López</strong><br>
+<span style="color: #71717a;">Fundador · <a href="https://radardelicitaciones.com" style="color: #2563eb; text-decoration: none;">radardelicitaciones.com</a></span>
 </p>
 
-<p class="email-muted" style="margin-top: 24px; font-size: 13px;">
-Si el botón no funciona, copie y pegue este enlace en su navegador:<br>
-<span class="break-all">{{ $trackingUrl }}</span>
+<hr style="border: none; border-top: 1px solid #e4e4e7; margin: 28px 0 18px;">
+
+<p style="margin: 0; font-size: 14px; line-height: 1.6; color: #3f3f46;">
+<strong>P.D.</strong> Si responde con el rubro o actividad principal de {{ $companyName }}, le envío gratis un reporte de las licitaciones más relevantes en su sector que cerraron este mes — sin que tenga que abrir cuenta.
 </p>
 
-<p class="email-muted" style="font-size: 12px; line-height: 1.5;">
-Recibió este mensaje porque su empresa aparece como proveedor en datos públicos de compras. Si no desea más correos como este, responda con «baja» y lo tendremos en cuenta.
+<p class="email-muted" style="margin-top: 24px; font-size: 12px; line-height: 1.5;">
+Recibió este mensaje porque su empresa figura en datos públicos de compras del DGCP. Si prefiere no recibir más correos como este, responda «baja» y lo retiramos.
 </p>
 </x-mail::message>
