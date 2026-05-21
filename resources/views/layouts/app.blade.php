@@ -411,5 +411,6 @@ function notificationBell() {
 }
 </script>
 <x-umami-track />
+<x-tawk-script />
 </body>
 </html>
