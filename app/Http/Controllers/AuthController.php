@@ -24,9 +24,8 @@ class AuthController extends Controller
 
             $user = Auth::user();
 
-            if ($user->is_super_admin) {
-                return redirect()->route('admin.dashboard');
-            }
+            // Super admins land on the regular dashboard like everyone else;
+            // they reach /admin via the purple Admin badge in the navbar.
 
             // Check subscription status first
             $subscription = $user->subscription;
