@@ -250,7 +250,7 @@
 
         <p class="text-center text-sm text-gray-500">
             ¿Quieres probar primero?
-            <a href="{{ route('register.trial') }}" class="font-medium text-blue-600 hover:text-blue-500">Prueba gratis 7 días</a>
+            <a href="{{ route('register.trial') }}" class="font-medium text-blue-600 hover:text-blue-500">Prueba gratis 14 días</a>
         </p>
 
         <p class="text-center text-sm text-gray-500">

@@ -39,7 +39,7 @@
                 <div class="mt-10 flex flex-col gap-4 sm:flex-row">
                     <a href="{{ route('register.trial') }}"
                        class="w-full rounded-xl bg-indigo-600 px-6 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:bg-indigo-500 hover:shadow-indigo-500/40 sm:w-auto">
-                        Prueba gratis 7 días
+                        Prueba gratis 14 días
                     </a>
                     @if(config('services.calendly.url'))
                     <a href="{{ config('services.calendly.url') }}" target="_blank" rel="noopener"
@@ -589,12 +589,12 @@
             Empiece a ganar más licitaciones hoy
         </h2>
         <p class="mt-4 text-lg text-indigo-100/90">
-            Pruebe gratis por 7 días. Sin tarjeta de crédito, sin compromisos.
+            Pruebe gratis por 14 días. Sin tarjeta de crédito, sin compromisos.
         </p>
         <div class="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a href="{{ route('register.trial') }}"
                class="w-full rounded-xl bg-white px-8 py-3.5 text-center text-sm font-semibold text-indigo-950 shadow-lg transition hover:bg-indigo-50 sm:w-auto">
-                Prueba gratis 7 días
+                Prueba gratis 14 días
             </a>
             @if(config('services.calendly.url'))
             <a href="{{ config('services.calendly.url') }}" target="_blank" rel="noopener"

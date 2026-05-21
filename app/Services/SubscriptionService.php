@@ -19,7 +19,7 @@ class SubscriptionService
 
     public const ANNUAL_DISCOUNT = 0.20;
 
-    public const TRIAL_DAYS = 7;
+    public const TRIAL_DAYS = 14;
 
     public const TRIAL_PARSE_LIMIT = 2;
 

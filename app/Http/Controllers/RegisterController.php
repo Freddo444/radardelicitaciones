@@ -19,8 +19,15 @@ use Sentry\Severity;
 
 class RegisterController extends Controller
 {
-    public function show()
+    public function show(Request $request)
     {
+        // Visitors arriving from a marketing campaign (UTM-tagged links) expect
+        // the free trial flow, not the paid signup. Bounce them to the trial
+        // page so already-sent cold-outreach emails route correctly.
+        if ($request->filled('utm_source')) {
+            return redirect()->route('register.trial', $request->query());
+        }
+
         return view('auth.register');
     }
 

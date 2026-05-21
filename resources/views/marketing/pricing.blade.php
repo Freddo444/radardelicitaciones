@@ -90,7 +90,7 @@
                 {{-- CTA --}}
                 <a href="{{ route('register.trial') }}"
                    class="mt-8 block w-full rounded-xl bg-indigo-600 py-3.5 text-center text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
-                    Prueba gratis 7 días
+                    Prueba gratis 14 días
                 </a>
                 <p class="mt-2 text-center text-xs text-zinc-500">
                     o <a href="{{ route('register.show') }}" class="font-medium text-indigo-600 hover:text-indigo-500">suscríbete ahora</a>
@@ -203,7 +203,7 @@
         </p>
         <a href="{{ route('register.trial') }}"
            class="mt-10 block w-full rounded-xl bg-white px-8 py-3.5 text-center text-sm font-semibold text-indigo-950 shadow-lg transition hover:bg-indigo-50 sm:inline-block sm:w-auto">
-            Prueba gratis 7 días
+            Prueba gratis 14 días
         </a>
     </div>
 </section>

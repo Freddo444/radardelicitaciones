@@ -18,7 +18,7 @@
 
         <div>
             <img src="/images/LOGO.png" alt="Radar de Licitaciones" class="mx-auto -mb-4 w-72 object-contain">
-            <h2 class="text-center text-lg font-bold text-gray-900">Prueba gratis por 7 días</h2>
+            <h2 class="text-center text-lg font-bold text-gray-900">Prueba gratis por 14 días</h2>
             <p class="mt-1 text-center text-sm text-gray-500">2 análisis de pliegos con IA incluidos. Sin tarjeta de crédito.</p>
         </div>
 
