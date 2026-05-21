@@ -15,6 +15,7 @@ class SendRadarColdOutreachCommand extends Command
         {--tracking-url= : Target URL for the CTA (trial/register)}
         {--max=150 : Stop after this many successful sends this invocation}
         {--daily-cap=0 : Stop when N total sends have happened today across all invocations (0 = no cap)}
+        {--max-per-domain=0 : Send to at most N recipients per email domain (0 = no cap). Highest message_count wins.}
         {--batch=20 : After this many successful sends, sleep --batch-sleep seconds}
         {--batch-sleep=1800 : Pause after each batch (default 1800 = 30 minutes)}
         {--min-delay=60 : Minimum seconds between successful sends (skipped rows do not wait)}
@@ -42,6 +43,7 @@ class SendRadarColdOutreachCommand extends Command
 
         $max = max(1, (int) $this->option('max'));
         $dailyCap = max(0, (int) $this->option('daily-cap'));
+        $maxPerDomain = max(0, (int) $this->option('max-per-domain'));
         $batch = max(1, (int) $this->option('batch'));
         $batchSleep = max(0, (int) $this->option('batch-sleep'));
         $minDelay = max(0, (int) $this->option('min-delay'));
@@ -87,6 +89,14 @@ class SendRadarColdOutreachCommand extends Command
             return self::FAILURE;
         }
 
+        // Build a per-domain allowlist when capping is enabled. We do this in a
+        // separate pre-pass so the main loop can stream the CSV in its original
+        // order (preserving the user's curated row order).
+        $domainAllowlist = null;
+        if ($maxPerDomain > 0) {
+            $domainAllowlist = $this->buildDomainAllowlist($csvPath, $header, $emailKey, $maxPerDomain);
+        }
+
         $skipped = 0;
         $failed = 0;
         $sent = 0;
@@ -94,6 +104,9 @@ class SendRadarColdOutreachCommand extends Command
 
         $this->info('CSV: '.$csvPath.($dryRun ? ' (dry-run)' : ''));
         $this->info('Sent-log: '.$sentLogPath.' ('.count($sentEmails).' previously-sent, '.$sentTodayCount.' today)');
+        if ($domainAllowlist !== null) {
+            $this->info('Per-domain cap: '.$maxPerDomain.' (allowlist size: '.count($domainAllowlist).')');
+        }
         $this->info("Target: {$max} this run".($dailyCap > 0 ? " (daily cap {$dailyCap})" : '').
             "; batch {$batch} then {$batchSleep}s pause; delay {$minDelay}-{$maxDelay}s.");
 
@@ -125,6 +138,12 @@ class SendRadarColdOutreachCommand extends Command
             }
 
             if (isset($sentEmails[$email])) {
+                $skipped++;
+
+                continue;
+            }
+
+            if ($domainAllowlist !== null && ! isset($domainAllowlist[$email])) {
                 $skipped++;
 
                 continue;
@@ -302,6 +321,58 @@ class SendRadarColdOutreachCommand extends Command
         fclose($fh);
 
         return [$sentEmails, $sentTodayCount];
+    }
+
+    /**
+     * Pre-scan the CSV and return a map of [email => true] for the top N
+     * recipients per email domain, sorted by message_count desc (ties broken
+     * by first-appearance order in the file). If the CSV doesn't have a
+     * message_count column, falls back to keeping the first N rows per domain.
+     *
+     * @param  list<string>  $header
+     * @return array<string, true>
+     */
+    private function buildDomainAllowlist(string $csvPath, array $header, string $emailKey, int $maxPerDomain): array
+    {
+        $fh = fopen($csvPath, 'r');
+        if ($fh === false) {
+            return [];
+        }
+        fgetcsv($fh); // skip header
+
+        $msgCountKey = $this->pickColumn($header, ['message_count', 'msg_count', 'engagement']);
+
+        // Group emails by domain, preserving insertion order, with their message_count
+        $byDomain = [];
+        $orderIdx = 0;
+        while (($row = fgetcsv($fh)) !== false) {
+            $data = $this->rowToAssoc($header, $row);
+            $email = strtolower(trim((string) ($data[$emailKey] ?? '')));
+            if ($email === '' || ! str_contains($email, '@')) {
+                continue;
+            }
+            $domain = substr($email, strpos($email, '@') + 1);
+            $mc = $msgCountKey !== null ? (int) ($data[$msgCountKey] ?? 0) : 0;
+            $byDomain[$domain][] = ['email' => $email, 'mc' => $mc, 'idx' => $orderIdx++];
+        }
+        fclose($fh);
+
+        $allowlist = [];
+        foreach ($byDomain as $rows) {
+            // Sort: highest message_count first, tie-break by original order
+            usort($rows, function ($a, $b) {
+                if ($a['mc'] !== $b['mc']) {
+                    return $b['mc'] <=> $a['mc'];
+                }
+
+                return $a['idx'] <=> $b['idx'];
+            });
+            foreach (array_slice($rows, 0, $maxPerDomain) as $r) {
+                $allowlist[$r['email']] = true;
+            }
+        }
+
+        return $allowlist;
     }
 
     private function appendSentLog(string $path, string $email): void
