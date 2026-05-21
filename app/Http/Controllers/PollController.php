@@ -11,16 +11,19 @@ class PollController extends Controller
     public function manual()
     {
         if (Setting::get('poll_status') === 'running') {
-            return redirect()->route('poll.progress');
+            return back()->with('success', 'Ya hay un sondeo en ejecución. Le notificaremos cuando concluya.');
         }
 
         Setting::set('poll_status', 'running');
         Setting::set('poll_log', '[]');
         Setting::set('poll_started_at', now()->toDateTimeString());
 
-        RunPollJob::dispatch();
+        $user = auth()->user();
+        $company = currentCompany();
 
-        return redirect()->route('poll.progress');
+        RunPollJob::dispatch($user?->id, $company?->id);
+
+        return back()->with('success', 'Sondeo iniciado. Le notificaremos cuando concluya.');
     }
 
     public function sondear(BidMatchingService $matcher)
