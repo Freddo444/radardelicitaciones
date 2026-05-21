@@ -168,6 +168,19 @@
 
             <div aria-hidden="true" class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10"></div>
 
+            @if(auth()->user()?->isSuperAdmin())
+            {{-- Super Admin quick-link --}}
+            <a href="{{ route('admin.dashboard') }}"
+               title="Panel de Super Admin"
+               class="inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-purple-500 transition">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="size-4">
+                    <path d="M12 2L4 7v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V7l-8-5z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="hidden sm:inline">Admin</span>
+            </a>
+            <div aria-hidden="true" class="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-900/10"></div>
+            @endif
+
             {{-- User dropdown --}}
             <el-dropdown class="relative">
                 <button class="flex items-center gap-x-2">
