@@ -13,6 +13,8 @@
 </head>
 <body class="h-full">
 
+<x-auth-nav />
+
 <div class="flex min-h-full items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
     <div class="w-full max-w-sm space-y-10">
 
