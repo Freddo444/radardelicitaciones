@@ -1,6 +1,86 @@
 @extends('marketing.layout')
 
 @section('title', 'Radar de Licitaciones — Monitoreo inteligente de licitaciones públicas RD')
+@section('description', 'Software dominicano para monitorear licitaciones del DGCP en tiempo real. Alertas por correo y Telegram, análisis de pliegos con IA, pre-llenado de formularios oficiales y gestor documental. Prueba gratis 14 días, sin tarjeta de crédito.')
+
+@push('head')
+{{-- Schema.org SoftwareApplication: makes the landing eligible for rich
+     snippets (product card with price, rating, free-trial badge) in Google
+     search results. Older competition almost certainly doesn't have this. --}}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Radar de Licitaciones",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://radardelicitaciones.com",
+    "description": "Monitoreo en tiempo real de licitaciones del DGCP en República Dominicana, con análisis de pliegos por IA, pre-llenado de formularios y gestor documental.",
+    "offers": {
+        "@type": "Offer",
+        "price": "45.00",
+        "priceCurrency": "USD",
+        "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "price": "45.00",
+            "priceCurrency": "USD",
+            "unitText": "MONTH"
+        }
+    },
+    "featureList": [
+        "Monitoreo automático del portal DGCP",
+        "Alertas por correo y Telegram",
+        "Análisis de pliegos con inteligencia artificial",
+        "Pre-llenado de formularios oficiales",
+        "Gestor documental por proceso de licitación"
+    ],
+    "inLanguage": "es-DO"
+}
+</script>
+
+{{-- FAQPage schema: makes FAQ entries eligible to appear directly in
+     Google search results as accordion-style rich results. --}}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "¿Cómo saben qué licitaciones me interesan?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Usted selecciona los códigos UNSPSC (rubros) de los bienes y servicios que ofrece su empresa. El sistema cruza automáticamente cada nueva licitación con sus rubros y le notifica cuando hay coincidencia."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "¿Es seguro subir mis documentos?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sí. Sus documentos se almacenan en servidores seguros con conexión encriptada. Cada empresa tiene un espacio aislado — ningún otro usuario puede acceder a sus datos."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "¿Puedo cancelar en cualquier momento?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sí, sin penalidades. Su acceso continúa hasta el final del período pagado. Puede cancelar desde su panel de facturación."
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "¿Qué incluye el análisis de pliegos con IA?",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "La inteligencia artificial lee el documento del pliego completo y genera un resumen con requisitos, montos, plazos, documentos solicitados y condiciones especiales. Le ahorra horas de lectura."
+            }
+        }
+    ]
+}
+</script>
+@endpush
 @section('navBg', 'bg-transparent')
 @section('logoText', 'text-white')
 @section('navLink', 'text-blue-100 hover:text-white')

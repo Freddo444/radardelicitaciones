@@ -1,6 +1,7 @@
 @extends('marketing.layout')
 
 @section('title', 'Términos de servicio — Radar de Licitaciones')
+@section('description', 'Términos de servicio de Radar de Licitaciones, plataforma de monitoreo de licitaciones públicas del DGCP en República Dominicana.')
 @section('navBg', 'bg-white/95 backdrop-blur-md shadow-sm')
 @section('logoText', 'text-zinc-900')
 @section('navLink', 'text-zinc-600 hover:text-zinc-900')

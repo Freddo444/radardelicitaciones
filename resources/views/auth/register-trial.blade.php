@@ -84,5 +84,6 @@
 </div>
 
 <x-umami-track />
+<x-tawk-script />
 </body>
 </html>

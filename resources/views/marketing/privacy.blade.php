@@ -1,6 +1,7 @@
 @extends('marketing.layout')
 
 @section('title', 'Política de privacidad — Radar de Licitaciones')
+@section('description', 'Política de privacidad y protección de datos de Radar de Licitaciones. Cómo recolectamos, almacenamos y protegemos la información de las empresas dominicanas que usan nuestra plataforma.')
 @section('navBg', 'bg-white/95 backdrop-blur-md shadow-sm')
 @section('logoText', 'text-zinc-900')
 @section('navLink', 'text-zinc-600 hover:text-zinc-900')

@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Radar de Licitaciones — Monitoreo de licitaciones públicas RD')</title>
-    <meta name="description" content="@yield('description', 'Monitoreo en tiempo real de licitaciones de la DGCP, análisis de pliegos con IA y herramientas para preparar ofertas ganadoras.')">
+    <meta name="description" content="@yield('description', 'Software dominicano para monitorear licitaciones del DGCP en tiempo real. Alertas por correo y Telegram, análisis de pliegos con IA, pre-llenado de formularios y gestor documental para constructoras, suplidores e ingenieros en RD.')">
+
+    {{-- Canonical: tells search engines the official URL for this page,
+         dedupes against trailing-slash / UTM / case variants --}}
+    <link rel="canonical" href="{{ url()->current() }}">
+    <link rel="alternate" hreflang="es-DO" href="{{ url()->current() }}">
+    <link rel="alternate" hreflang="x-default" href="{{ url()->current() }}">
 
     {{-- Open Graph --}}
     <meta property="og:type" content="website">
@@ -28,7 +34,32 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    {{-- Schema.org Organization: tells Google what brand this is. Appears
+         in the knowledge panel + improves the chance of brand-name search
+         autocomplete and rich snippets sitewide. --}}
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Radar de Licitaciones",
+        "url": "https://radardelicitaciones.com",
+        "logo": "https://radardelicitaciones.com/images/LOGO.png",
+        "description": "Software dominicano de monitoreo de licitaciones públicas del DGCP, análisis de pliegos con IA y gestión de procesos de oferta.",
+        "founder": "Frederick López",
+        "areaServed": {
+            "@type": "Country",
+            "name": "Dominican Republic"
+        },
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "DO"
+        }
+    }
+    </script>
+
     @vite(['resources/css/app.css'])
+
+    @stack('head')
     <style>
         :root {
             --radar-dark: #020617;

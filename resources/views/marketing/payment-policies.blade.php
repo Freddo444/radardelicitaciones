@@ -1,6 +1,7 @@
 @extends('marketing.layout')
 
 @section('title', 'Políticas de pago y seguridad — Radar de Licitaciones')
+@section('description', 'Políticas de pago, devoluciones y seguridad de Radar de Licitaciones. Aceptamos PayPal, tarjetas vía Azul (Visa, Mastercard) y transferencia bancaria desde República Dominicana.')
 @section('navBg', 'bg-white/95 backdrop-blur-md shadow-sm')
 @section('logoText', 'text-zinc-900')
 @section('navLink', 'text-zinc-600 hover:text-zinc-900')
