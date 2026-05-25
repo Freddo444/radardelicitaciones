@@ -34,8 +34,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-    {{-- Schema.org Organization. Wrapped in @verbatim so Blade doesn't try
-         to interpret @context / @type as directives. --}}
+    {{-- Schema.org Organization. Wrapped in a verbatim block so Blade does
+         not try to interpret the JSON-LD keys as directives. --}}
     @verbatim
     <script type="application/ld+json">
     {

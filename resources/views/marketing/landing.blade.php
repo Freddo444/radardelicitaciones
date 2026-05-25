@@ -4,8 +4,8 @@
 @section('description', 'Software dominicano para monitorear licitaciones del DGCP en tiempo real. Alertas por correo y Telegram, análisis de pliegos con IA, pre-llenado de formularios oficiales y gestor documental. Prueba gratis 14 días, sin tarjeta de crédito.')
 
 @push('head')
-{{-- Schema.org SoftwareApplication + FAQPage. Wrapped in @verbatim so Blade
-     doesn't try to interpret @context / @type as directives. --}}
+{{-- Schema.org SoftwareApplication + FAQPage. Wrapped in a verbatim block so
+     Blade does not try to interpret the JSON-LD keys as directives. --}}
 @verbatim
 <script type="application/ld+json">
 {
