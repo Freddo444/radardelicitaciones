@@ -4,9 +4,9 @@
 @section('description', 'Software dominicano para monitorear licitaciones del DGCP en tiempo real. Alertas por correo y Telegram, análisis de pliegos con IA, pre-llenado de formularios oficiales y gestor documental. Prueba gratis 14 días, sin tarjeta de crédito.')
 
 @push('head')
-{{-- Schema.org SoftwareApplication: makes the landing eligible for rich
-     snippets (product card with price, rating, free-trial badge) in Google
-     search results. Older competition almost certainly doesn't have this. --}}
+{{-- Schema.org SoftwareApplication + FAQPage. Wrapped in @verbatim so Blade
+     doesn't try to interpret @context / @type as directives. --}}
+@verbatim
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
@@ -80,6 +80,7 @@
     ]
 }
 </script>
+@endverbatim
 @endpush
 @section('navBg', 'bg-transparent')
 @section('logoText', 'text-white')
