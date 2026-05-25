@@ -38,8 +38,6 @@
 }
 </script>
 
-{{-- FAQPage schema: makes FAQ entries eligible to appear directly in
-     Google search results as accordion-style rich results. --}}
 <script type="application/ld+json">
 {
     "@context": "https://schema.org",
