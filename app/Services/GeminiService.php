@@ -22,7 +22,7 @@ class GeminiService
 
     private string $model = 'gemini-2.5-flash';
 
-    private string $fallbackModel = 'gemini-2.0-flash';
+    private string $fallbackModel = 'gemini-2.5-flash-lite';
 
     private string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -194,9 +194,14 @@ PROMPT;
 
             $response = $this->callGemini($this->model, $base64Pdf);
 
-            if ($response->status() === 503) {
-                Log::warning('Gemini 503 on primary model, retrying with fallback', [
+            // 503: model overloaded. 404: model retired/unavailable on this key.
+            // Both are recoverable by retrying with the secondary model, which
+            // sits on a different quota pool.
+            if (in_array($response->status(), [503, 404], true)) {
+                Log::warning('Gemini primary model unavailable, retrying with fallback', [
                     'offer_id' => $attempt->offer_id,
+                    'primary_model' => $this->model,
+                    'primary_status' => $response->status(),
                     'fallback_model' => $this->fallbackModel,
                 ]);
                 $response = $this->callGemini($this->fallbackModel, $base64Pdf);
