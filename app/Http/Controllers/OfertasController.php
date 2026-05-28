@@ -23,6 +23,7 @@ use App\Models\Personnel;
 use App\Models\Project;
 use App\Models\Subscription;
 use App\Models\VaultDocument;
+use App\Rules\PdfFile;
 use App\Services\DgcpApiClient;
 use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
@@ -161,7 +162,7 @@ class OfertasController extends Controller
         abort_unless($oferta->isEditable(), 403, 'La oferta está bloqueada.');
 
         $request->validate([
-            'pliego' => 'required|file|mimes:pdf|max:51200',
+            'pliego' => ['required', 'file', 'max:51200', new PdfFile],
         ]);
 
         $file = $request->file('pliego');
