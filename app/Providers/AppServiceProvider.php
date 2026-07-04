@@ -19,6 +19,8 @@ use App\Observers\OfferEventObserver;
 use App\Observers\OfferObserver;
 use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
+use App\Support\Blog\ArticleRepository;
+use Carbon\Carbon;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -28,12 +30,15 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->singleton(ArticleRepository::class, function () {
+            return new ArticleRepository(resource_path('articles'));
+        });
     }
 
     public function boot(): void
     {
         date_default_timezone_set('America/Santo_Domingo');
+        Carbon::setLocale('es');
 
         Event::listen(Login::class, function (Login $event): void {
             $user = $event->user;

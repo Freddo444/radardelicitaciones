@@ -5,6 +5,7 @@ use App\Http\Controllers\Billing\AzulController;
 use App\Http\Controllers\Billing\BankTransferController;
 use App\Http\Controllers\Billing\PayPalController;
 use App\Http\Controllers\Billing\SubscriptionController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\CalendarFeedController;
 use App\Http\Controllers\CalendarIntegrationController;
@@ -48,6 +49,13 @@ Route::get('/privacidad', [MarketingController::class, 'privacy'])->name('privac
 Route::get('/politicas-pago-seguridad', [MarketingController::class, 'paymentPolicies'])->name('payment-policies');
 Route::post('/contacto', [SupportController::class, 'contact'])->name('contact.store')->middleware('throttle:5,1');
 Route::get('/sitemap.xml', [MarketingController::class, 'sitemap'])->name('sitemap');
+
+// ── Blog (public) ─────────────────────────────────────────────────────
+Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+Route::get('/blog/feed.xml', [BlogController::class, 'feed'])->name('blog.feed');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])
+    ->where('slug', '[a-z0-9-]+')
+    ->name('blog.show');
 
 Route::get('/calendar/feeds/tablero-{token}.ics', [CalendarFeedController::class, 'tablero'])
     ->where('token', '[a-f0-9]{64}')

@@ -24,6 +24,7 @@
         <div class="hidden items-center gap-8 md:flex">
             <a href="/" class="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">Inicio</a>
             <a href="/precios" class="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">Precios</a>
+            <a href="/blog" class="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">Guías</a>
             <a href="/#contacto" class="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">Contacto</a>
             <a href="{{ route('login') }}" class="text-sm font-medium text-gray-600 transition-colors hover:text-gray-900">Iniciar sesión</a>
             <a href="{{ route('register.trial') }}"
@@ -44,6 +45,7 @@
         <div class="space-y-2 px-4 py-4">
             <a @click="open = false" href="/" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Inicio</a>
             <a @click="open = false" href="/precios" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Precios</a>
+            <a @click="open = false" href="/blog" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Guías</a>
             <a @click="open = false" href="/#contacto" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Contacto</a>
             <a @click="open = false" href="{{ route('login') }}" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Iniciar sesión</a>
             <a @click="open = false" href="{{ route('register.trial') }}" class="block rounded-lg bg-indigo-600 px-3 py-3 text-center text-sm font-semibold text-white shadow-md shadow-indigo-600/20">Prueba gratis</a>
@@ -68,6 +70,8 @@
                :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Inicio</a>
             <a href="/precios" class="text-sm font-medium transition-colors"
                :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Precios</a>
+            <a href="/blog" class="text-sm font-medium transition-colors"
+               :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Guías</a>
             <a href="/#contacto" class="text-sm font-medium transition-colors"
                :class="scrolled ? 'text-gray-600 hover:text-gray-900' : '@yield('navLink', 'text-blue-100 hover:text-white')'">Contacto</a>
             <a href="/login" class="text-sm font-medium transition-colors"
@@ -91,6 +95,7 @@
         <div class="space-y-2 px-4 py-4">
             <a @click="open = false" href="/" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Inicio</a>
             <a @click="open = false" href="/precios" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Precios</a>
+            <a @click="open = false" href="/blog" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Guías</a>
             <a @click="open = false" href="/#contacto" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Contacto</a>
             <a @click="open = false" href="/login" class="block rounded-lg px-3 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50">Iniciar sesión</a>
             <a @click="open = false" href="{{ route('register.trial') }}" class="block rounded-lg bg-indigo-600 px-3 py-3 text-center text-sm font-semibold text-white shadow-md shadow-indigo-600/20">Prueba gratis</a>
