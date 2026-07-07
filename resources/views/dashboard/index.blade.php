@@ -203,8 +203,8 @@
                                     {{ $bid->currency === 'USD' ? 'US$' : 'RD$' }}{{ number_format($bid->amount_estimated, 0, '.', ',') }}
                                 </span>
                                 @endif
-                                <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
-                                   class="text-xs text-blue-600 hover:underline">DGCP →</a>
+                                <a href="{{ route('convocatorias.index', ['open' => $bid->id]) }}"
+                                   class="text-xs font-medium text-blue-600 hover:underline">Ver detalle →</a>
                             </div>
                         </div>
                         {{-- Mobile-only: amount + link row --}}
@@ -216,8 +216,8 @@
                             @else
                             <span></span>
                             @endif
-                            <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
-                               class="text-xs text-blue-600 hover:underline">Ver en DGCP →</a>
+                            <a href="{{ route('convocatorias.index', ['open' => $bid->id]) }}"
+                               class="text-xs font-medium text-blue-600 hover:underline">Ver detalle →</a>
                         </div>
                     </li>
                     @endforeach

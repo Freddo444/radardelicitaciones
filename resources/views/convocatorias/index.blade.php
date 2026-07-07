@@ -2,7 +2,7 @@
 @section('title', 'Convocatorias')
 
 @section('content')
-<div x-data="convocatorias()" class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
+<div x-data="convocatorias()" x-init="init()" class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-10 lg:px-8">
 
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
@@ -836,6 +836,21 @@ function convocatorias() {
         showAllCronograma: false,
         copied: false,
         bookmarks: {!! json_encode($bids->pluck('is_bookmarked', 'id')) !!},
+
+        init() {
+            // Auto-open a bid's drawer when arriving via ?open=<id> (e.g. from
+            // the dashboard's "Convocatorias recientes" list). Keeps users
+            // inside the app instead of bouncing them to the DGCP portal.
+            const params = new URLSearchParams(window.location.search);
+            const openId = params.get('open');
+            if (openId && /^\d+$/.test(openId)) {
+                this.openDrawer(parseInt(openId, 10));
+                // Strip ?open so a refresh or back-nav doesn't reopen it.
+                params.delete('open');
+                const qs = params.toString();
+                history.replaceState({}, '', window.location.pathname + (qs ? '?' + qs : ''));
+            }
+        },
 
         async openDrawer(bidId) {
             this.drawerOpen = true;
