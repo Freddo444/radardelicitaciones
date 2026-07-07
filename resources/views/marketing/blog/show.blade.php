@@ -122,7 +122,10 @@
             <p class="text-xs font-semibold uppercase tracking-wider text-indigo-600">Pruebe Radar</p>
             <h2 class="mt-2 text-xl font-bold text-zinc-900">Aplique lo aprendido sin revisar el portal a mano</h2>
             <p class="mt-2 text-sm text-zinc-600">Radar de Licitaciones monitorea el DGCP en tiempo real y le avisa cuando aparece algo que encaja con su empresa. 14 días gratis, sin tarjeta.</p>
-            <a href="{{ route('register.trial') }}" class="mt-5 inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
+            <a href="{{ route('register.trial') }}"
+               data-umami-event="blog_cta_trial"
+               data-umami-event-article="{{ $article->slug }}"
+               class="mt-5 inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
                 Probar gratis 14 días
             </a>
         </div>

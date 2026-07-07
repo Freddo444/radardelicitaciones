@@ -44,7 +44,7 @@
         @if($articles->isEmpty())
             <div class="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 py-20 text-center">
                 <p class="text-sm text-zinc-500">Pronto publicaremos guías sobre el DGCP, pliegos y oferta pública.</p>
-                <p class="mt-2 text-xs text-zinc-400">¿Quiere saber cuándo? Suscríbase al <a class="underline" href="{{ route('blog.feed') }}">feed RSS</a>.</p>
+                <p class="mt-2 text-xs text-zinc-400">¿Quiere saber cuándo? Suscríbase al <a class="underline" href="{{ route('blog.feed') }}" data-umami-event="blog_rss_click">feed RSS</a>.</p>
             </div>
         @else
             <ul class="divide-y divide-zinc-100">
@@ -84,7 +84,10 @@
         <div class="rounded-2xl bg-white p-8 ring-1 ring-zinc-100 sm:p-10">
             <h2 class="text-xl font-bold text-zinc-900">¿Listo para dejar de revisar el portal a mano?</h2>
             <p class="mt-3 text-base text-zinc-600">Probar Radar es gratis durante 14 días. Sin tarjeta de crédito.</p>
-            <a href="{{ route('register.trial') }}" class="mt-6 inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
+            <a href="{{ route('register.trial') }}"
+               data-umami-event="blog_cta_trial"
+               data-umami-event-article="index"
+               class="mt-6 inline-flex rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-500">
                 Probar gratis 14 días
             </a>
         </div>
