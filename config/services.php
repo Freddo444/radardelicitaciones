@@ -53,7 +53,11 @@ return [
     ],
 
     'support' => [
+        // Publicly displayed contact address (footer, terms, privacy).
         'email' => env('SUPPORT_EMAIL', 'info@radardelicitaciones.com'),
+        // Internal inbox that contact-form and in-app support submissions
+        // are delivered to. Kept separate from the public address above.
+        'inbox' => env('SUPPORT_INBOX', 'soporte@radardelicitaciones.com'),
         'phone' => env('SUPPORT_PHONE', '+1-809-555-1234'),
         'address_line' => env('BUSINESS_ADDRESS_LINE', 'Dirección comercial registrada'),
         'city' => env('BUSINESS_CITY', 'Santo Domingo'),

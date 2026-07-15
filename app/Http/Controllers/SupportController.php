@@ -30,7 +30,7 @@ class SupportController extends Controller
 
         try {
             Mail::raw($details, function ($msg) use ($request) {
-                $msg->to('support@radardelicitaciones.com')
+                $msg->to(config('services.support.inbox'))
                     ->replyTo($request->email, $request->name)
                     ->subject("Contacto: {$request->name}");
             });
@@ -73,7 +73,7 @@ class SupportController extends Controller
 
         try {
             Mail::raw($details, function ($msg) use ($request, $user, $screenshotPath) {
-                $msg->to('support@radardelicitaciones.com')
+                $msg->to(config('services.support.inbox'))
                     ->replyTo($user->email, $user->name)
                     ->subject("Soporte: {$request->subject}");
 
