@@ -614,10 +614,15 @@
 
             <form method="POST" action="{{ route('contact.store') }}" class="mt-10 space-y-6">
                 @csrf
-                {{-- Honeypot --}}
-                <div class="hidden" aria-hidden="true">
-                    <input type="text" name="website" tabindex="-1" autocomplete="off">
+                {{-- Anti-spam. Positioned off-screen rather than display:none —
+                     bots look for hidden/display:none and skip those fields. --}}
+                <div style="position:absolute;left:-9999px;top:-9999px;" aria-hidden="true">
+                    <label for="company-fax-field">No complete este campo</label>
+                    <input type="text" id="company-fax-field" name="{{ \App\Support\ContactSpamGuard::HONEYPOT_FIELD }}"
+                           tabindex="-1" autocomplete="off">
                 </div>
+                <input type="hidden" name="{{ \App\Support\ContactSpamGuard::TIMESTAMP_FIELD }}"
+                       value="{{ \App\Support\ContactSpamGuard::issueTimestamp() }}">
                 <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                     <div>
                         <label for="contact-name" class="block text-sm font-medium text-zinc-700">Nombre</label>

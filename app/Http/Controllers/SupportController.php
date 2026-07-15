@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ContactSpamGuard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -9,9 +10,11 @@ use Illuminate\Support\Facades\Mail;
 
 class SupportController extends Controller
 {
-    public function contact(Request $request)
+    public function contact(Request $request, ContactSpamGuard $spamGuard)
     {
-        if ($request->filled('website')) {
+        // Bots get the same success response as humans so they can't tell
+        // which heuristic caught them. Blocked attempts are logged.
+        if ($spamGuard->isSpam($request)) {
             return back()->with('contact_sent', true);
         }
 
