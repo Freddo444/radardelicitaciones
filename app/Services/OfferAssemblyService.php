@@ -12,6 +12,10 @@ use ZipArchive;
 
 class OfferAssemblyService
 {
+    public function __construct(
+        private readonly SobreBinder $binder,
+    ) {}
+
     /**
      * Assemble an offer package: snapshot all data, create ZIP, return snapshot record.
      */
@@ -96,7 +100,7 @@ class OfferAssemblyService
      */
     public function assembleSobres(Offer $offer): array
     {
-        $offer->load('activeRequirements.items');
+        $offer->load('activeRequirements.items', 'company');
 
         $sobreDir = storage_path('app/generated/sobres');
         if (! is_dir($sobreDir)) {
@@ -122,7 +126,7 @@ class OfferAssemblyService
                 continue;
             }
 
-            // Convert each file to PDF and collect paths
+            // Convert each file to PDF and collect paths, preserving order.
             $pdfPaths = [];
             foreach ($files as $file) {
                 $pdf = $this->ensurePdf($file['full_path'], $pdfCacheDir);
@@ -135,28 +139,14 @@ class OfferAssemblyService
                 continue;
             }
 
-            // Build ZIP
-            $zipName = "Sobre {$sobre}-{$code}.zip";
-            $zipPath = "{$sobreDir}/{$zipName}";
+            // Bind into a single branded, paginated PDF (cover + index +
+            // separators + documents with foliado).
+            $boundPath = "{$sobreDir}/Sobre {$sobre}-{$code}.pdf";
+            $bound = $this->binder->bind($offer, $sobre, $pdfPaths, $boundPath);
 
-            $zip = new ZipArchive;
-            $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
-
-            $usedNames = [];
-            foreach ($pdfPaths as $entry) {
-                $baseName = pathinfo($entry['label'], PATHINFO_FILENAME).'.pdf';
-                // Avoid duplicate names
-                if (isset($usedNames[$baseName])) {
-                    $usedNames[$baseName]++;
-                    $baseName = pathinfo($entry['label'], PATHINFO_FILENAME)."_{$usedNames[$baseName]}.pdf";
-                } else {
-                    $usedNames[$baseName] = 1;
-                }
-                $zip->addFile($entry['path'], $baseName);
+            if ($bound) {
+                $result[$sobre] = $bound;
             }
-            $zip->close();
-
-            $result[$sobre] = $zipPath;
         }
 
         return $result;

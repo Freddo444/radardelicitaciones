@@ -592,16 +592,14 @@ class OfertasController extends Controller
     {
         abort_unless(in_array($sobre, ['A', 'B', 'U']), 404);
 
-        $pattern = storage_path("app/generated/sobres/Sobre {$sobre}-{$oferta->proceso_codigo}*.zip");
-        $files = glob($pattern);
+        $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $oferta->proceso_codigo ?? 'oferta');
+        $path = storage_path("app/generated/sobres/Sobre {$sobre}-{$code}.pdf");
 
-        if (empty($files)) {
+        if (! file_exists($path)) {
             abort(404, "Sobre {$sobre} no ha sido generado.");
         }
 
-        $latest = collect($files)->sort()->last();
-
-        return response()->download($latest, basename($latest));
+        return response()->download($path, basename($path));
     }
 
     // ── Form generation within offer context ──────────────────────────

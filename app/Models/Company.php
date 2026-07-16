@@ -32,6 +32,8 @@ class Company extends Model
         'firma_path',
         'sello_path',
         'logo_path',
+        'sobre_theme',
+        'sobre_accent_color',
         'onboarding_dismissed_at',
         'calendar_feed_token',
     ];
