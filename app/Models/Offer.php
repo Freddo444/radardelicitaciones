@@ -145,10 +145,16 @@ class Offer extends Model
             && $this->allRequirementsMet();
     }
 
-    /** Days remaining until fecha_limite. */
+    /** Calendar days remaining until fecha_limite (0 = today, 1 = tomorrow, <0 = past). */
     public function diasRestantes(): ?int
     {
-        return $this->fecha_limite ? (int) now()->diffInDays($this->fecha_limite, false) : null;
+        if (! $this->fecha_limite) {
+            return null;
+        }
+
+        // Compare calendar days, not 24h periods: a deadline tomorrow at any
+        // time is "1 day away", never "today", regardless of the clock time.
+        return (int) now()->startOfDay()->diffInDays($this->fecha_limite->copy()->startOfDay(), false);
     }
 
     public function deadlineColor(): string
