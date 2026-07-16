@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Rubro;
+use App\Services\BidMatchingService;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CompanySetupController extends Controller
 {
@@ -113,7 +115,7 @@ class CompanySetupController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, BidMatchingService $matcher)
     {
         $user = Auth::user();
         $subscription = $user->subscription;
@@ -185,10 +187,28 @@ class CompanySetupController extends Controller
         session(['current_company_id' => $company->id]);
         $user->update(['current_company_id' => $company->id]);
 
+        // Backfill matches against the 90-day bid backlog so the dashboard is
+        // populated the moment onboarding finishes, instead of empty until the
+        // next poll happens to catch a new bid. Guarded so a slow/failed match
+        // never blocks the redirect — a poll will fill it in either way.
+        $matched = 0;
+        try {
+            $matched = $matcher->sondear($company->id);
+        } catch (\Throwable $e) {
+            Log::warning('[CompanySetup] onboarding sondear failed', [
+                'company_id' => $company->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $message = $matched > 0
+            ? "Empresa {$company->razon_social} creada. Encontramos {$matched} convocatoria(s) que coinciden con tus rubros."
+            : "Empresa {$company->razon_social} creada correctamente.";
+
         return redirect()->route('dashboard')
             ->with(array_filter([
-                'success' => "Empresa {$company->razon_social} creada correctamente.",
-                '_umami' => umami_flash_payload('company_onboarding_complete'),
+                'success' => $message,
+                '_umami' => umami_flash_payload('company_onboarding_complete', ['initial_matches' => $matched]),
             ], fn ($v) => $v !== null));
     }
 }
