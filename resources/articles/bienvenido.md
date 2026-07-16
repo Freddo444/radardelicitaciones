@@ -38,8 +38,8 @@ Estos son algunos de los temas que vamos a publicar:
 3. **Qué pasa realmente en una apertura de sobres**
    Cómo se vive una apertura desde la práctica, qué se revisa, qué puede salir mal y por qué llegar preparado importa.
 
-4. **Comparación de precios, comparación abreviada y licitación pública**
-   Cuándo aplica cada modalidad y cómo cambia la forma de preparar la propuesta.
+4. **Las modalidades de contratación bajo la nueva Ley 47-25**
+   Qué reemplazó a la comparación de precios, cuándo aplica cada modalidad y los umbrales vigentes.
 
 5. **Qué busca un comité de evaluación más allá de los documentos**
    Porque cumplir en papel no siempre es suficiente. Una oferta también debe ser clara, coherente y defendible.
