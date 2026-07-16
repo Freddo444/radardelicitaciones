@@ -45,7 +45,14 @@
                 </button>
             </div>
 
-            <p x-show="lookupError" class="mt-2 text-sm text-red-600" x-text="lookupError"></p>
+            {{-- Any lookup failure (DGCP down, server error) still offers a way
+                 forward, so a broken API never traps the user at step one. --}}
+            <div x-show="lookupError" x-cloak class="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
+                <p x-text="lookupError"></p>
+                <button type="button" @click="startManualEntry()" class="mt-2 block font-semibold text-amber-900 underline">
+                    Continuar sin autocompletar
+                </button>
+            </div>
 
             <div x-show="notFound" class="mt-4 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
                 No se encontró un proveedor con ese RPE. Puedes llenar los datos manualmente.
@@ -250,6 +257,13 @@ function companySetup() {
             this.lookupError = null;
             this.wasLookedUp = false;
             this.rubros = [];
+            // Preserve a typed RPE so the company is still saved with it — the
+            // user can then sync rubros from the DGCP later (once it's back up)
+            // via the "Sincronizar con la DGCP" button, instead of being stuck
+            // with an empty, unmatchable company.
+            if (this.rpeInput) {
+                this.form.rpe_numero = parseInt(this.rpeInput, 10);
+            }
             this.formReady = true;
         },
 

@@ -45,25 +45,42 @@ class CompanySetupController extends Controller
         $rpe = (int) $request->rpe;
         $base = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
 
-        // Fetch provider info
-        $providerResponse = Http::timeout(10)->get("{$base}/proveedores", [
-            'rpe' => $rpe,
-            'limit' => 1,
-        ]);
+        // The DGCP open-data API is frequently unavailable (502/timeout). When
+        // it is, a connection exception must NOT bubble up as a 500 that leaves
+        // the user stuck — return a recoverable response so the UI can offer
+        // "continue without autofill".
+        try {
+            $providerResponse = Http::timeout(10)->get("{$base}/proveedores", [
+                'rpe' => $rpe,
+                'limit' => 1,
+            ]);
 
-        if ($providerResponse->failed()) {
-            return response()->json(['found' => false, 'error' => 'Error al consultar la DGCP.'], 502);
+            if ($providerResponse->failed()) {
+                return response()->json([
+                    'found' => false,
+                    'dgcp_unavailable' => true,
+                    'error' => 'La DGCP no está respondiendo en este momento. Puedes continuar llenando los datos manualmente.',
+                ]);
+            }
+
+            $providers = $providerResponse->json('payload.content', []);
+            if (empty($providers)) {
+                return response()->json(['found' => false]);
+            }
+
+            $provider = $providers[0];
+
+            // Fetch rubros via the shared service (same source the sync action uses).
+            $rubros = app(DgcpProviderService::class)->fetchRubros($rpe);
+        } catch (\Throwable $e) {
+            Log::warning('[CompanySetup] RPE lookup failed', ['rpe' => $rpe, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'found' => false,
+                'dgcp_unavailable' => true,
+                'error' => 'La DGCP no está respondiendo en este momento. Puedes continuar llenando los datos manualmente.',
+            ]);
         }
-
-        $providers = $providerResponse->json('payload.content', []);
-        if (empty($providers)) {
-            return response()->json(['found' => false]);
-        }
-
-        $provider = $providers[0];
-
-        // Fetch rubros via the shared service (same source the sync action uses).
-        $rubros = app(DgcpProviderService::class)->fetchRubros($rpe);
 
         $seenCodes = [];
         $rubros = array_values(array_filter($rubros, function (array $r) use (&$seenCodes) {
