@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Dates;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -47,13 +48,7 @@ class OfferEvent extends Model
 
     public function daysUntil(): ?int
     {
-        if (! $this->event_date) {
-            return null;
-        }
-
-        // Calendar days, not 24h periods: an event tomorrow is "En 1 día",
-        // never "Hoy", regardless of the clock time (matches Offer::diasRestantes).
-        return (int) now()->startOfDay()->diffInDays($this->event_date->copy()->startOfDay(), false);
+        return Dates::calendarDaysUntil($this->event_date);
     }
 
     public function isPast(): bool

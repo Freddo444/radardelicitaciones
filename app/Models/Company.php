@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Dates;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -107,7 +108,7 @@ class Company extends Model
 
     public function cpaExpiryDays(): ?int
     {
-        return $this->cpa_vence ? (int) now()->diffInDays($this->cpa_vence, false) : null;
+        return Dates::calendarDaysUntil($this->cpa_vence);
     }
 
     public function ensureCalendarFeedToken(): string

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Traits\BelongsToCompany;
+use App\Support\Dates;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -148,13 +149,7 @@ class Offer extends Model
     /** Calendar days remaining until fecha_limite (0 = today, 1 = tomorrow, <0 = past). */
     public function diasRestantes(): ?int
     {
-        if (! $this->fecha_limite) {
-            return null;
-        }
-
-        // Compare calendar days, not 24h periods: a deadline tomorrow at any
-        // time is "1 day away", never "today", regardless of the clock time.
-        return (int) now()->startOfDay()->diffInDays($this->fecha_limite->copy()->startOfDay(), false);
+        return Dates::calendarDaysUntil($this->fecha_limite);
     }
 
     public function deadlineColor(): string

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Payment;
 use App\Models\Subscription;
+use App\Support\Dates;
 
 class SubscriptionService
 {
@@ -173,7 +174,7 @@ class SubscriptionService
             $usage['trial_parses_used'] = $subscription->trial_parse_count;
             $usage['trial_parses_limit'] = $subscription->trial_parse_limit;
             $usage['trial_days_left'] = $subscription->trial_ends_at
-                ? max(0, (int) now()->diffInDays($subscription->trial_ends_at, false))
+                ? max(0, Dates::calendarDaysUntil($subscription->trial_ends_at))
                 : 0;
         }
 

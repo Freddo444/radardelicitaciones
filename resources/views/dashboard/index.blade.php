@@ -13,7 +13,7 @@
         @foreach($expiryAlerts as $doc)
         @php
             $expired  = $doc->expires_at->isPast();
-            $daysLeft = (int) now()->diffInDays($doc->expires_at, false);
+            $daysLeft = \App\Support\Dates::calendarDaysUntil($doc->expires_at);
         @endphp
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg px-4 py-3 text-sm {{ $expired ? 'bg-red-50 ring-1 ring-inset ring-red-200' : 'bg-amber-50 ring-1 ring-inset ring-amber-200' }}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="size-5 shrink-0 {{ $expired ? 'text-red-500' : 'text-amber-500' }}">
@@ -98,7 +98,7 @@
             <ul class="divide-y divide-gray-100">
                 @foreach($upcomingEvents as $event)
                 @php
-                    $daysUntil = (int) now()->diffInDays($event->event_date, false);
+                    $daysUntil = \App\Support\Dates::calendarDaysUntil($event->event_date);
                     $urgentClass = $daysUntil <= 3 ? 'text-red-600' : ($daysUntil <= 7 ? 'text-amber-600' : 'text-gray-700');
                     $typeLabels = [
                         'visita_campo' => 'Visita de campo',
