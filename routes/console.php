@@ -22,6 +22,12 @@ Schedule::exec("{$php} secp:send-digest")
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/secp-digest.log'));
 
+// Nudge trial users who signed up but never finished company setup
+Schedule::exec("{$php} secp:send-setup-reminders")
+    ->hourly()
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/secp-setup-reminders.log'));
+
 Schedule::exec("{$php} secp:scrape")
     ->everyFifteenMinutes()
     ->withoutOverlapping()
