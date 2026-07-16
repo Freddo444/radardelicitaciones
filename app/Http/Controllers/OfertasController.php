@@ -548,7 +548,7 @@ class OfertasController extends Controller
 
         $data = $request->validate([
             'sobres' => 'required|array',
-            'sobres.*' => 'nullable|in:A,B',
+            'sobres.*' => 'nullable|in:A,B,U',
         ]);
 
         foreach ($data['sobres'] as $reqId => $sobre) {
@@ -578,7 +578,7 @@ class OfertasController extends Controller
 
     public function downloadSobre(Offer $oferta, string $sobre)
     {
-        abort_unless(in_array($sobre, ['A', 'B']), 404);
+        abort_unless(in_array($sobre, ['A', 'B', 'U']), 404);
 
         $pattern = storage_path("app/generated/sobres/Sobre {$sobre}-{$oferta->proceso_codigo}*.zip");
         $files = glob($pattern);

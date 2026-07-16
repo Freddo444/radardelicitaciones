@@ -91,7 +91,7 @@ class OfferAssemblyService
     }
 
     /**
-     * Generate Sobre A and Sobre B ZIP packages.
+     * Generate Sobre A, Sobre B, and Sobre Único (U) ZIP packages.
      * Each ZIP contains all requirement-item files converted to PDF.
      */
     public function assembleSobres(Offer $offer): array
@@ -111,7 +111,7 @@ class OfferAssemblyService
         $result = [];
         $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $offer->proceso_codigo ?? 'oferta');
 
-        foreach (['A', 'B'] as $sobre) {
+        foreach (['A', 'B', 'U'] as $sobre) {
             $reqs = $offer->activeRequirements->where('sobre', $sobre);
             if ($reqs->isEmpty()) {
                 continue;

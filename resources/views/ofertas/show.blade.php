@@ -1072,12 +1072,22 @@
             $metReqs = $oferta->activeRequirements->filter(fn($r) => in_array($r->estado, ['CUMPLE', 'ACEPTADO']));
             $sobreA = $oferta->activeRequirements->where('sobre', 'A');
             $sobreB = $oferta->activeRequirements->where('sobre', 'B');
-            $hasSobres = $sobreA->isNotEmpty() || $sobreB->isNotEmpty();
+            $sobreU = $oferta->activeRequirements->where('sobre', 'U');
+            $hasSobres = $sobreA->isNotEmpty() || $sobreB->isNotEmpty() || $sobreU->isNotEmpty();
         @endphp
-        <div class="rounded-xl border border-gray-200 bg-white">
+        <div class="rounded-xl border border-gray-200 bg-white" x-data="{ setAll(v) { $root.querySelectorAll('.js-sobre-select').forEach(s => { s.value = v; }); } }">
             <div class="border-b border-gray-200 px-6 py-4">
                 <h2 class="text-sm font-semibold text-gray-900">Asignar requisitos a Sobres</h2>
-                <p class="mt-0.5 text-xs text-gray-500">Clasifica cada requisito como Sobre A (administrativo/legal) o Sobre B (técnico/económico) para generar los paquetes PDF.</p>
+                <p class="mt-0.5 text-xs text-gray-500">Clasifica cada requisito como Sobre A (administrativo/legal), Sobre B (técnico/económico), o Sobre Único cuando el proceso no separa sobres. Luego genera los paquetes PDF.</p>
+                {{-- Bulk categorizer: sets every dropdown at once, then Guardar persists it. --}}
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-medium text-gray-400">Asignar todos a:</span>
+                    <button type="button" @click="setAll('U')" class="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100">Sobre Único</button>
+                    <button type="button" @click="setAll('A')" class="rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-200 hover:bg-blue-100">Sobre A</button>
+                    <button type="button" @click="setAll('B')" class="rounded-md bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 ring-1 ring-inset ring-purple-200 hover:bg-purple-100">Sobre B</button>
+                    <button type="button" @click="setAll('')" class="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-600 ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Limpiar</button>
+                    <span class="text-xs text-gray-400">(recuerde Guardar)</span>
+                </div>
             </div>
             <form method="POST" action="{{ route('ofertas.sobres.save', $oferta) }}">
                 @csrf
@@ -1092,18 +1102,20 @@
                             </div>
                         </div>
                         <select name="sobres[{{ $req->id }}]"
-                                class="w-32 shrink-0 rounded-md bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                                class="js-sobre-select w-36 shrink-0 rounded-md bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
                             <option value="">— Sin asignar —</option>
                             <option value="A" {{ $req->sobre === 'A' ? 'selected' : '' }}>Sobre A</option>
                             <option value="B" {{ $req->sobre === 'B' ? 'selected' : '' }}>Sobre B</option>
+                            <option value="U" {{ $req->sobre === 'U' ? 'selected' : '' }}>Sobre Único</option>
                         </select>
                     </div>
                     @endforeach
                 </div>
                 <div class="flex items-center justify-between border-t border-gray-200 px-6 py-4">
-                    <div class="flex items-center gap-x-4 text-xs text-gray-500">
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
                         <span class="inline-flex items-center gap-x-1"><span class="inline-block size-2.5 rounded-full bg-blue-500"></span> Sobre A: {{ $sobreA->count() }}</span>
                         <span class="inline-flex items-center gap-x-1"><span class="inline-block size-2.5 rounded-full bg-purple-500"></span> Sobre B: {{ $sobreB->count() }}</span>
+                        <span class="inline-flex items-center gap-x-1"><span class="inline-block size-2.5 rounded-full bg-emerald-500"></span> Sobre Único: {{ $sobreU->count() }}</span>
                     </div>
                     <div class="flex items-center gap-x-3">
                         <button type="submit"
@@ -1127,6 +1139,7 @@
                         $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $oferta->proceso_codigo ?? 'oferta');
                         $sobreAFile = glob(storage_path("app/generated/sobres/Sobre A-{$code}.zip"));
                         $sobreBFile = glob(storage_path("app/generated/sobres/Sobre B-{$code}.zip"));
+                        $sobreUFile = glob(storage_path("app/generated/sobres/Sobre U-{$code}.zip"));
                     @endphp
                     @if(!empty($sobreAFile))
                     <a href="{{ route('ofertas.sobres.download', [$oferta, 'A']) }}"
@@ -1146,6 +1159,16 @@
                             <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/>
                         </svg>
                         Sobre B
+                    </a>
+                    @endif
+                    @if(!empty($sobreUFile))
+                    <a href="{{ route('ofertas.sobres.download', [$oferta, 'U']) }}"
+                       class="inline-flex items-center gap-x-1.5 rounded-md bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100">
+                        <svg viewBox="0 0 20 20" fill="currentColor" class="-ml-0.5 size-4">
+                            <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z"/>
+                            <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/>
+                        </svg>
+                        Sobre Único
                     </a>
                     @endif
                 </div>
