@@ -47,7 +47,13 @@ class OfferEvent extends Model
 
     public function daysUntil(): ?int
     {
-        return $this->event_date ? (int) now()->diffInDays($this->event_date, false) : null;
+        if (! $this->event_date) {
+            return null;
+        }
+
+        // Calendar days, not 24h periods: an event tomorrow is "En 1 día",
+        // never "Hoy", regardless of the clock time (matches Offer::diasRestantes).
+        return (int) now()->startOfDay()->diffInDays($this->event_date->copy()->startOfDay(), false);
     }
 
     public function isPast(): bool

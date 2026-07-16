@@ -1198,7 +1198,7 @@
                                 <span class="text-xs text-gray-400">Pasado · {{ $event->event_date?->format('H:i') }}</span>
                                 @elseif($daysUntil !== null)
                                 <span class="text-xs font-medium {{ $daysUntil <= 3 ? 'text-red-600' : ($daysUntil <= 7 ? 'text-amber-600' : 'text-gray-500') }}">
-                                    {{ $daysUntil === 0 ? 'Hoy' : 'En ' . $daysUntil . ' días' }}
+                                    {{ $daysUntil === 0 ? 'Hoy' : ($daysUntil === 1 ? 'Mañana' : 'En ' . $daysUntil . ' días') }}
                                 </span>
                                 @endif
                                 @if($event->alert_days_before > 0)
