@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\SobreTheme;
 use Illuminate\Http\Request;
 
 class EmpresaController extends Controller
@@ -34,7 +35,12 @@ class EmpresaController extends Controller
             'registro_mercantil' => 'nullable|string|max:50',
             'cpa_numero' => 'nullable|string|max:50',
             'cpa_vence' => 'nullable|date',
+            'sobre_theme' => 'nullable|in:'.implode(',', SobreTheme::THEMES),
+            'sobre_accent_color' => 'nullable|regex:/^#?[0-9a-fA-F]{6}$/',
         ]);
+
+        // Normalize the accent color to #rrggbb (or null to fall back to the theme default).
+        $data['sobre_accent_color'] = SobreTheme::sanitizeHex($data['sobre_accent_color'] ?? null);
 
         $company = currentCompany();
         $company->fill($data);

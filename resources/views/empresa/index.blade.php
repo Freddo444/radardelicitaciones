@@ -196,6 +196,58 @@
             </div>
         </div>
 
+        {{-- Section: Sobre design --}}
+        @php
+            $themeMeta = [
+                'corporativo'  => ['label' => 'Corporativo',      'desc' => 'Banda de encabezado, sobrio y limpio.',        'default' => '#1e40af'],
+                'construccion' => ['label' => 'Construcción',     'desc' => 'Barra lateral fuerte, industrial.',            'default' => '#c2410c'],
+                'minimalista'  => ['label' => 'Minimalista',      'desc' => 'Mucho espacio en blanco, elegante.',           'default' => '#111827'],
+                'oscuro'       => ['label' => 'Elegante Oscuro',  'desc' => 'Fondo oscuro, premium.',                       'default' => '#38bdf8'],
+            ];
+            $currentTheme = old('sobre_theme', $company->sobre_theme ?? 'corporativo');
+            $currentAccent = old('sobre_accent_color', $company->sobre_accent_color);
+        @endphp
+        <div class="rounded-xl border border-gray-200 bg-white"
+             x-data="{ theme: '{{ $currentTheme }}', accent: '{{ $currentAccent ?: '' }}', defaults: {{ Illuminate\Support\Js::from(collect($themeMeta)->map->only('default')->map(fn($m)=>$m['default'])) }} }">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-sm font-semibold text-gray-900">Diseño de los sobres</h2>
+                <p class="mt-0.5 text-xs text-gray-500">La portada y separadores de los sobres PDF que genera Radar usarán este tema y color. Su logo aparece automáticamente.</p>
+            </div>
+            <div class="px-6 py-6 space-y-6">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    @foreach($themeMeta as $key => $meta)
+                    <label class="relative flex cursor-pointer flex-col rounded-lg border p-4 transition"
+                           :class="theme === '{{ $key }}' ? 'border-blue-600 ring-2 ring-blue-600/20 bg-blue-50/40' : 'border-gray-200 hover:border-gray-300'">
+                        <input type="radio" name="sobre_theme" value="{{ $key }}" class="sr-only" x-model="theme">
+                        <span class="mb-3 inline-flex h-8 w-full items-center overflow-hidden rounded ring-1 ring-inset ring-gray-200">
+                            <span class="h-full w-2/5" :style="`background:${accent || defaults['{{ $key }}']}`"></span>
+                            <span class="h-full flex-1 bg-white"></span>
+                        </span>
+                        <span class="text-sm font-semibold text-gray-900">{{ $meta['label'] }}</span>
+                        <span class="mt-0.5 text-xs text-gray-500">{{ $meta['desc'] }}</span>
+                        <svg x-show="theme === '{{ $key }}'" x-cloak class="absolute right-3 top-3 size-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0l-3.5-3.5a1 1 0 1 1 1.4-1.4l2.8 2.79 6.8-6.79a1 1 0 0 1 1.4 0Z" clip-rule="evenodd"/>
+                        </svg>
+                    </label>
+                    @endforeach
+                </div>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-3">
+                    <label for="sobre_accent_color" class="text-sm font-medium text-gray-900">Color de acento</label>
+                    <input type="color" x-model="accent"
+                           :value="accent || defaults[theme]"
+                           class="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-0.5"
+                           aria-label="Selector de color de acento">
+                    <input type="text" id="sobre_accent_color" name="sobre_accent_color" x-model="accent"
+                           placeholder="Por defecto del tema" maxlength="7"
+                           class="w-40 rounded-md bg-white px-3 py-2 text-sm font-mono text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+                    <button type="button" @click="accent = ''"
+                            class="text-xs font-medium text-gray-500 hover:text-gray-700">Usar color del tema</button>
+                    @error('sobre_accent_color')<p class="w-full text-xs text-red-600">{{ $message }}</p>@enderror
+                </div>
+            </div>
+        </div>
+
     </form>
 
     {{-- Section 4: Corporate images --}}
