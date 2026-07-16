@@ -207,6 +207,7 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
 
     // Rubros
     Route::get('/rubros', [RubrosController::class, 'index'])->name('rubros.index');
+    Route::post('/rubros/sync', [RubrosController::class, 'sync'])->name('rubros.sync');
     Route::post('/rubros', [RubrosController::class, 'store'])->name('rubros.store');
     Route::delete('/rubros/{rubro}', [RubrosController::class, 'destroy'])->name('rubros.destroy');
     Route::patch('/rubros/{rubro}/toggle', [RubrosController::class, 'toggle'])->name('rubros.toggle');

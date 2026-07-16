@@ -12,7 +12,18 @@
                 {{ $rubros->total() }} rubro{{ $rubros->total() !== 1 ? 's' : '' }} registrado{{ $rubros->total() !== 1 ? 's' : '' }}.
             </p>
         </div>
-        <div class="mt-4 sm:mt-0">
+        <div class="mt-4 flex items-center gap-x-3 sm:mt-0">
+            <form method="POST" action="{{ route('rubros.sync') }}">
+                @csrf
+                <button type="submit"
+                        @if(empty($company->rpe_numero)) disabled title="Agrega tu número RPE en el perfil de empresa" @endif
+                        class="inline-flex items-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="-ml-0.5 size-5">
+                        <path fill-rule="evenodd" d="M15.312 11.424a5.5 5.5 0 0 1-9.201 2.466l-.312-.311h2.433a.75.75 0 0 0 0-1.5H3.989a.75.75 0 0 0-.75.75v4.242a.75.75 0 0 0 1.5 0v-2.43l.31.31a7 7 0 0 0 11.712-3.138.75.75 0 0 0-1.449-.39Zm1.23-3.723a.75.75 0 0 0 .219-.53V2.929a.75.75 0 0 0-1.5 0V5.36l-.31-.31A7 7 0 0 0 3.239 8.188a.75.75 0 1 0 1.448.389A5.5 5.5 0 0 1 13.89 6.11l.311.31h-2.432a.75.75 0 0 0 0 1.5h4.243a.75.75 0 0 0 .53-.219Z" clip-rule="evenodd"/>
+                    </svg>
+                    Sincronizar con la DGCP
+                </button>
+            </form>
             <button command="show-modal" commandfor="rubros-drawer"
                     class="inline-flex items-center gap-x-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="-ml-0.5 size-5">

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\CatalogItem;
 use App\Models\Rubro;
+use App\Services\BidMatchingService;
+use App\Services\DgcpProviderService;
 use Illuminate\Http\Request;
 
 class RubrosController extends Controller
@@ -11,8 +13,62 @@ class RubrosController extends Controller
     public function index()
     {
         $rubros = Rubro::orderByDesc('active')->orderBy('name')->paginate(25);
+        $company = currentCompany();
 
-        return view('rubros.index', compact('rubros'));
+        return view('rubros.index', compact('rubros', 'company'));
+    }
+
+    /**
+     * Re-sync the company's rubros from its DGCP registration. Adds any rubro
+     * the company has newly registered at the DGCP (familia level), leaving
+     * existing rubros and their active state untouched, then re-matches so new
+     * rubros immediately surface historical convocatorias.
+     */
+    public function sync(DgcpProviderService $dgcp, BidMatchingService $matcher)
+    {
+        $company = currentCompany();
+
+        if (! $company->rpe_numero) {
+            return back()->with('warning', 'Agrega tu número RPE en el perfil de empresa para sincronizar rubros con la DGCP.');
+        }
+
+        $remote = $dgcp->fetchRubros((int) $company->rpe_numero);
+        if (empty($remote)) {
+            return back()->with('info', 'No se encontraron rubros en la DGCP para tu RPE, o la DGCP no respondió. Intenta de nuevo más tarde.');
+        }
+
+        $existing = Rubro::withoutGlobalScopes()
+            ->where('company_id', $company->id)
+            ->pluck('code')
+            ->flip();
+
+        $added = 0;
+        foreach ($remote as $r) {
+            if ($existing->has($r['code'])) {
+                continue;
+            }
+            Rubro::create([
+                'company_id' => $company->id,
+                'code' => $r['code'],
+                'name' => $r['name'],
+                'level' => 'familia',
+                'active' => true,
+            ]);
+            $added++;
+        }
+
+        if ($added === 0) {
+            return back()->with('info', 'Tus rubros ya están al día con la DGCP.');
+        }
+
+        $matched = $matcher->sondear($company->id);
+
+        $msg = "Se agregaron {$added} rubro(s) desde la DGCP.";
+        if ($matched > 0) {
+            $msg .= " Encontramos {$matched} convocatoria(s) nueva(s) que coinciden.";
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function store(Request $request)

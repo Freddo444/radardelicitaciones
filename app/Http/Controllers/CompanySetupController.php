@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Rubro;
 use App\Services\BidMatchingService;
+use App\Services\DgcpProviderService;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -61,31 +62,8 @@ class CompanySetupController extends Controller
 
         $provider = $providers[0];
 
-        // Fetch rubros
-        $rubros = [];
-        $page = 1;
-        do {
-            $rubroResponse = Http::timeout(10)->get("{$base}/proveedores/rubro", [
-                'rpe' => $rpe,
-                'limit' => 100,
-                'page' => $page,
-            ]);
-
-            if ($rubroResponse->failed()) {
-                break;
-            }
-
-            $content = $rubroResponse->json('payload.content', []);
-            foreach ($content as $r) {
-                $rubros[] = [
-                    'code' => $r['familia_unspsc'],
-                    'name' => trim($r['descripcion']),
-                ];
-            }
-
-            $totalPages = $rubroResponse->json('pages', 1);
-            $page++;
-        } while ($page <= $totalPages);
+        // Fetch rubros via the shared service (same source the sync action uses).
+        $rubros = app(DgcpProviderService::class)->fetchRubros($rpe);
 
         $seenCodes = [];
         $rubros = array_values(array_filter($rubros, function (array $r) use (&$seenCodes) {
