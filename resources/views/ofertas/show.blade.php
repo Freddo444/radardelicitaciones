@@ -44,15 +44,18 @@
 
     {{-- ── Tab nav ──────────────────────────────────────────────────────── --}}
     @php
-        $tabs = [
-            'pliego'      => 'Pliego',
-            'documentos'  => 'Documentos del proceso',
-            'checklist'   => 'Checklist',
-            'composicion' => 'Composición',
-            'formularios' => 'Formularios',
-            'cronograma'  => 'Cronograma',
-            'ensamblar'   => 'Ensamblar',
-        ];
+        $tabs = array_merge(
+            $oferta->bid ? ['resumen' => 'Resumen'] : [],
+            [
+                'pliego'      => 'Pliego',
+                'documentos'  => 'Documentos del proceso',
+                'checklist'   => 'Checklist',
+                'composicion' => 'Composición',
+                'formularios' => 'Formularios',
+                'cronograma'  => 'Cronograma',
+                'ensamblar'   => 'Ensamblar',
+            ]
+        );
     @endphp
     <div class="border-b border-gray-200 mb-8">
         <nav class="-mb-px flex gap-x-6 overflow-x-auto" aria-label="Tabs">
@@ -67,6 +70,209 @@
             @endforeach
         </nav>
     </div>
+
+    {{-- ═══════════════════════════════════════════════════════════════════ --}}
+    {{-- TAB: RESUMEN (overview general de la convocatoria vinculada)        --}}
+    {{-- ═══════════════════════════════════════════════════════════════════ --}}
+    @if($tab === 'resumen' && $oferta->bid)
+    @php
+        $bid = $oferta->bid;
+        $bidStatus = strtoupper($bid->status ?? '');
+        $bidStatusStyle = match(true) {
+            str_contains($bidStatus, 'PUBLICAD')  => 'bg-green-50 text-green-700 ring-green-600/20',
+            str_contains($bidStatus, 'ADJUDIC')   => 'bg-gray-100 text-gray-600 ring-gray-500/10',
+            str_contains($bidStatus, 'CANCEL')    => 'bg-red-50 text-red-700 ring-red-600/20',
+            str_contains($bidStatus, 'DESIERTO')  => 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+            str_contains($bidStatus, 'CERRADA')   => 'bg-yellow-50 text-yellow-800 ring-yellow-600/20',
+            str_contains($bidStatus, 'ABIERTO')   => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+            str_contains($bidStatus, 'APERTURAD') => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+            str_contains($bidStatus, 'EVALUAC')   => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+            default                               => 'bg-gray-100 text-gray-600 ring-gray-500/10',
+        };
+        $articles = $bid->cached_articles ?? [];
+    @endphp
+    <div class="space-y-6">
+
+        {{-- Información general --}}
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-6 py-4">
+                <div class="min-w-0">
+                    <h2 class="text-sm font-semibold text-gray-900">Información general</h2>
+                    <p class="mt-0.5 truncate text-xs text-gray-500">{{ $bid->title }}</p>
+                </div>
+                <div class="flex shrink-0 items-center gap-x-2">
+                    <span class="rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset {{ $bidStatusStyle }}">{{ $bid->status ?? 'N/D' }}</span>
+                    @if($bid->mipymes)
+                    <span class="rounded-md bg-teal-50 px-2 py-1 text-xs font-medium text-teal-700 ring-1 ring-inset ring-teal-600/20">MIPYME</span>
+                    @endif
+                    @if($bid->mipymes_mujeres)
+                    <span class="rounded-md bg-pink-50 px-2 py-1 text-xs font-medium text-pink-700 ring-1 ring-inset ring-pink-600/20">MIPYME Mujeres</span>
+                    @endif
+                </div>
+            </div>
+            <dl class="grid grid-cols-1 gap-x-6 gap-y-4 px-6 py-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Código de proceso</dt>
+                    <dd class="mt-0.5 font-mono text-sm text-gray-900">{{ $bid->process_code }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Entidad contratante</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bid->buyer_name ?? '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Modalidad</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bid->procurement_method ?? '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Monto estimado</dt>
+                    <dd class="mt-0.5 text-sm font-semibold text-gray-900">
+                        @if($bid->amount_estimated && $bid->amount_estimated > 0)
+                            {{ $bid->currency === 'USD' ? 'US$' : 'RD$' }}{{ number_format($bid->amount_estimated, 2, '.', ',') }}
+                        @else
+                            —
+                        @endif
+                    </dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Publicación</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bid->published_at?->format('d/m/Y h:i A') ?? '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Cierre de recepción</dt>
+                    <dd class="mt-0.5 text-sm {{ $bid->tender_deadline?->isPast() ? 'font-semibold text-red-600' : 'text-gray-900' }}">
+                        {{ $bid->tender_deadline?->format('d/m/Y h:i A') ?? '—' }}
+                        @if($bid->tender_deadline?->isPast())
+                        <span class="ml-1 text-xs font-medium">(vencido)</span>
+                        @endif
+                    </dd>
+                </div>
+                @if($bidInstitution['objeto'] ?? null)
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Objeto</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bidInstitution['objeto'] }}</dd>
+                </div>
+                @endif
+                @if($bidInstitution['duracion_contrato'] ?? null)
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Duración del contrato</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bidInstitution['duracion_contrato'] }}</dd>
+                </div>
+                @endif
+                @if($bidInstitution['encargado'] ?? null)
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Encargado</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bidInstitution['encargado'] }}</dd>
+                </div>
+                @endif
+                @if($bidInstitution['email'] ?? null)
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Correo de contacto</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900"><a href="mailto:{{ $bidInstitution['email'] }}" class="text-blue-600 hover:underline">{{ $bidInstitution['email'] }}</a></dd>
+                </div>
+                @endif
+                @if($bidInstitution['telefono'] ?? null)
+                <div>
+                    <dt class="text-xs font-medium text-gray-500">Teléfono</dt>
+                    <dd class="mt-0.5 text-sm text-gray-900">{{ $bidInstitution['telefono'] }}</dd>
+                </div>
+                @endif
+            </dl>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 px-6 py-3">
+                <a href="{{ route('convocatorias.index', ['open' => $bid->id]) }}"
+                   class="text-xs font-medium text-blue-600 hover:underline">Ver en Convocatorias →</a>
+                @if($bid->secp_url)
+                <a href="{{ $bid->secp_url }}" target="_blank" rel="noopener"
+                   class="text-xs font-medium text-gray-500 hover:text-gray-700 hover:underline">Ver en portal DGCP ↗</a>
+                @endif
+            </div>
+        </div>
+
+        {{-- Cronograma del proceso --}}
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-sm font-semibold text-gray-900">Cronograma del proceso</h2>
+                <p class="mt-0.5 text-xs text-gray-500">Hitos publicados por la institución. Para sus propios recordatorios use la pestaña Cronograma.</p>
+            </div>
+            @if(empty($bidCronograma))
+            <p class="px-6 py-8 text-center text-sm text-gray-500">Sin fechas publicadas para este proceso.</p>
+            @else
+            <ol class="divide-y divide-gray-100">
+                @foreach($bidCronograma as $ev)
+                <li class="flex items-center gap-x-3 px-6 py-3">
+                    <span class="inline-block size-2.5 shrink-0 rounded-full {{ $ev['is_past'] ? 'bg-gray-300' : 'bg-blue-500' }}"></span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm {{ $ev['is_past'] ? 'text-gray-500' : 'font-medium text-gray-900' }}">{{ $ev['label'] }}</p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-x-2">
+                        @if($ev['countdown'])
+                        <span class="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 ring-1 ring-inset ring-amber-600/20">{{ $ev['countdown'] }}</span>
+                        @endif
+                        <span class="text-xs {{ $ev['is_past'] ? 'text-gray-400' : 'text-gray-600' }}">{{ $ev['date'] }}</span>
+                    </div>
+                </li>
+                @endforeach
+            </ol>
+            @endif
+        </div>
+
+        {{-- Artículos y lotes --}}
+        <div class="rounded-xl border border-gray-200 bg-white">
+            <div class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-sm font-semibold text-gray-900">Artículos y lotes</h2>
+                @if(!empty($articles))
+                <p class="mt-0.5 text-xs text-gray-500">{{ count($articles) }} artículo(s) publicados en el proceso.</p>
+                @endif
+            </div>
+            @if(empty($articles))
+            <div class="px-6 py-8 text-center">
+                <p class="text-sm text-gray-500">Sin artículos en caché para este proceso.</p>
+                <a href="{{ route('convocatorias.index', ['open' => $bid->id]) }}"
+                   class="mt-2 inline-flex text-xs font-medium text-blue-600 hover:underline">Consultar en Convocatorias →</a>
+            </div>
+            @else
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-200 bg-gray-50/60">
+                            <th class="py-2.5 pl-6 pr-3 text-left text-xs font-semibold text-gray-600">UNSPSC</th>
+                            <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600">Descripción</th>
+                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600">Cant.</th>
+                            <th class="px-3 py-2.5 text-right text-xs font-semibold text-gray-600">P. Unit.</th>
+                            <th class="py-2.5 pl-3 pr-6 text-right text-xs font-semibold text-gray-600">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @php $articlesTotal = 0; @endphp
+                        @foreach($articles as $item)
+                        @php
+                            $unspsc = collect([$item['familia'] ?? null, $item['clase'] ?? null, $item['subclase'] ?? null])->filter()->join('-');
+                            $lineTotal = $item['precio_total_estimado'] ?? null;
+                            if (is_numeric($lineTotal)) { $articlesTotal += (float) $lineTotal; }
+                        @endphp
+                        <tr>
+                            <td class="py-2.5 pl-6 pr-3 font-mono text-xs text-gray-500">{{ $unspsc ?: '—' }}</td>
+                            <td class="px-3 py-2.5 text-gray-700">{{ $item['descripcion_usuario'] ?? $item['descripcion_articulo'] ?? '—' }}</td>
+                            <td class="px-3 py-2.5 text-right text-gray-700">{{ $item['cantidad'] ?? '—' }}</td>
+                            <td class="px-3 py-2.5 text-right text-gray-700">{{ isset($item['precio_unitario_estimado']) && is_numeric($item['precio_unitario_estimado']) ? number_format((float) $item['precio_unitario_estimado'], 2, '.', ',') : '—' }}</td>
+                            <td class="py-2.5 pl-3 pr-6 text-right font-medium text-gray-900">{{ is_numeric($lineTotal) ? number_format((float) $lineTotal, 2, '.', ',') : '—' }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                    @if($articlesTotal > 0)
+                    <tfoot>
+                        <tr class="border-t border-gray-200 bg-gray-50/60">
+                            <td colspan="4" class="py-2.5 pl-6 pr-3 text-right text-xs font-semibold text-gray-600">Total estimado</td>
+                            <td class="py-2.5 pl-3 pr-6 text-right text-sm font-semibold text-gray-900">{{ number_format($articlesTotal, 2, '.', ',') }}</td>
+                        </tr>
+                    </tfoot>
+                    @endif
+                </table>
+            </div>
+            @endif
+        </div>
+
+    </div>
+    @endif
 
     {{-- ═══════════════════════════════════════════════════════════════════ --}}
     {{-- TAB: PLIEGO                                                         --}}

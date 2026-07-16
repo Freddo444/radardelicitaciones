@@ -28,6 +28,7 @@ use App\Services\DgcpApiClient;
 use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
 use App\Services\OfferAssemblyService;
+use App\Support\BidOverview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -90,6 +91,7 @@ class OfertasController extends Controller
     public function show(Offer $oferta)
     {
         $oferta->load([
+            'bid',
             'parseAttempts.bidDocument',
             'activeRequirements.items',
             'personnel.person',
@@ -112,9 +114,19 @@ class OfertasController extends Controller
 
         $activeParse = $oferta->activeParse();
 
+        // Resumen tab: general overview of the linked convocatoria (shares
+        // builders with the convocatorias drawer so both stay in sync)
+        $bidCronograma = [];
+        $bidInstitution = [];
+        if ($tab === 'resumen' && $oferta->bid) {
+            $bidCronograma = BidOverview::cronograma($oferta->bid);
+            $bidInstitution = BidOverview::institution($oferta->bid);
+        }
+
         return view('ofertas.show', compact(
             'oferta', 'tab', 'activeParse',
-            'availablePersonnel', 'availableProjects', 'availableEquipment', 'availableFinancials'
+            'availablePersonnel', 'availableProjects', 'availableEquipment', 'availableFinancials',
+            'bidCronograma', 'bidInstitution'
         ));
     }
 

@@ -7,7 +7,7 @@ use App\Models\BidWatch;
 use App\Models\CompanyBid;
 use App\Services\DgcpApiClient;
 use App\Services\PortalScraperService;
-use Carbon\Carbon;
+use App\Support\BidOverview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
@@ -88,7 +88,7 @@ class ConvocatoriasController extends Controller
         $pivot = CompanyBid::where('bid_id', $bid->id)->where('company_id', $companyId)->first();
 
         // Build cronograma from raw_data date fields
-        $cronograma = $this->buildCronograma($bid);
+        $cronograma = BidOverview::cronograma($bid);
 
         // Check cache freshness (1 hour TTL)
         $needsRefresh = ! $bid->cache_refreshed_at || $bid->cache_refreshed_at->lt(now()->subHour());
@@ -117,7 +117,7 @@ class ConvocatoriasController extends Controller
                 'on_tablero' => $bid->offers()->exists(),
             ],
             'cronograma' => $cronograma,
-            'institution' => $this->buildInstitutionInfo($bid),
+            'institution' => BidOverview::institution($bid),
             'cache_stale' => $needsRefresh,
         ]);
     }
@@ -303,72 +303,6 @@ class ConvocatoriasController extends Controller
             'Content-Type' => $file['content_type'],
             'Content-Disposition' => 'attachment; filename="'.($file['filename'] ?: $filename).'"',
         ]);
-    }
-
-    private function buildCronograma(Bid $bid): array
-    {
-        $raw = $bid->raw_data ?? [];
-        $events = [];
-
-        $dateFields = [
-            'fecha_publicacion' => 'Publicación del aviso de convocatoria',
-            'fecha_enmienda' => 'Plazo para enmiendas y adendas',
-            'fecha_fin_recepcion_ofertas' => 'Fecha límite de recepción de ofertas',
-            'fecha_apertura_ofertas' => 'Apertura de sobres',
-            'fecha_habilitacion_oferente' => 'Habilitación de oferentes',
-            'fecha_estimada_adjudicacion' => 'Adjudicación estimada',
-            'fecha_suscripcion' => 'Suscripción del contrato',
-        ];
-
-        foreach ($dateFields as $field => $label) {
-            $value = $raw[$field] ?? null;
-            if (! $value) {
-                continue;
-            }
-
-            try {
-                $dt = Carbon::parse($value);
-                $isPast = $dt->isPast();
-                $isNext = ! $isPast && $dt->isFuture();
-
-                $countdown = null;
-                if ($isNext && $dt->diffInDays(now()) <= 14) {
-                    $countdown = $dt->diffForHumans(['parts' => 2, 'short' => true]);
-                }
-
-                $events[] = [
-                    'date' => $dt->format('d/m/Y h:i A'),
-                    'label' => $label,
-                    'is_past' => $isPast,
-                    'countdown' => $countdown,
-                    'sort' => $dt->timestamp,
-                ];
-            } catch (\Throwable) {
-                continue;
-            }
-        }
-
-        usort($events, fn ($a, $b) => $a['sort'] <=> $b['sort']);
-
-        return $events;
-    }
-
-    private function buildInstitutionInfo(Bid $bid): array
-    {
-        $raw = $bid->raw_data ?? [];
-
-        return [
-            'institucion' => $bid->buyer_name,
-            'encargado' => $raw['nombre_encargado'] ?? $raw['encargado'] ?? null,
-            'email' => $raw['correo_electronico'] ?? $raw['email_contacto'] ?? null,
-            'telefono' => $raw['telefono'] ?? $raw['telefono_contacto'] ?? null,
-            'modalidad' => $bid->procurement_method,
-            'objeto' => $raw['tipo_objeto'] ?? $raw['objeto_compra'] ?? null,
-            'duracion_contrato' => isset($raw['duracion_contrato'])
-                ? str_replace(['dias', 'anos'], ['días', 'años'], preg_replace('/(\d+)\s*(?=[a-záéíóú])/iu', '$1 ', $raw['duracion_contrato']))
-                : null,
-            'proveedores_notificados' => $raw['proveedores_notificados'] ?? null,
-        ];
     }
 
     private function fetchAdjudicacionData(DgcpApiClient $api, string $processCode): array
