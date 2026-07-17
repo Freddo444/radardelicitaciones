@@ -157,17 +157,27 @@ class SobreBinder
         $pdf->SetAutoPageBreak(false);
         $pdf->setMargins(0, 0, 0);
 
-        // Ordered list of source files to concatenate.
-        $sources = [$coverPath, $indexPath];
+        // Height of the footer band reserved for the foliado (mm). Imported
+        // document pages are scaled down to leave this band clear so our stamp
+        // never collides with the document's own footer.
+        $footerBand = 12.0;
+
+        // Ordered list of source files to concatenate, flagged by whether the
+        // page is an imported document (needs a reserved footer band) or one of
+        // our own generated pages (cover/index/separator — already margined).
+        $sources = [
+            ['path' => $coverPath, 'is_document' => false],
+            ['path' => $indexPath, 'is_document' => false],
+        ];
         foreach ($documents as $i => $doc) {
-            $sources[] = $separators[$i];
-            $sources[] = $doc['path'];
+            $sources[] = ['path' => $separators[$i], 'is_document' => false];
+            $sources[] = ['path' => $doc['path'], 'is_document' => true];
         }
 
         // First pass counts total pages for the "de N" foliado.
         $totalPages = 0;
         foreach ($sources as $src) {
-            $totalPages += $this->pageCount($src);
+            $totalPages += $this->pageCount($src['path']);
         }
         $totalContent = max(0, $totalPages - $coverPages);
 
@@ -175,14 +185,26 @@ class SobreBinder
         $absolute = 0;   // absolute page index across the whole document
 
         foreach ($sources as $src) {
-            $count = $pdf->setSourceFile($src);
+            $count = $pdf->setSourceFile($src['path']);
             for ($p = 1; $p <= $count; $p++) {
                 $absolute++;
                 $tpl = $pdf->importPage($p);
                 $size = $pdf->getTemplateSize($tpl);
                 $orientation = $size['width'] > $size['height'] ? 'L' : 'P';
                 $pdf->AddPage($orientation, [$size['width'], $size['height']]);
-                $pdf->useTemplate($tpl, ['adjustPageSize' => true]);
+
+                if ($src['is_document']) {
+                    // Scale the page down to reserve a clear footer band, keeping
+                    // it centered horizontally and top-aligned.
+                    $avail = $size['height'] - $footerBand;
+                    $scale = min(1.0, $avail / $size['height']);
+                    $newW = $size['width'] * $scale;
+                    $newH = $size['height'] * $scale;
+                    $x = ($size['width'] - $newW) / 2;
+                    $pdf->useTemplate($tpl, ['x' => $x, 'y' => 0, 'height' => $newH, 'adjustPageSize' => false]);
+                } else {
+                    $pdf->useTemplate($tpl, ['adjustPageSize' => true]);
+                }
 
                 // Cover is not foliated; everything after is.
                 if ($absolute > $coverPages) {
@@ -203,11 +225,14 @@ class SobreBinder
         $pdf->SetTextColor(120, 120, 120);
         $pdf->SetFont('helvetica', '', 8);
 
+        // Sits in the reserved footer band, ~7mm from the bottom edge.
+        $y = $h - 7;
+
         // Left: traceability. Right: folio.
-        $pdf->SetXY(12, $h - 10);
+        $pdf->SetXY(12, $y);
         $pdf->Cell(120, 5, "{$sobreLabel} · {$codigo}", 0, 0, 'L');
 
-        $pdf->SetXY($w - 52, $h - 10);
+        $pdf->SetXY($w - 52, $y);
         $pdf->Cell(40, 5, "Página {$folio} de {$total}", 0, 0, 'R');
     }
 
