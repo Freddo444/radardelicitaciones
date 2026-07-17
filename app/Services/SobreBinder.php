@@ -225,12 +225,14 @@ class SobreBinder
         $pdf->SetTextColor(120, 120, 120);
         $pdf->SetFont('helvetica', '', 8);
 
-        // Sits in the reserved footer band, ~7mm from the bottom edge.
+        // Sits in the reserved footer band, ~7mm from the bottom edge. Left
+        // text starts at 20mm so it clears full-height accent bars (e.g. the
+        // separator's) and aligns with the index's 20mm content inset.
         $y = $h - 7;
 
         // Left: traceability. Right: folio.
-        $pdf->SetXY(12, $y);
-        $pdf->Cell(120, 5, "{$sobreLabel} · {$codigo}", 0, 0, 'L');
+        $pdf->SetXY(20, $y);
+        $pdf->Cell(110, 5, "{$sobreLabel} · {$codigo}", 0, 0, 'L');
 
         $pdf->SetXY($w - 52, $y);
         $pdf->Cell(40, 5, "Página {$folio} de {$total}", 0, 0, 'R');

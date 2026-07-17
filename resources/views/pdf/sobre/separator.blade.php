@@ -22,10 +22,8 @@
     <div class="abs" style="left:34mm; top:112mm; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:{{ $t['muted'] }};">Documento</div>
     <div class="abs" style="left:34mm; top:150mm; width:150mm; font-size:24px; font-weight:bold; line-height:1.25; color:{{ $t['ink'] }};">{{ $label }}</div>
 
-    {{-- Process footer --}}
-    <div class="abs" style="left:34mm; bottom:22mm; width:150mm; border-top:1px solid {{ $t['key'] === 'oscuro' ? '#334155' : '#e5e7eb' }}; padding-top:5mm; font-size:9px; color:{{ $t['muted'] }};">
-        {{ $company->razon_social }} · {{ $sobre }} · {{ $proceso['codigo'] }}
-    </div>
+    {{-- Footer intentionally omitted: the foliado stamp (applied at merge)
+         serves as the page footer, keeping it clear of the accent bar. --}}
 </div>
 </body>
 </html>

@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8">
 <style>
-    @page { margin: 22mm 20mm; }
+    /* dompdf ignores @page margins here, so inset via body padding instead. */
+    @page { margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: {{ $t['font'] }}, sans-serif; color: {{ $t['ink'] }}; }
+    body { font-family: {{ $t['font'] }}, sans-serif; color: {{ $t['ink'] }}; padding: 24mm 20mm; }
     .kicker { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: {{ $t['accent'] }}; }
     h1 { font-size: 24px; font-weight: bold; margin: 3mm 0 2mm; color: {{ $t['ink'] }}; }
     .sub { font-size: 11px; color: {{ $t['muted'] }}; margin-bottom: 9mm; }
