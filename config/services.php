@@ -52,6 +52,16 @@ return [
         'number' => env('WHATSAPP_NUMBER', ''),
     ],
 
+    // Bank account shown on the bank-transfer payment page. Kept in config/env
+    // so the account can change without a code deploy.
+    'bank' => [
+        'name' => env('BANK_NAME', 'Banco BDI'),
+        'account_number' => env('BANK_ACCOUNT_NUMBER', '4060024065'),
+        'account_type' => env('BANK_ACCOUNT_TYPE', 'Corriente'),
+        'holder' => env('BANK_HOLDER', 'Grupo Alzare SRL'),
+        'rnc' => env('BANK_RNC', '1-33-64987-1'),
+    ],
+
     'support' => [
         // Publicly displayed contact address (footer, terms, privacy).
         'email' => env('SUPPORT_EMAIL', 'info@radardelicitaciones.com'),
