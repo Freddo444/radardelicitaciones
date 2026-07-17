@@ -55,7 +55,11 @@
                     </dd>
                 </div>
             </dl>
-            <p class="mt-4 rounded-md bg-blue-50 p-3 text-xs text-blue-800">
+            <div class="mt-4 rounded-md bg-amber-50 p-3 text-xs text-amber-900">
+                <p class="font-semibold">Importante:</p>
+                <p class="mt-1">Al hacer la transferencia, escribe el <strong>nombre de tu empresa</strong> en el comentario o concepto del pago. Así podemos identificar y confirmar tu suscripción más rápido.</p>
+            </div>
+            <p class="mt-3 text-xs text-gray-500">
                 Transfiere el monto en pesos (RD$) a la cuenta indicada y sube el comprobante abajo. Tu suscripción se activa cuando confirmamos el pago.
             </p>
         </div>
@@ -71,20 +75,6 @@
                     <input id="receipt" type="file" name="receipt" required accept=".pdf,.jpg,.jpeg,.png"
                            class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:rounded-md file:border-0 file:bg-blue-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-blue-700 hover:file:bg-blue-100"/>
                     @error('receipt') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label for="amount_transferred" class="block text-sm font-medium text-gray-700">Monto transferido (RD$)</label>
-                    <input id="amount_transferred" type="number" step="0.01" min="0" name="amount_transferred"
-                           value="{{ old('amount_transferred', $amountDop) }}"
-                           class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"/>
-                    @error('amount_transferred') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror
-                </div>
-
-                <div>
-                    <label for="notes" class="block text-sm font-medium text-gray-700">Notas (opcional)</label>
-                    <input id="notes" type="text" name="notes" maxlength="500"
-                           class="mt-1 block w-full rounded-md bg-white px-3 py-1.5 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"/>
                 </div>
 
                 <button type="submit" class="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500">

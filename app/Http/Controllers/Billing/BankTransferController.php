@@ -24,8 +24,6 @@ class BankTransferController extends Controller
     {
         $request->validate([
             'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
-            'amount_transferred' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string|max:500',
         ]);
 
         $subscription = Auth::user()->subscription;
@@ -35,21 +33,13 @@ class BankTransferController extends Controller
 
         $path = $request->file('receipt')->store("receipts/{$subscription->id}", 'local');
 
-        $notes = "Comprobante: {$path}";
-        if ($request->filled('amount_transferred')) {
-            $notes .= ' — Monto declarado: RD$'.number_format((float) $request->amount_transferred, 2);
-        }
-        if ($request->filled('notes')) {
-            $notes .= " — {$request->notes}";
-        }
-
         Payment::create([
             'subscription_id' => $subscription->id,
             'amount' => $subscription->monthly_amount,
             'currency' => 'USD',
             'gateway' => 'bank_transfer',
             'status' => 'pending',
-            'notes' => $notes,
+            'notes' => "Comprobante: {$path}",
         ]);
 
         return redirect()->route('billing.index')
