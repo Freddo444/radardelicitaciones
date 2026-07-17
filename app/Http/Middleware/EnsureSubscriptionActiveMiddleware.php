@@ -49,6 +49,20 @@ class EnsureSubscriptionActiveMiddleware
         }
 
         if (! $subscription || ! $subscription->isActive()) {
+            // A submitted bank transfer awaiting confirmation gets a dedicated
+            // "pending" wall instead of a generic "not active" warning, so the
+            // user isn't left in limbo. (Trial users never reach here — an
+            // active trial makes isActive() true above.)
+            if ($subscription && $subscription->hasPendingBankTransfer()) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'message' => 'Tu pago está pendiente de confirmación. Te avisaremos por correo.',
+                    ], 402);
+                }
+
+                return redirect()->route('billing.transfer-pending');
+            }
+
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'La suscripción de tu empresa no está activa. Contacta al administrador.',

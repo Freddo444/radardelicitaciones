@@ -89,6 +89,7 @@
                                 <th class="py-4 pr-3 pl-5 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">#</th>
                                 <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Cliente</th>
                                 <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Monto</th>
+                                <th class="px-4 py-4 text-left text-xs font-semibold tracking-wide text-zinc-600 uppercase">Comprobante</th>
                                 <th class="py-4 pr-5 pl-3 text-right"><span class="sr-only">Confirmar</span></th>
                             </tr>
                         </thead>
@@ -96,10 +97,25 @@
                             @foreach($pendingTransfers as $p)
                             <tr class="hover:bg-zinc-50/50">
                                 <td class="py-5 pr-3 pl-5 text-sm font-medium whitespace-nowrap text-zinc-900">{{ $p->id }}</td>
-                                <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">{{ $p->subscription?->owner?->name ?? '—' }}</td>
+                                <td class="px-4 py-5 text-sm whitespace-nowrap text-zinc-600">
+                                    <span class="block">{{ $p->subscription?->owner?->name ?? '—' }}</span>
+                                    <span class="block text-xs text-zinc-400">{{ $p->subscription?->owner?->email }}</span>
+                                </td>
                                 <td class="px-4 py-5 text-sm font-semibold whitespace-nowrap text-zinc-900">${{ number_format($p->amount, 2) }}</td>
+                                <td class="px-4 py-5 text-sm whitespace-nowrap">
+                                    @if($p->receipt_path)
+                                    <a href="{{ route('admin.payments.voucher', $p) }}" target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-x-1 font-medium text-indigo-600 hover:text-indigo-800">
+                                        <svg viewBox="0 0 20 20" fill="currentColor" class="size-4"><path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 0 0 3 3.5v13A1.5 1.5 0 0 0 4.5 18h11a1.5 1.5 0 0 0 1.5-1.5V7.621a1.5 1.5 0 0 0-.44-1.06l-4.12-4.122A1.5 1.5 0 0 0 10.88 2H4.5Zm5.75 3.75a.75.75 0 0 0-1.5 0v3.19l-1.72-1.72a.75.75 0 0 0-1.06 1.06l3 3a.75.75 0 0 0 1.06 0l3-3a.75.75 0 1 0-1.06-1.06l-1.72 1.72V5.75Z" clip-rule="evenodd"/></svg>
+                                        Ver
+                                    </a>
+                                    @else
+                                    <span class="text-xs text-zinc-400">—</span>
+                                    @endif
+                                </td>
                                 <td class="py-5 pr-5 pl-3 text-right text-sm font-medium whitespace-nowrap">
-                                    <form method="POST" action="{{ route('admin.payments.confirm', $p) }}">
+                                    <form method="POST" action="{{ route('admin.payments.confirm', $p) }}"
+                                          onsubmit="return confirm('¿Confirmar el pago y activar la cuenta del cliente? Se le enviará un correo.');">
                                         @csrf @method('PATCH')
                                         <button type="submit" class="font-semibold text-indigo-600 hover:text-indigo-800">Confirmar</button>
                                     </form>

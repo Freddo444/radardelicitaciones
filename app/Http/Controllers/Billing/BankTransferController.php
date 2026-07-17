@@ -20,6 +20,27 @@ class BankTransferController extends Controller
         return view('billing.bank-transfer', compact('subscription', 'bank', 'rate', 'amountDop'));
     }
 
+    /**
+     * "Pago pendiente de confirmación" wall shown to users who submitted a
+     * bank-transfer voucher and have no active trial to fall back on.
+     */
+    public function pending()
+    {
+        $subscription = Auth::user()->subscription;
+
+        // Nothing to wait on → send them to normal billing.
+        if (! $subscription || ! $subscription->hasPendingBankTransfer()) {
+            return redirect()->route('billing.index');
+        }
+
+        // If they somehow reach here while already active, go to the app.
+        if ($subscription->isActive() && ! $subscription->isTrialing()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('billing.transfer-pending', compact('subscription'));
+    }
+
     public function uploadReceipt(Request $request)
     {
         $request->validate([
@@ -40,6 +61,7 @@ class BankTransferController extends Controller
             'gateway' => 'bank_transfer',
             'status' => 'pending',
             'notes' => "Comprobante: {$path}",
+            'receipt_path' => $path,
         ]);
 
         return redirect()->route('billing.index')

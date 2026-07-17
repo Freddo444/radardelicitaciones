@@ -242,6 +242,17 @@
     </script>
     @endif
 
+    {{-- Pending bank-transfer banner (trial users keep app access while waiting) --}}
+    @php $__sub = currentCompany()?->owner?->subscription ?? auth()->user()?->subscription; @endphp
+    @if($__sub && $__sub->hasPendingBankTransfer())
+    <div class="border-b border-amber-200 bg-amber-50">
+        <div class="mx-auto flex max-w-7xl items-center gap-x-2 px-4 py-2.5 text-sm text-amber-800 sm:px-6 lg:px-8">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="size-4 shrink-0"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h2.5a.75.75 0 0 0 0-1.5h-1.75v-2.75Z" clip-rule="evenodd"/></svg>
+            <span>Tu transferencia está <strong>en revisión</strong>. Te avisaremos por correo cuando confirmemos el pago.</span>
+        </div>
+    </div>
+    @endif
+
     {{-- Breadcrumbs --}}
     @hasSection('breadcrumbs')
         @yield('breadcrumbs')

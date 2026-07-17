@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/suscribirse/return', [SubscriptionController::class, 'subscribeReturn'])->name('billing.subscribe.return');
     Route::get('/transferencia', [BankTransferController::class, 'show'])->name('billing.bank-transfer');
     Route::post('/transferencia', [BankTransferController::class, 'uploadReceipt'])->name('billing.bank-transfer.upload');
+    Route::get('/pago-pendiente', [BankTransferController::class, 'pending'])->name('billing.transfer-pending');
 
     // Company setup wizard (post-payment)
     Route::get('/configurar-empresa', [CompanySetupController::class, 'show'])->name('company-setup.show');

@@ -3,10 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\BankTransferConfirmedMail;
 use App\Models\Payment;
 use App\Models\PendingRegistration;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AdminPaymentController extends Controller
 {
@@ -47,7 +52,7 @@ class AdminPaymentController extends Controller
     public function confirm(Payment $payment)
     {
         if ($payment->status !== 'pending') {
-            return back()->with('error', 'Este pago no esta pendiente.');
+            return back()->with('error', 'Este pago no está pendiente.');
         }
 
         $payment->update([
@@ -55,14 +60,42 @@ class AdminPaymentController extends Controller
             'paid_at' => now(),
         ]);
 
-        // Activate subscription if needed
+        // Activate (or extend) the subscription for its already-specified plan.
         $subscription = $payment->subscription;
-        if ($subscription && $subscription->isPending()) {
-            SubscriptionService::activate($subscription);
-        } elseif ($subscription && $subscription->isActive()) {
+        if ($subscription && $subscription->isActive()) {
             $subscription->update(['current_period_end' => now()->addMonth()]);
+        } elseif ($subscription) {
+            // Covers pending, trialing, and expired-trial → active.
+            SubscriptionService::activate($subscription);
         }
 
-        return back()->with('success', "Pago #{$payment->id} confirmado. Suscripcion actualizada.");
+        // Notify the customer their account is now active.
+        $recipient = $subscription?->owner?->email;
+        if ($recipient) {
+            try {
+                Mail::to($recipient)->send(new BankTransferConfirmedMail($payment->fresh('subscription.owner')));
+            } catch (\Throwable $e) {
+                Log::error('[AdminPayment] confirmation email failed', [
+                    'payment_id' => $payment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return back()->with('success', "Pago #{$payment->id} confirmado. Cuenta activada y cliente notificado.");
+    }
+
+    /**
+     * Stream a payment's uploaded bank-transfer voucher (private disk).
+     */
+    public function voucher(Payment $payment)
+    {
+        $path = $payment->receipt_path;
+
+        if (! $path || ! Storage::disk('local')->exists($path)) {
+            throw new NotFoundHttpException('Comprobante no encontrado.');
+        }
+
+        return Storage::disk('local')->response($path);
     }
 }

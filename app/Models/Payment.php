@@ -10,6 +10,7 @@ class Payment extends Model
     protected $fillable = [
         'subscription_id', 'amount', 'currency', 'gateway',
         'gateway_payment_id', 'card_last_four', 'status', 'paid_at', 'invoice_emailed_at', 'notes',
+        'receipt_path',
     ];
 
     protected $casts = [

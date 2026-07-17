@@ -76,6 +76,15 @@ class Subscription extends Model
         return $this->status === 'pending';
     }
 
+    /** A bank-transfer voucher has been submitted and is awaiting admin confirmation. */
+    public function hasPendingBankTransfer(): bool
+    {
+        return $this->payments()
+            ->where('gateway', 'bank_transfer')
+            ->where('status', 'pending')
+            ->exists();
+    }
+
     public function isPastDue(): bool
     {
         return $this->status === 'past_due';
