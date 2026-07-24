@@ -54,10 +54,17 @@
                 </button>
             </div>
 
-            <div x-show="notFound" class="mt-4 rounded-md bg-yellow-50 p-3 text-sm text-yellow-800">
-                No se encontró un proveedor con ese RPE. Puedes llenar los datos manualmente.
-                <button type="button" @click="startManualEntry()" class="mt-2 block font-semibold text-yellow-900 underline">
-                    Continuar sin RPE
+            <div x-show="notFound" x-cloak class="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                <p class="font-medium">¿Aún no estás registrado como proveedor en la DGCP? No hay problema.</p>
+                <p class="mt-1 text-blue-700">Puedes configurar tu empresa manualmente y elegir los rubros que te interesa monitorear. Cuando te registres en la DGCP, podrás sincronizar tus rubros con un clic.</p>
+                <button type="button" @click="startManualEntry()" class="mt-2 inline-flex rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-500">
+                    Configurar manualmente
+                </button>
+            </div>
+
+            <div class="mt-4 border-t border-gray-100 pt-3 text-center">
+                <button type="button" @click="startManualEntry()" class="text-xs font-medium text-gray-500 hover:text-gray-700">
+                    ¿Prefieres llenar los datos tú mismo? Configurar sin RPE
                 </button>
             </div>
         </div>
@@ -128,8 +135,45 @@
                 </div>
             </div>
 
+            {{-- Manual rubro picker (RPE not found / manual entry) --}}
+            <div x-show="!wasLookedUp" class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
+                <h2 class="text-lg font-semibold text-gray-900">¿Qué rubros quieres monitorear?</h2>
+                <p class="mt-1 text-xs text-gray-500">Busca por palabra clave (ej: "construcción", "alimentos") o por código UNSPSC. Elige los que ofrece tu empresa — así sabremos qué licitaciones avisarte.</p>
+
+                <div class="relative mt-3">
+                    <input type="text" x-model="rubroQuery" @input.debounce.300ms="searchRubros()"
+                           placeholder="Buscar rubro..."
+                           class="block w-full rounded-md bg-white px-3 py-2 text-sm text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-blue-600"/>
+                    <div x-show="rubroResults.length > 0" x-cloak
+                         class="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                        <template x-for="res in rubroResults" :key="res.code">
+                            <button type="button" @click="addRubro(res)"
+                                    class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-blue-50">
+                                <span class="font-mono text-xs text-gray-400" x-text="res.code"></span>
+                                <span class="text-gray-900" x-text="res.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                    <p x-show="rubroSearching" x-cloak class="mt-1 text-xs text-gray-400">Buscando...</p>
+                    <p x-show="!rubroSearching && rubroQuery.length >= 3 && rubroResults.length === 0" x-cloak class="mt-1 text-xs text-gray-400">Sin resultados. Prueba otra palabra.</p>
+                </div>
+
+                {{-- Selected rubros as chips --}}
+                <div x-show="rubros.length > 0" x-cloak class="mt-4 flex flex-wrap gap-2">
+                    <template x-for="(rubro, i) in rubros" :key="rubro.code">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-50 py-1 pl-3 pr-2 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                            <span x-text="rubro.name"></span>
+                            <button type="button" @click="rubros.splice(i, 1)" class="text-blue-400 hover:text-blue-700">
+                                <svg viewBox="0 0 20 20" fill="currentColor" class="size-3.5"><path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/></svg>
+                            </button>
+                        </span>
+                    </template>
+                </div>
+                <p x-show="rubros.length === 0" x-cloak class="mt-3 text-xs text-amber-600">Agrega al menos un rubro para empezar a recibir avisos de licitaciones.</p>
+            </div>
+
             {{-- Rubros from DGCP --}}
-            <div x-show="rubros.length > 0" class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
+            <div x-show="wasLookedUp && rubros.length > 0" class="rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
                 <div class="flex items-center justify-between">
                     <div>
                         <h2 class="text-lg font-semibold text-gray-900">Rubros registrados en la DGCP</h2>
@@ -157,15 +201,16 @@
                         </label>
                     </template>
                 </div>
-
-                {{-- Hidden inputs for selected rubros --}}
-                <template x-for="(rubro, i) in rubros.filter(r => r.selected)" :key="'h-'+rubro.code">
-                    <div>
-                        <input type="hidden" :name="'rubros['+i+'][code]'" :value="rubro.code">
-                        <input type="hidden" :name="'rubros['+i+'][name]'" :value="rubro.name">
-                    </div>
-                </template>
             </div>
+
+            {{-- Hidden inputs for selected rubros — rendered for both the DGCP
+                 and manual paths so the selection always submits. --}}
+            <template x-for="(rubro, i) in rubros.filter(r => r.selected)" :key="'h-'+rubro.code">
+                <div>
+                    <input type="hidden" :name="'rubros['+i+'][code]'" :value="rubro.code">
+                    <input type="hidden" :name="'rubros['+i+'][name]'" :value="rubro.name">
+                </div>
+            </template>
 
             <div class="flex items-center justify-between gap-4">
                 <button type="button" x-show="wasLookedUp" @click="backToRpeSearch()"
@@ -198,10 +243,41 @@ function companySetup() {
         formReady: false,
         wasLookedUp: false,
         rubros: [],
+        rubroQuery: '',
+        rubroResults: [],
+        rubroSearching: false,
         form: {
             razon_social: '', rnc: '', nombre_comercial: '',
             telefono: '', email: '', direccion: '',
             municipio: '', provincia: '', rpe_numero: '', registro_mercantil: '',
+        },
+
+        async searchRubros() {
+            const q = this.rubroQuery.trim();
+            if (q.length < 3) { this.rubroResults = []; return; }
+            this.rubroSearching = true;
+            try {
+                const res = await fetch(`/configurar-empresa/buscar-rubro?q=${encodeURIComponent(q)}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                });
+                const data = await res.json();
+                // Hide rubros already selected
+                const have = new Set(this.rubros.map(r => r.code));
+                this.rubroResults = (data || []).filter(r => !have.has(r.code));
+            } catch (e) {
+                this.rubroResults = [];
+            } finally {
+                this.rubroSearching = false;
+            }
+        },
+
+        addRubro(res) {
+            if (!this.rubros.some(r => r.code === res.code)) {
+                this.rubros.push({ code: res.code, name: res.name, selected: true });
+            }
+            this.rubroQuery = '';
+            this.rubroResults = [];
         },
 
         async lookup() {

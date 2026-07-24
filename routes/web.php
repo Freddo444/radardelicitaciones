@@ -139,6 +139,8 @@ Route::middleware('auth')->group(function () {
     // Company setup wizard (post-payment)
     Route::get('/configurar-empresa', [CompanySetupController::class, 'show'])->name('company-setup.show');
     Route::post('/configurar-empresa', [CompanySetupController::class, 'store'])->name('company-setup.store');
+    Route::get('/configurar-empresa/buscar-rubro', [CompanySetupController::class, 'searchRubros'])
+        ->middleware('throttle:60,1')->name('company-setup.search-rubro');
     Route::post('/configurar-empresa/lookup-rpe', [CompanySetupController::class, 'lookupRpe'])
         ->middleware('throttle:30,1')
         ->name('company-setup.lookup-rpe');

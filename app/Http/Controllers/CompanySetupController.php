@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CatalogItem;
 use App\Models\Company;
 use App\Models\Rubro;
 use App\Services\BidMatchingService;
@@ -108,6 +109,40 @@ class CompanySetupController extends Controller
             ],
             'rubros' => $rubros,
         ]);
+    }
+
+    /**
+     * Setup-safe rubro catalog search (no tenant required). Manual users whose
+     * RPE isn't in the DGCP registry use this to pick rubros by keyword or code
+     * so they don't end up with an empty, matchless account. Searches at the
+     * familia level (rubros are stored as familia during onboarding).
+     */
+    public function searchRubros(Request $request)
+    {
+        $q = trim((string) $request->input('q', ''));
+        if (mb_strlen($q) < 3) {
+            return response()->json([]);
+        }
+
+        $query = CatalogItem::query()
+            ->whereNotNull('familia')
+            ->select('familia', 'descripcion_familia')
+            ->distinct();
+
+        if (ctype_digit($q)) {
+            $query->where('familia', 'like', $q.'%');
+        } else {
+            $query->where('descripcion_familia', 'like', '%'.$q.'%');
+        }
+
+        $rows = $query->orderBy('descripcion_familia')->limit(15)->get();
+
+        return response()->json(
+            $rows->map(fn ($r) => [
+                'code' => (string) $r->familia,
+                'name' => trim((string) $r->descripcion_familia),
+            ])->values()
+        );
     }
 
     public function store(Request $request, BidMatchingService $matcher)
