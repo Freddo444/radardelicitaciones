@@ -32,8 +32,9 @@ class CompanySetupController extends Controller
         }
 
         $isTrial = $subscription->isTrialing();
+        $hasCompanies = $user->companies()->exists();
 
-        return view('company-setup.create', compact('isTrial'));
+        return view('company-setup.create', compact('isTrial', 'hasCompanies'));
     }
 
     /**

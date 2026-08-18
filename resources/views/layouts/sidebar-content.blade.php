@@ -272,7 +272,9 @@
             <ul role="list" class="-mx-2 mt-2 space-y-1" :class="($store.layout.sidebarCollapsed && !@js($__sidebarMobile)) && 'mt-0'"
                 x-show="$store.layout.sectionOpen('empresaActiva', @js($__sidebarMobile))" x-cloak>
                 <li>
-                    @php $empresa = currentCompany(); @endphp
+                    {{-- Fall back to the user's active company for display on non-tenant
+                         routes (billing, company switcher) where currentCompany() is unbound. --}}
+                    @php $empresa = currentCompany() ?? auth()->user()?->currentCompany(); @endphp
                     <a href="{{ route('empresa.index') }}" title="{{ $empresa->razon_social ?? 'Sin configurar' }}"
                        class="sidebar-link group flex gap-x-3 rounded-md p-2 text-sm/6 font-semibold text-blue-200 hover:bg-blue-900 hover:text-white">
                         <span class="flex size-6 shrink-0 items-center justify-center rounded-lg border border-blue-400 bg-blue-700 text-[0.625rem] font-medium text-white">

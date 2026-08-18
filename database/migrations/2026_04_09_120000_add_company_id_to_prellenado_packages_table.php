@@ -15,12 +15,16 @@ return new class extends Migration
         });
 
         // Best-effort backfill using the user's current active company at migration time.
-        DB::statement('
-            UPDATE prellenado_packages p
-            JOIN users u ON u.id = p.user_id
-            SET p.company_id = u.current_company_id
-            WHERE p.company_id IS NULL
-        ');
+        // UPDATE...JOIN is MySQL syntax; guard so non-MySQL drivers (e.g. sqlite in
+        // local/test) don't crash. Production runs MySQL.
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('
+                UPDATE prellenado_packages p
+                JOIN users u ON u.id = p.user_id
+                SET p.company_id = u.current_company_id
+                WHERE p.company_id IS NULL
+            ');
+        }
     }
 
     public function down(): void

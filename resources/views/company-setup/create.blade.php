@@ -15,10 +15,30 @@
 <body class="h-full">
 
 <div class="min-h-full" x-data="companySetup()">
+    {{-- Top bar: brand + escape hatch, so the user is always oriented and never trapped. --}}
+    <div class="border-b border-gray-200 bg-white">
+        <div class="mx-auto flex max-w-2xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+            <span class="text-sm font-semibold text-gray-900">{{ config('app.name') }}</span>
+            @if($hasCompanies)
+                <a href="{{ route('companies.index') }}" class="text-sm font-medium text-gray-500 hover:text-gray-700">Cancelar</a>
+            @else
+                <a href="{{ route('logout') }}"
+                   onclick="event.preventDefault();document.getElementById('setup-logout').submit();"
+                   class="text-sm font-medium text-gray-500 hover:text-gray-700">Cerrar sesión</a>
+                <form id="setup-logout" method="POST" action="{{ route('logout') }}" class="hidden">@csrf</form>
+            @endif
+        </div>
+    </div>
+
     <div class="mx-auto max-w-2xl px-4 py-12 sm:px-6 lg:px-8">
 
-        <h1 class="text-2xl font-bold text-gray-900">Configurar empresa</h1>
-        <p class="mt-1 text-sm text-gray-500">Ingresa tu número RPE para autocompletar los datos desde la DGCP.</p>
+        @if($hasCompanies)
+            <h1 class="text-2xl font-bold text-gray-900">Agregar otra empresa</h1>
+            <p class="mt-1 text-sm text-gray-500">Ingresa el número RPE de la nueva empresa para autocompletar sus datos desde la DGCP. Podrás cambiar entre tus empresas en cualquier momento.</p>
+        @else
+            <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido! Configuremos tu empresa</h1>
+            <p class="mt-1 text-sm text-gray-500">Es el último paso. Ingresa tu número RPE y traeremos los datos y rubros de tu empresa desde la DGCP para empezar a avisarte de licitaciones. Toma menos de un minuto.</p>
+        @endif
 
         @if($errors->any())
         <div class="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
