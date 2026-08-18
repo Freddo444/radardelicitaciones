@@ -20,7 +20,10 @@ class CompanySwitchController extends Controller
         }
         $companies = $user->companies()->withCount('users')->get();
 
-        return view('companies.index', compact('companies'));
+        $subscription = $user->subscription;
+        $canAddCompany = $subscription && SubscriptionService::canAddCompany($subscription);
+
+        return view('companies.index', compact('companies', 'canAddCompany'));
     }
 
     public function switch(Request $request, Company $company)

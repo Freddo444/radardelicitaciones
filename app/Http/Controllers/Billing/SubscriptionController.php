@@ -403,8 +403,21 @@ class SubscriptionController extends Controller
             }
         }
 
+        // The proration (if any) is already captured at this point, so the
+        // customer has paid for the seat and must get it. But if PayPal fails
+        // to revise the recurring amount, the DB and PayPal drift: PayPal would
+        // keep charging the OLD amount next cycle. Grant the seat, but log
+        // loudly for manual reconciliation and don't promise the new price.
+        $recurringUpdated = true;
         if ($subscription->gateway_subscription_id && $subscription->payment_gateway === 'paypal') {
-            $this->revisePayPalSubscription($subscription->gateway_subscription_id, $newRecurring);
+            $recurringUpdated = $this->revisePayPalSubscription($subscription->gateway_subscription_id, $newRecurring);
+            if (! $recurringUpdated) {
+                Log::error('[PayPal] Addon granted but recurring amount NOT updated — DB and PayPal are out of sync, reconcile manually', [
+                    'subscription' => $subscription->id,
+                    'gateway_subscription_id' => $subscription->gateway_subscription_id,
+                    'expected_recurring' => $newRecurring,
+                ]);
+            }
         }
 
         $subscription->update([
@@ -418,9 +431,13 @@ class SubscriptionController extends Controller
             ? "Cobro prorrateado: US\${$prorated}. "
             : '';
 
+        $nextCycleNote = $recurringUpdated
+            ? 'Próximo ciclo: US$'.number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.'
+            : 'Ajustaremos el monto de tu próximo ciclo en breve.';
+
         return redirect()->route('billing.index')
             ->with(array_filter([
-                'success' => "1 {$label} agregado(a). {$proratedNote}Próximo ciclo: US\$".number_format($newRecurring, 2).'/'.($subscription->billing_cycle === 'annual' ? 'año' : 'mes').'.',
+                'success' => "1 {$label} agregado(a). {$proratedNote}{$nextCycleNote}",
                 '_umami' => umami_flash_payload('subscription_addon_purchased', ['type' => $type]),
             ], fn ($v) => $v !== null));
     }
@@ -476,12 +493,19 @@ class SubscriptionController extends Controller
 
     /**
      * Revise PayPal subscription recurring amount for next billing cycle.
+     * Returns true on success; false (with an error log) if the recurring
+     * amount could not be updated, so callers can flag DB/PayPal drift.
      */
-    private function revisePayPalSubscription(string $paypalSubId, float $newAmount): void
+    private function revisePayPalSubscription(string $paypalSubId, float $newAmount): bool
     {
         $token = $this->getAccessToken();
         if (! $token) {
-            return;
+            Log::error('[PayPal] Cannot revise subscription: no access token', [
+                'id' => $paypalSubId,
+                'new_amount' => $newAmount,
+            ]);
+
+            return false;
         }
 
         $response = Http::withToken($token)
@@ -507,7 +531,11 @@ class SubscriptionController extends Controller
                 'new_amount' => $newAmount,
                 'body' => $response->body(),
             ]);
+
+            return false;
         }
+
+        return true;
     }
 
     private function cancelPayPalSubscription(string $paypalSubId): void
