@@ -102,7 +102,10 @@ class OfferAssemblyService
     {
         $offer->load('activeRequirements.items', 'company');
 
-        $sobreDir = storage_path('app/generated/sobres');
+        // Namespace by company_id: multiple companies routinely bid on the same
+        // government tender (same proceso_codigo), so a shared path would let one
+        // company overwrite or download another's assembled sobre.
+        $sobreDir = storage_path('app/generated/sobres/'.$offer->company_id);
         if (! is_dir($sobreDir)) {
             mkdir($sobreDir, 0755, true);
         }

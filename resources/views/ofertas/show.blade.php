@@ -1413,9 +1413,10 @@
                     </form>
                     @php
                         $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $oferta->proceso_codigo ?? 'oferta');
-                        $sobreAFile = glob(storage_path("app/generated/sobres/Sobre A-{$code}.pdf"));
-                        $sobreBFile = glob(storage_path("app/generated/sobres/Sobre B-{$code}.pdf"));
-                        $sobreUFile = glob(storage_path("app/generated/sobres/Sobre U-{$code}.pdf"));
+                        $sobreBase = storage_path("app/generated/sobres/{$oferta->company_id}");
+                        $sobreAFile = glob("{$sobreBase}/Sobre A-{$code}.pdf");
+                        $sobreBFile = glob("{$sobreBase}/Sobre B-{$code}.pdf");
+                        $sobreUFile = glob("{$sobreBase}/Sobre U-{$code}.pdf");
                     @endphp
                     @if(!empty($sobreAFile))
                     <a href="{{ route('ofertas.sobres.download', [$oferta, 'A']) }}"

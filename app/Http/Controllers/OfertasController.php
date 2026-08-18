@@ -705,7 +705,9 @@ class OfertasController extends Controller
         abort_unless(in_array($sobre, ['A', 'B', 'U']), 404);
 
         $code = preg_replace('/[^A-Za-z0-9_\-]/', '_', $oferta->proceso_codigo ?? 'oferta');
-        $path = storage_path("app/generated/sobres/Sobre {$sobre}-{$code}.pdf");
+        // Company-namespaced (see OfferAssemblyService): prevents serving another
+        // company's sobre for the same proceso_codigo.
+        $path = storage_path("app/generated/sobres/{$oferta->company_id}/Sobre {$sobre}-{$code}.pdf");
 
         if (! file_exists($path)) {
             abort(404, "Sobre {$sobre} no ha sido generado.");
