@@ -482,6 +482,23 @@
                     this.failReason = e.message;
                     this.parsing = false;
                 }
+            },
+            async parsePortalDoc(fileId, filename) {
+                if (this.parsing) return;
+                try {
+                    const res = await fetch('{{ route('ofertas.parse-from-portal', $oferta) }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
+                        body: JSON.stringify({ file_id: fileId, filename })
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json.error || 'Error al iniciar análisis');
+                    this.startPolling(0);
+                } catch (e) {
+                    this.failed = true;
+                    this.failReason = e.message;
+                    this.parsing = false;
+                }
             }
         }" class="rounded-xl border border-gray-200 bg-white">
             <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
@@ -549,6 +566,12 @@
                                         Analizar
                                     </button>
                                 </template>
+                                <template x-if="doc.is_portal && doc.portal_file_id">
+                                    <button @click="parsePortalDoc(doc.portal_file_id, (doc.nombre_documento || 'pliego.pdf'))"
+                                            class="shrink-0 rounded-md bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20 hover:bg-blue-100">
+                                        Analizar
+                                    </button>
+                                </template>
                             </li>
                         </template>
                     </ul>
@@ -591,6 +614,8 @@
     <div x-data="{
         docs: [],
         loading: true,
+        analyzing: false,
+        analyzingId: null,
         async init() {
             try {
                 const res = await fetch('{{ route('ofertas.api-docs', $oferta) }}');
@@ -600,6 +625,34 @@
                 console.error(e);
             }
             this.loading = false;
+        },
+        async analyzePortal(doc) {
+            this.analyzing = true;
+            this.analyzingId = doc.portal_file_id;
+            try {
+                const res = await fetch('{{ route('ofertas.parse-from-portal', $oferta) }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ file_id: doc.portal_file_id, filename: doc.nombre_documento || 'pliego.pdf' }),
+                });
+                const json = await res.json();
+                if (res.ok) {
+                    window.location = '{{ route('ofertas.show', [$oferta, 'tab' => 'pliego']) }}';
+                } else {
+                    alert(json.error || 'No se pudo iniciar el análisis.');
+                }
+            } catch (e) {
+                alert('Error de conexión al iniciar el análisis.');
+            } finally {
+                this.analyzing = false;
+                this.analyzingId = null;
+            }
         }
     }" class="space-y-6">
         <div class="rounded-xl border border-gray-200 bg-white">
@@ -643,15 +696,32 @@
                                     </p>
                                 </div>
                             </div>
-                            <template x-if="doc.url_documento">
-                                <a :href="doc.url_documento" target="_blank" rel="noopener"
-                                   class="shrink-0 inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                                    <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                                    </svg>
-                                    Descargar
-                                </a>
-                            </template>
+                            <div class="flex shrink-0 items-center gap-x-2">
+                                {{-- Download: API docs use their direct URL; portal docs go through our proxy. --}}
+                                <template x-if="doc.url_documento">
+                                    <a :href="doc.url_documento" target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                        Descargar
+                                    </a>
+                                </template>
+                                <template x-if="doc.is_portal && doc.portal_file_id">
+                                    <a :href="'{{ route('ofertas.portal-doc', $oferta) }}?fileId=' + encodeURIComponent(doc.portal_file_id) + '&filename=' + encodeURIComponent(doc.nombre_documento || 'documento.pdf')"
+                                       target="_blank" rel="noopener"
+                                       class="inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                                        Descargar
+                                    </a>
+                                </template>
+                                @if($oferta->isEditable())
+                                <template x-if="doc.is_portal && doc.portal_file_id">
+                                    <button @click="analyzePortal(doc)" :disabled="analyzing"
+                                            class="inline-flex items-center rounded-md bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20 hover:bg-blue-100 disabled:opacity-50">
+                                        <span x-text="analyzingId === doc.portal_file_id ? 'Enviando...' : 'Analizar'"></span>
+                                    </button>
+                                </template>
+                                @endif
+                            </div>
                         </li>
                     </template>
                 </ul>

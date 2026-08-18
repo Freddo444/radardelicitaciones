@@ -299,7 +299,9 @@ Route::middleware(['auth', 'verified', 'tenant', 'subscription.active'])->group(
     Route::post('/ofertas/{oferta}/parse/{attempt}/verify', [OfertasController::class, 'verifyParse'])->name('ofertas.parse.verify');
     Route::post('/ofertas/{oferta}/pliego', [OfertasController::class, 'uploadPliego'])->name('ofertas.pliego.upload');
     Route::get('/ofertas/{oferta}/api-docs', [OfertasController::class, 'apiDocuments'])->name('ofertas.api-docs');
+    Route::get('/ofertas/{oferta}/portal-doc', [OfertasController::class, 'portalDoc'])->name('ofertas.portal-doc');
     Route::post('/ofertas/{oferta}/parse-from-api', [OfertasController::class, 'parseFromApi'])->name('ofertas.parse-from-api');
+    Route::post('/ofertas/{oferta}/parse-from-portal', [OfertasController::class, 'parseFromPortal'])->name('ofertas.parse-from-portal');
     Route::get('/ofertas/{oferta}/parse-status', [OfertasController::class, 'parseStatus'])->name('ofertas.parse-status');
 
     // Requirements

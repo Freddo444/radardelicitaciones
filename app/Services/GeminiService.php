@@ -102,7 +102,34 @@ PROMPT;
             return $attempt;
         }
 
-        // Store locally
+        return $this->storeAndParse($offer, $attempt, $pdfContent, $originalFilename, $pdfUrl);
+    }
+
+    /**
+     * Parse a pliego from raw PDF bytes already in hand (e.g. downloaded from
+     * the SECP portal via the two-hop scraper, where there is no direct URL).
+     */
+    public function parseFromContent(Offer $offer, string $pdfContent, string $originalFilename, ?int $userId = null, ?int $attemptId = null): OfferParseAttempt
+    {
+        $this->checkTrialLimit($offer);
+
+        $attempt = $attemptId
+            ? OfferParseAttempt::findOrFail($attemptId)
+            : OfferParseAttempt::create([
+                'offer_id' => $offer->id,
+                'status' => 'pending',
+                'parser_version' => $this->parserVersion,
+                'triggered_by' => $userId ?? Auth::id(),
+            ]);
+
+        return $this->storeAndParse($offer, $attempt, $pdfContent, $originalFilename, null);
+    }
+
+    /**
+     * Store the PDF locally, record a BidDocument, and hand it to Gemini.
+     */
+    private function storeAndParse(Offer $offer, OfferParseAttempt $attempt, string $pdfContent, string $originalFilename, ?string $sourceUrl): OfferParseAttempt
+    {
         $localPath = "bid_docs/{$offer->company_id}/{$offer->id}/".$originalFilename;
         Storage::disk('bid_docs')->put($localPath, $pdfContent);
         $sha256 = hash('sha256', $pdfContent);
@@ -111,7 +138,7 @@ PROMPT;
             'offer_id' => $offer->id,
             'document_type' => 'pliego',
             'original_filename' => $originalFilename,
-            'source_url' => $pdfUrl,
+            'source_url' => $sourceUrl,
             'downloaded_at' => now(),
             'sha256' => $sha256,
             'local_path' => $localPath,
@@ -120,7 +147,6 @@ PROMPT;
 
         $attempt->update(['bid_document_id' => $bidDoc->id, 'status' => 'running']);
 
-        // Parse with Gemini
         return $this->parseDocument($attempt, $bidDoc, $pdfContent);
     }
 

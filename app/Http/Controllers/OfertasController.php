@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\TrialLimitExceededException;
 use App\Jobs\ParsePliegoJob;
+use App\Jobs\ParsePortalPliegoJob;
 use App\Models\Bid;
 use App\Models\BidDocument;
 use App\Models\Equipment;
@@ -28,6 +29,7 @@ use App\Services\DgcpApiClient;
 use App\Services\FormGeneratorService;
 use App\Services\GeminiService;
 use App\Services\OfferAssemblyService;
+use App\Services\PortalScraperService;
 use App\Support\BidOverview;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -242,21 +244,131 @@ class OfertasController extends Controller
     }
 
     /**
-     * Fetch documents from the DGCP API for this offer's process code.
+     * Fetch the process documents for this offer.
+     *
+     * Prefers the SECP portal (via the linked bid) over the open-data API,
+     * because recently published processes — especially newer modalities like
+     * Contratación Menor — often have documents on the portal before they
+     * appear in the open-data API. Mirrors the convocatorias drawer, so the
+     * offer's "Documentos del proceso" tab and the drawer stay consistent.
      */
-    public function apiDocuments(Offer $oferta, DgcpApiClient $api)
+    public function apiDocuments(Offer $oferta, DgcpApiClient $api, PortalScraperService $scraper)
     {
-        if (! $oferta->proceso_codigo) {
-            return response()->json(['docs' => []]);
+        $bid = $oferta->bid;
+        $noticeUid = $bid?->resolveNoticeUid();
+
+        // 1. Portal first (only path that has docs for many recent processes).
+        if ($bid && $noticeUid) {
+            // Served-from-cache if the backfill job already populated it.
+            if (! empty($bid->cached_documents)) {
+                return response()->json(['docs' => $this->normalizePortalDocs($bid->cached_documents)]);
+            }
+            try {
+                $detail = $scraper->fetchDetail($noticeUid);
+                $docs = $detail['documents'] ?? [];
+                if (! empty($docs)) {
+                    $bid->update(['cached_documents' => $docs, 'cache_refreshed_at' => now()]);
+
+                    return response()->json(['docs' => $this->normalizePortalDocs($docs)]);
+                }
+            } catch (\Throwable) {
+                // fall through to API
+            }
         }
 
-        try {
-            $docs = $api->fetchDocuments($oferta->proceso_codigo);
-        } catch (\Throwable) {
-            $docs = [];
+        // 2. Open-data API fallback (direct-URL docs).
+        if ($oferta->proceso_codigo) {
+            try {
+                $docs = $api->fetchDocuments($oferta->proceso_codigo);
+                if (! empty($docs)) {
+                    return response()->json(['docs' => $docs]);
+                }
+            } catch (\Throwable) {
+                // fall through
+            }
         }
 
-        return response()->json(['docs' => $docs]);
+        return response()->json(['docs' => []]);
+    }
+
+    /**
+     * Tag portal-sourced docs with the offer download/parse handles the
+     * frontend needs (portal_file_id + a download_url), since they have no
+     * direct url_documento.
+     *
+     * @param  array<int, array<string, mixed>>  $docs
+     */
+    private function normalizePortalDocs(array $docs): array
+    {
+        return collect($docs)->map(fn ($d) => array_merge($d, [
+            'portal_file_id' => $d['portal_file_id'] ?? '',
+            'is_portal' => true,
+        ]))->values()->all();
+    }
+
+    /**
+     * Download a portal document for viewing (streams via the linked bid's
+     * two-hop scraper).
+     */
+    public function portalDoc(Offer $oferta, Request $request, PortalScraperService $scraper)
+    {
+        $fileId = (string) $request->input('fileId', '');
+        $filename = basename((string) $request->input('filename', 'documento.pdf')) ?: 'documento.pdf';
+
+        if (! preg_match('/^\d+$/', $fileId)) {
+            abort(400, 'ID de documento inválido');
+        }
+
+        $noticeUid = $oferta->bid?->resolveNoticeUid();
+        if (! $noticeUid) {
+            abort(404, 'Documento no disponible');
+        }
+
+        $file = $scraper->downloadPortalDocument($noticeUid, $fileId);
+        if (! $file) {
+            abort(404, 'No se pudo descargar el documento.');
+        }
+
+        return response($file['body'], 200, [
+            'Content-Type' => $file['content_type'],
+            'Content-Disposition' => 'inline; filename="'.($file['filename'] ?: $filename).'"',
+        ]);
+    }
+
+    /**
+     * Analyze a portal document: download server-side via the scraper, parse
+     * with Gemini. Portal docs have no direct URL, so this can't go through
+     * the URL-based parseFromApi path.
+     */
+    public function parseFromPortal(Request $request, Offer $oferta)
+    {
+        abort_unless($oferta->isEditable(), 403, 'La oferta está bloqueada.');
+
+        $data = $request->validate([
+            'file_id' => 'required|regex:/^\d+$/',
+            'filename' => 'required|string|max:255',
+        ]);
+
+        $noticeUid = $oferta->bid?->resolveNoticeUid();
+        if (! $noticeUid) {
+            return response()->json(['error' => 'No se pudo ubicar el proceso en el portal.'], 422);
+        }
+
+        $subscription = Subscription::where('user_id', $oferta->company->owner_id)->first();
+        if ($subscription && $subscription->status === 'trialing' && ! $subscription->canUseTrial()) {
+            return response()->json(['error' => (new TrialLimitExceededException)->getMessage()], 422);
+        }
+
+        $attempt = OfferParseAttempt::create([
+            'offer_id' => $oferta->id,
+            'status' => 'pending',
+            'parser_version' => 'v1.0',
+            'triggered_by' => Auth::id(),
+        ]);
+
+        ParsePortalPliegoJob::dispatch($oferta, $noticeUid, $data['file_id'], $data['filename'], $attempt->id);
+
+        return response()->json(['ok' => true]);
     }
 
     /**
