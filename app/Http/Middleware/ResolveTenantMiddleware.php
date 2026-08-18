@@ -64,7 +64,7 @@ class ResolveTenantMiddleware
         }
 
         // No companies — redirect to company setup
-        return redirect()->route('companies.create');
+        return redirect()->route('company-setup.show');
     }
 
     private function bindCompany(Company $company): void

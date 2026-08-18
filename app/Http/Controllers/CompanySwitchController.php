@@ -44,7 +44,10 @@ class CompanySwitchController extends Controller
 
     public function create()
     {
-        return view('companies.create');
+        // Use the full onboarding flow (RPE lookup + rubro picker + auto-match)
+        // for every company, not just the first — a bare form would create a
+        // company with no rubros, which can never match anything.
+        return redirect()->route('company-setup.show');
     }
 
     public function store(Request $request)
