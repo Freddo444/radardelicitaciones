@@ -7,11 +7,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('basic','custom','trial') DEFAULT 'basic'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('basic','custom','trial') DEFAULT 'basic'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('basic','custom') DEFAULT 'basic'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE subscriptions MODIFY COLUMN plan ENUM('basic','custom') DEFAULT 'basic'");
+        }
     }
 };

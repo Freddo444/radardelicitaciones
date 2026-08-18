@@ -9,7 +9,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        DB::statement("ALTER TABLE subscriptions MODIFY COLUMN status ENUM('pending','active','past_due','cancelled','suspended','trialing') DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE subscriptions MODIFY COLUMN status ENUM('pending','active','past_due','cancelled','suspended','trialing') DEFAULT 'pending'");
+        }
 
         Schema::table('subscriptions', function (Blueprint $table) {
             $table->timestamp('trial_ends_at')->nullable()->after('cancelled_at');
@@ -25,6 +27,8 @@ return new class extends Migration
             $table->dropColumn(['trial_ends_at', 'trial_parse_count', 'trial_parse_limit', 'billing_cycle']);
         });
 
-        DB::statement("ALTER TABLE subscriptions MODIFY COLUMN status ENUM('pending','active','past_due','cancelled','suspended') DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE subscriptions MODIFY COLUMN status ENUM('pending','active','past_due','cancelled','suspended') DEFAULT 'pending'");
+        }
     }
 };
