@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Sentry\Laravel\Integration;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -40,6 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // Laravel 11+ requires this call for sentry/sentry-laravel to capture
+        // unhandled exceptions — the service provider does not register it
+        // automatically. Without it, 500s never reach Sentry.
+        Integration::handles($exceptions);
+
         $exceptions->render(function (HttpExceptionInterface $e, Request $request) {
             if ($e->getStatusCode() !== 403 || $request->expectsJson()) {
                 return null;

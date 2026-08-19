@@ -208,7 +208,7 @@
             $currentAccent = old('sobre_accent_color', $company->sobre_accent_color);
         @endphp
         <div class="rounded-xl border border-gray-200 bg-white"
-             x-data="{ theme: '{{ $currentTheme }}', accent: '{{ $currentAccent ?: '' }}', defaults: {{ Illuminate\Support\Js::from(collect($themeMeta)->map->only('default')->map(fn($m)=>$m['default'])) }} }">
+             x-data="{ theme: '{{ $currentTheme }}', accent: '{{ $currentAccent ?: '' }}', defaults: {{ Illuminate\Support\Js::from(collect($themeMeta)->map(fn($m) => $m['default'])) }} }">
             <div class="border-b border-gray-200 px-6 py-4">
                 <h2 class="text-sm font-semibold text-gray-900">Diseño de los sobres</h2>
                 <p class="mt-0.5 text-xs text-gray-500">La portada y separadores de los sobres PDF que genera Radar usarán este tema y color. Su logo aparece automáticamente.</p>
