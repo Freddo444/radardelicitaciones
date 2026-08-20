@@ -74,6 +74,14 @@
 
     <table class="totals" style="margin-top: 16px;">
         <tr>
+            <td class="label">Subtotal (base imponible)</td>
+            <td class="amount" style="width: 22%; font-weight: 400;">{{ $subtotalFormatted }}</td>
+        </tr>
+        <tr>
+            <td class="label">ITBIS (18% incluido)</td>
+            <td class="amount" style="width: 22%; font-weight: 400;">{{ $itbisFormatted }}</td>
+        </tr>
+        <tr>
             <td class="label">Total</td>
             <td class="amount" style="width: 22%;">{{ $payment->amountFormatted() }}</td>
         </tr>

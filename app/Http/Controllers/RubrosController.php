@@ -71,7 +71,7 @@ class RubrosController extends Controller
         return back()->with('success', $msg);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, BidMatchingService $matcher)
     {
         $companyId = currentCompany()->id;
         $request->validate([
@@ -88,7 +88,16 @@ class RubrosController extends Controller
             'active' => true,
         ]);
 
-        return back()->with('success', "Rubro {$request->code} agregado correctamente.");
+        // Match already-synced convocatorias against the new rubro right away,
+        // so the user sees results immediately instead of waiting for the poll.
+        $matched = $matcher->sondear($companyId);
+
+        $msg = "Rubro {$request->code} agregado correctamente.";
+        if ($matched > 0) {
+            $msg .= " Encontramos {$matched} convocatoria(s) que coinciden.";
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function destroy($rubro)
