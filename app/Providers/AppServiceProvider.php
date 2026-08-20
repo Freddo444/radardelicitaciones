@@ -19,11 +19,15 @@ use App\Observers\OfferEventObserver;
 use App\Observers\OfferObserver;
 use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
+use App\Mail\WelcomeMail;
 use App\Support\Blog\ArticleRepository;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Verified;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -44,6 +48,21 @@ class AppServiceProvider extends ServiceProvider
             $user = $event->user;
             if ($user instanceof User) {
                 $user->forceFill(['last_sign_in_at' => now()])->saveQuietly();
+            }
+        });
+
+        // Send a one-time welcome email once the user verifies their address.
+        Event::listen(Verified::class, function (Verified $event): void {
+            $user = $event->user;
+            if (! $user instanceof User || $user->welcome_sent_at) {
+                return;
+            }
+
+            try {
+                Mail::to($user->email)->queue(new WelcomeMail($user));
+                $user->forceFill(['welcome_sent_at' => now()])->saveQuietly();
+            } catch (\Throwable $e) {
+                Log::error('[Welcome] send failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
             }
         });
 
