@@ -206,6 +206,23 @@
                                 </button>
                             </dd>
                         </div>
+                        <div class="py-6">
+                            <dt class="font-medium text-gray-900">Aviso por cada coincidencia</dt>
+                            <dd class="mt-2">
+                                <label class="flex items-start gap-3">
+                                    <input type="checkbox" name="telegram_notify_each_match" aria-label="Avisar por Telegram en cada coincidencia"
+                                           {{ ($settings['telegram_notify_each_match'] ?? '0') === '1' ? 'checked' : '' }}
+                                           class="mt-0.5 size-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"/>
+                                    <span class="text-sm text-gray-700">
+                                        Enviarme un mensaje de Telegram <strong>por cada</strong> nueva convocatoria que coincida con mis rubros.
+                                    </span>
+                                </label>
+                                <div class="mt-3 flex gap-2 rounded-md bg-amber-50 p-3 text-sm text-amber-800 ring-1 ring-inset ring-amber-200">
+                                    <svg class="mt-0.5 size-5 shrink-0 text-amber-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 6a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 6Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd"/></svg>
+                                    <span><strong>Puede ser muy ruidoso.</strong> Si tienes rubros amplios, esto puede significar decenas de mensajes al día. Para menos ruido, deja esto desactivado y usa el <strong>resumen periódico</strong> (pestaña Notificaciones), que agrupa todo en un solo mensaje.</span>
+                                </div>
+                            </dd>
+                        </div>
                     </dl>
                 </div>
 

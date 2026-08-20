@@ -22,6 +22,7 @@ class SettingsController extends Controller
             'notification_email' => Setting::get('notification_email', null, $cid),
             'telegram_bot_token' => Setting::get('telegram_bot_token', null, $cid),
             'telegram_chat_id' => Setting::get('telegram_chat_id', null, $cid),
+            'telegram_notify_each_match' => Setting::get('telegram_notify_each_match', '0', $cid),
             'min_amount_filter' => Setting::get('min_amount_filter', '0', $cid),
             'min_amount_value' => Setting::get('min_amount_value', '0', $cid),
             'min_amount_currency' => Setting::get('min_amount_currency', 'DOP', $cid),
@@ -97,6 +98,7 @@ class SettingsController extends Controller
         );
         Setting::set('telegram_bot_token', $request->telegram_bot_token, $cid);
         Setting::set('telegram_chat_id', $request->telegram_chat_id, $cid);
+        Setting::set('telegram_notify_each_match', $request->has('telegram_notify_each_match') ? '1' : '0', $cid);
         // Per-company filters
         $minVal = $request->min_amount_value ?? '0';
         Setting::set('min_amount_filter', ((float) $minVal > 0) ? '1' : '0', $cid);

@@ -9,6 +9,7 @@ use App\Models\CompanyBid;
 use App\Models\InAppNotification;
 use App\Models\NotificationLog;
 use App\Models\Setting;
+use App\Services\TelegramService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
@@ -32,7 +33,7 @@ class SendBidNotification implements ShouldQueue
         $this->companyId = $company->id;
     }
 
-    public function handle(): void
+    public function handle(TelegramService $telegram): void
     {
         $bid = Bid::find($this->bidId);
         $company = Company::find($this->companyId);
@@ -48,6 +49,7 @@ class SendBidNotification implements ShouldQueue
 
         $this->createInAppNotifications($bid, $company);
         $this->sendMatchEmailIfConfigured($bid, $company);
+        $this->sendMatchTelegramIfEnabled($bid, $company, $telegram);
     }
 
     private function markAsNotifiedIfPending(Bid $bid, Company $company): bool
@@ -93,6 +95,69 @@ class SendBidNotification implements ShouldQueue
             ]);
 
             Log::error('[SendBidNotification] Email failed', [
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Per-match Telegram alert — off by default and opt-in (telegram_notify_each_match),
+     * because broad rubros can produce dozens of matches a day. When the periodic
+     * digest is on, matches are batched there instead, so skip the per-match ping.
+     */
+    private function sendMatchTelegramIfEnabled(Bid $bid, Company $company, TelegramService $telegram): void
+    {
+        if (Setting::get('digest_enabled', '0', $company->id) === '1') {
+            return;
+        }
+
+        if (Setting::get('telegram_notify_each_match', '0', $company->id) !== '1') {
+            return;
+        }
+
+        if (! $telegram->isConfigured($company->id)) {
+            return;
+        }
+
+        $amount = $bid->amount_estimated
+            ? ($bid->currency ?? 'DOP').' '.number_format($bid->amount_estimated, 2)
+            : 'N/D';
+
+        $deadline = $bid->tender_deadline
+            ? $bid->tender_deadline->format('d/m/Y H:i')
+            : 'N/D';
+
+        $text = "🎯 <b>Nueva coincidencia</b>\n\n"
+            ."📋 <b>{$bid->title}</b>\n"
+            ."🏢 {$bid->buyer_name}\n"
+            ."💰 {$amount}\n"
+            ."📅 Cierre: {$deadline}\n\n"
+            ."<a href=\"{$bid->secp_url}\">Ver en DGCP</a>";
+
+        try {
+            $sent = $telegram->sendMessage($text, $company->id);
+
+            NotificationLog::create([
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
+                'channel' => 'telegram',
+                'status' => $sent ? 'sent' : 'failed',
+                'error_message' => 'Nueva coincidencia: '.$bid->process_code,
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            NotificationLog::create([
+                'company_id' => $company->id,
+                'bid_id' => $bid->id,
+                'channel' => 'telegram',
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+                'created_at' => now(),
+            ]);
+
+            Log::error('[SendBidNotification] Telegram failed', [
                 'company_id' => $company->id,
                 'bid_id' => $bid->id,
                 'error' => $e->getMessage(),
