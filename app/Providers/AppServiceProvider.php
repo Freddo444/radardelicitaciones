@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Mail\WelcomeMail;
 use App\Models\BidDocument;
 use App\Models\BidWatch;
 use App\Models\Equipment;
@@ -19,7 +20,6 @@ use App\Observers\OfferEventObserver;
 use App\Observers\OfferObserver;
 use App\Observers\PaymentObserver;
 use App\Policies\CompanyModelPolicy;
-use App\Mail\WelcomeMail;
 use App\Support\Blog\ArticleRepository;
 use Carbon\Carbon;
 use Illuminate\Auth\Events\Login;

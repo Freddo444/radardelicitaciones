@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Company;
+use App\Models\VaultDocument;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -14,7 +15,7 @@ class DocumentExpiryMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    /** @param Collection<int, \App\Models\VaultDocument> $documents */
+    /** @param Collection<int, VaultDocument> $documents */
     public function __construct(
         public Company $company,
         public Collection $documents,
