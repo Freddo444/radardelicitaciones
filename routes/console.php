@@ -95,3 +95,9 @@ Schedule::exec("{$php} secp:send-reengagement")
     ->dailyAt('09:30')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/lifecycle-reengagement.log'));
+
+// Proactive vault document expiry alerts (email + Telegram)
+Schedule::exec("{$php} secp:send-expiry-alerts")
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/expiry-alerts.log'));

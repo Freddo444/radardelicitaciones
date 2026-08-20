@@ -34,11 +34,13 @@ class VaultDocument extends Model
         'replaces_document_id',
         'superseded_at',
         'is_current',
+        'expiry_notified_at',
     ];
 
     protected $casts = [
         'issued_at' => 'date',
         'expires_at' => 'date',
+        'expiry_notified_at' => 'datetime',
         'superseded_at' => 'datetime',
         'notarized' => 'boolean',
         'internal_only' => 'boolean',

@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Bid extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'process_code', 'ocid', 'title', 'buyer_name', 'buyer_code',
         'procurement_method', 'status', 'amount_estimated', 'currency',

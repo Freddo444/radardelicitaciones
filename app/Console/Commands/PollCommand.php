@@ -387,7 +387,9 @@ class PollCommand extends Command
             'Proceso desierto',
         ];
 
-        $deleted = Bid::where(function ($q) use ($closedStatuses) {
+        // Soft-delete (archive) so the record survives for history/review; the
+        // SoftDeletes trait keeps them out of every normal query automatically.
+        $archived = Bid::where(function ($q) use ($closedStatuses) {
             $q->where(function ($q2) {
                 $q2->whereNotNull('tender_deadline')
                     ->where('tender_deadline', '<', now());
@@ -398,9 +400,18 @@ class PollCommand extends Command
             ->whereDoesntHave('companies', fn ($q) => $q->where('company_bid.is_bookmarked', true))
             ->delete();
 
-        if ($deleted > 0) {
-            $this->progress("Limpieza: {$deleted} convocatoria(s) eliminada(s) por plazo vencido o proceso cerrado.", 'info');
-            Log::info("[SECP] Cleanup removed {$deleted} expired/closed bids.");
+        if ($archived > 0) {
+            $this->progress("Limpieza: {$archived} convocatoria(s) archivada(s) por plazo vencido o proceso cerrado.", 'info');
+            Log::info("[SECP] Cleanup archived {$archived} expired/closed bids.");
+        }
+
+        // Bound table growth: permanently purge bids archived over a year ago.
+        $purged = Bid::onlyTrashed()
+            ->where('deleted_at', '<', now()->subMonths(12))
+            ->forceDelete();
+
+        if ($purged > 0) {
+            Log::info("[SECP] Cleanup purged {$purged} bids archived over 12 months ago.");
         }
     }
 
