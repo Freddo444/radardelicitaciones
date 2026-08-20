@@ -122,6 +122,7 @@ Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('az
 Route::middleware('auth')->group(function () {
     // Billing (redirects to settings + subscription management)
     Route::get('/facturacion', [SubscriptionController::class, 'index'])->name('billing.index');
+    Route::get('/facturacion/pago/{payment}/factura', [SubscriptionController::class, 'downloadInvoice'])->name('billing.invoice');
     Route::delete('/facturacion/cancelar', [SubscriptionController::class, 'cancel'])->name('billing.cancel');
     Route::get('/suscripcion/preview-addon', [SubscriptionController::class, 'previewAddon'])->name('billing.preview-addon');
     Route::post('/suscripcion/purchase-addon', [SubscriptionController::class, 'purchaseAddon'])->name('billing.purchase-addon');

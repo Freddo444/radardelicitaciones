@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subscription extends Model
 {
+    /** Days a customer keeps access after a failed payment while PayPal retries. */
+    public const DUNNING_GRACE_DAYS = 7;
+
     protected $fillable = [
         'user_id', 'plan', 'status',
         'current_period_start', 'current_period_end',
@@ -15,6 +18,8 @@ class Subscription extends Model
         'payment_gateway', 'gateway_subscription_id', 'gateway_customer_id',
         'cancelled_at', 'trial_ends_at', 'trial_parse_count', 'trial_parse_limit',
         'billing_cycle',
+        'grace_ends_at', 'payment_failed_notified_at',
+        'trial_ending_notified_at', 'trial_expired_notified_at',
     ];
 
     protected $casts = [
@@ -22,6 +27,10 @@ class Subscription extends Model
         'current_period_end' => 'date',
         'cancelled_at' => 'datetime',
         'trial_ends_at' => 'datetime',
+        'grace_ends_at' => 'datetime',
+        'payment_failed_notified_at' => 'datetime',
+        'trial_ending_notified_at' => 'datetime',
+        'trial_expired_notified_at' => 'datetime',
         'monthly_amount' => 'decimal:2',
         'max_companies' => 'integer',
         'max_users' => 'integer',
@@ -41,7 +50,21 @@ class Subscription extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active' || $this->isTrialing();
+        return $this->status === 'active'
+            || $this->isTrialing()
+            || $this->inDunningGrace();
+    }
+
+    /**
+     * A past_due subscription keeps full access during the dunning grace window
+     * so a single failed/retried charge doesn't instantly lock out a paying
+     * customer. Access is only cut once the grace window lapses.
+     */
+    public function inDunningGrace(): bool
+    {
+        return $this->status === 'past_due'
+            && $this->grace_ends_at
+            && $this->grace_ends_at->isFuture();
     }
 
     public function isTrialing(): bool

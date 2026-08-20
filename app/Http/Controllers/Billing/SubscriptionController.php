@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Services\Billing\AzulCheckoutBuilder;
+use App\Services\Billing\PaymentInvoicePdfGenerator;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,25 @@ class SubscriptionController extends Controller
         $canAzul = (bool) config('services.azul.merchant_id') && (bool) config('services.azul.auth_key');
 
         return view('billing.index', compact('subscription', 'usage', 'payments', 'isOwner', 'canPaypalProration', 'canAzul'));
+    }
+
+    /**
+     * Stream the invoice/receipt PDF for a completed payment, scoped to the
+     * authenticated owner's own subscription.
+     */
+    public function downloadInvoice(Payment $payment, PaymentInvoicePdfGenerator $generator)
+    {
+        $subscription = Auth::user()?->subscription;
+
+        abort_unless($subscription && $payment->subscription_id === $subscription->id, 403);
+        abort_unless($payment->status === 'completed', 404);
+
+        $pdf = $generator->binary($payment);
+
+        return response($pdf, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="Factura-RDL-'.$payment->id.'.pdf"',
+        ]);
     }
 
     public function showSubscribe()

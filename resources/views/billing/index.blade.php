@@ -289,7 +289,8 @@
     @if($payments->isNotEmpty())
     <div class="mt-6 rounded-lg bg-white p-6 shadow ring-1 ring-gray-900/5">
         <h3 class="text-sm font-semibold text-gray-900">Historial de pagos</h3>
-        <table class="mt-4 w-full text-sm">
+        <div class="mt-4 overflow-x-auto">
+        <table class="w-full min-w-[560px] text-sm">
             <thead>
                 <tr class="border-b text-left text-gray-500">
                     <th class="pb-2 font-medium">Fecha</th>
@@ -297,6 +298,7 @@
                     <th class="pb-2 font-medium">M&eacute;todo</th>
                     <th class="pb-2 font-medium">Nota</th>
                     <th class="pb-2 font-medium">Estado</th>
+                    <th class="pb-2 font-medium">Factura</th>
                 </tr>
             </thead>
             <tbody class="divide-y">
@@ -325,10 +327,22 @@
                             } }}
                         </span>
                     </td>
+                    <td class="py-2">
+                        @if($payment->status === 'completed')
+                            <a href="{{ route('billing.invoice', $payment) }}" target="_blank"
+                               class="inline-flex items-center gap-1 font-medium text-blue-600 hover:text-blue-800">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                                Descargar
+                            </a>
+                        @else
+                            <span class="text-gray-400">&mdash;</span>
+                        @endif
+                    </td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
+        </div>
     </div>
     @endif
 

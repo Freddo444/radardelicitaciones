@@ -73,3 +73,25 @@ Schedule::exec("{$php} secp:import-catalog")
 Schedule::exec("{$php} billing:reconcile-azul-orphans")
     ->daily()
     ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));
+
+// Enforce dunning-grace expiry + flag stale active subscriptions
+Schedule::exec("{$php} subscriptions:reconcile")
+    ->dailyAt('03:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/subscriptions-reconcile.log'));
+
+// Lifecycle emails — sent once each per user, gated inside the commands
+Schedule::exec("{$php} secp:send-trial-ending")
+    ->dailyAt('09:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/lifecycle-trial-ending.log'));
+
+Schedule::exec("{$php} secp:send-trial-expired")
+    ->dailyAt('09:15')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/lifecycle-trial-expired.log'));
+
+Schedule::exec("{$php} secp:send-reengagement")
+    ->dailyAt('09:30')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/lifecycle-reengagement.log'));
