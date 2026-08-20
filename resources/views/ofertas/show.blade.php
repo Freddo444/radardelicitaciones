@@ -1407,7 +1407,7 @@
                     <form method="POST" action="{{ route('ofertas.sobres.generate', $oferta) }}">
                         @csrf
                         <button type="submit"
-                                class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500">
                             Generar Sobres PDF
                         </button>
                     </form>

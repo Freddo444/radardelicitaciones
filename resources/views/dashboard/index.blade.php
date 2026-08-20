@@ -154,7 +154,11 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="mx-auto size-10 text-gray-400">
                         <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <p class="mt-2 text-sm text-gray-500">Sin convocatorias. Ejecuta el sondeo para comenzar.</p>
+                    <p class="mt-2 text-sm text-gray-500">Aún no hay convocatorias recientes.</p>
+                    <div class="mt-4">
+                        <a href="{{ route('convocatorias.index') }}"
+                            class="inline-flex items-center justify-center gap-x-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-blue-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">Ver convocatorias</a>
+                    </div>
                 </div>
                 @else
                 <ul class="divide-y divide-gray-100">

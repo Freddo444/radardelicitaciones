@@ -137,7 +137,7 @@
                         <div class="py-6 sm:flex sm:items-center">
                             <dt class="font-medium text-gray-900 sm:w-64 sm:flex-none sm:pr-6">Último sondeo</dt>
                             <dd class="mt-1 sm:mt-0 sm:flex-auto">
-                                <span class="text-[#6b7280]">{{ $settings['last_polled_at'] ? \Carbon\Carbon::parse($settings['last_polled_at'])->format('d/m/Y H:i:s') : 'Nunca' }}</span>
+                                <span class="text-gray-500">{{ $settings['last_polled_at'] ? \Carbon\Carbon::parse($settings['last_polled_at'])->format('d/m/Y H:i:s') : 'Nunca' }}</span>
                             </dd>
                         </div>
                     </dl>

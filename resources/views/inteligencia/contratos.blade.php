@@ -12,7 +12,7 @@
             </p>
         </div>
         <div class="mt-3 sm:mt-0">
-            <span class="inline-flex items-center gap-1.5 rounded-md bg-indigo-50 px-2.5 py-1.5 text-xs font-medium text-indigo-700">
+            <span class="inline-flex items-center gap-1.5 rounded-md bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-blue-700">
                 <svg class="size-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 Contratos gubernamentales firmados
             </span>
@@ -139,7 +139,7 @@
                             <div class="flex items-center gap-3 text-xs">
                                 <span class="w-20 shrink-0 truncate text-gray-700">{{ $st->status }}</span>
                                 <div class="flex-1 h-4 rounded bg-gray-100 overflow-hidden">
-                                    <div class="h-full rounded bg-indigo-500" style="width: {{ ($st->total / $maxSt) * 100 }}%"></div>
+                                    <div class="h-full rounded bg-blue-500" style="width: {{ ($st->total / $maxSt) * 100 }}%"></div>
                                 </div>
                                 <span class="w-28 shrink-0 text-right tabular-nums text-gray-700">RD${{ number_format($st->total, 0) }}</span>
                                 <span class="w-8 shrink-0 text-right text-gray-400">({{ $st->count }})</span>
@@ -297,7 +297,7 @@
                     @forelse($contracts as $contract)
                         <tr class="hover:bg-gray-50">
                             <td class="whitespace-nowrap px-4 py-3 text-sm">
-                                <span class="font-mono text-xs text-indigo-600">{{ \Illuminate\Support\Str::limit($contract->contract_code, 30) }}</span>
+                                <span class="font-mono text-xs text-blue-600">{{ \Illuminate\Support\Str::limit($contract->contract_code, 30) }}</span>
                             </td>
                             <td class="max-w-xs px-4 py-3 text-sm text-gray-900">
                                 <div class="truncate" title="{{ $contract->description }}">
@@ -358,7 +358,7 @@
                                             <path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
                                         <p class="mt-2 font-medium text-gray-900">Sin datos de contratos</p>
-                                        <p class="mt-1 text-gray-500">Ejecuta <code class="rounded bg-gray-100 px-1 py-0.5 text-xs">php artisan secp:sync-contracts</code> para sincronizar contratos desde la API.</p>
+                                        <p class="mt-1 text-gray-500">Aún no hay contratos sincronizados. Los datos se actualizan automáticamente cada mes.</p>
                                     </div>
                                 @else
                                     No se encontraron contratos con los filtros seleccionados.

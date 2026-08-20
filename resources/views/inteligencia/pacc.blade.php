@@ -383,7 +383,7 @@
                                             <path d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
                                         <p class="mt-2 font-medium text-gray-900">Sin datos PACC</p>
-                                        <p class="mt-1 text-gray-500">Ejecuta <code class="rounded bg-gray-100 px-1 py-0.5 text-xs">php artisan secp:sync-pacc</code> para sincronizar planes anuales de compras desde la API.</p>
+                                        <p class="mt-1 text-gray-500">Aún no hay planes anuales de compras sincronizados. Los datos se actualizan automáticamente cada mes.</p>
                                     </div>
                                 @else
                                     No se encontraron adquisiciones con los filtros seleccionados.
