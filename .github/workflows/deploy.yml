@@ -51,6 +51,7 @@ jobs:
       - name: Run tests
         run: |
           printf 'APP_KEY=base64:UtqyemUT+eP8onBHLPtboRZROlJ559oxaHRz/03/MuQ=\n' > .env
+          mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions storage/framework/testing bootstrap/cache
           php artisan test
 
   deploy:
