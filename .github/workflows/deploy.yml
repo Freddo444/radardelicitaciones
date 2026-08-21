@@ -120,11 +120,13 @@ jobs:
               php artisan route:cache
               php artisan event:cache
               php artisan view:cache
-              php artisan queue:restart || true
+              php artisan queue:restart >/dev/null 2>&1 || true
             "
 
-            # Restart workers managed by supervisor
-            sudo_exec supervisorctl restart radar-worker:* || true
+            # Restart workers managed by supervisor. Redirect output and bound the
+            # call: restarted workers otherwise inherit this SSH session's stdout,
+            # so the channel never closes and the action hangs until it times out.
+            timeout 120 bash -c 'echo "$SUDO_PASS" | sudo -S -p "" supervisorctl restart radar-worker:*' >/dev/null 2>&1 || true
 
             # Optional health check (set APP_HEALTHCHECK_URL secret, e.g. https://radardelicitaciones.com/up)
             if [ -n "${{ secrets.APP_HEALTHCHECK_URL }}" ]; then
