@@ -18,15 +18,22 @@ class ReEngagementMail extends Mailable
     use Queueable, RepliesToSupport, SerializesModels;
 
     /** @param Collection<int, Bid> $missedBids */
+    public int $total;
+
+    /** @param Collection<int, Bid> $missedBids */
     public function __construct(
         public User $user,
         public int $daysAway,
         public Collection $missedBids,
-    ) {}
+        ?int $total = null,
+    ) {
+        // The list is capped for display; the total is the real match count.
+        $this->total = $total ?? $missedBids->count();
+    }
 
     public function envelope(): Envelope
     {
-        $count = $this->missedBids->count();
+        $count = $this->total;
         $first = Str::of((string) $this->user->name)->before(' ')->trim();
 
         $subject = $count === 1
@@ -68,7 +75,7 @@ class ReEngagementMail extends Mailable
             markdown: 'emails.re-engagement',
             with: [
                 'name' => $this->user->name,
-                'total' => $this->missedBids->count(),
+                'total' => $this->total,
                 'highlights' => $this->missedBids->take(5),
                 'soonestDays' => $this->daysToSoonestDeadline(),
                 'url' => route('convocatorias.index'),

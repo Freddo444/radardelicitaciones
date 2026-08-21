@@ -69,6 +69,7 @@ class SendReEngagementCommand extends Command
             // company needs a setup nudge, not a list of matches they can't have.
             $hasCompany = $user->companies()->exists();
             $missed = $hasCompany ? $this->missedBids($user) : collect();
+            $missedTotal = $hasCompany ? $this->missedBidsQuery($user)?->count() ?? 0 : 0;
 
             if ($hasCompany && $missed->isEmpty()) {
                 // "Come back, we found nothing" is worse than staying quiet.
@@ -78,11 +79,11 @@ class SendReEngagementCommand extends Command
             }
 
             $mail = $hasCompany
-                ? new ReEngagementMail($user, $daysAway, $missed)
+                ? new ReEngagementMail($user, $daysAway, $missed, $missedTotal)
                 : new SetupNudgeMail($user, $this->openBidCount());
 
             if ($dryRun) {
-                $kind = $hasCompany ? "{$missed->count()} missed" : 'no company — setup nudge';
+                $kind = $hasCompany ? "{$missedTotal} missed" : 'no company — setup nudge';
                 $this->line("[DRY] → {$user->email} ({$daysAway}d away, {$kind})");
 
                 continue;
@@ -125,11 +126,20 @@ class SendReEngagementCommand extends Command
      */
     private function missedBids(User $user)
     {
+        return $this->missedBidsQuery($user)
+            ?->orderBy('bids.tender_deadline')
+            ->limit(12)
+            ->get() ?? collect();
+    }
+
+    /** Shared base query so the displayed list and the total can never disagree. */
+    private function missedBidsQuery(User $user)
+    {
         $since = $user->last_sign_in_at ?? $user->created_at;
         $companyIds = $user->companies()->pluck('companies.id');
 
         if (! $since || $companyIds->isEmpty()) {
-            return collect();
+            return null;
         }
 
         return Bid::query()
@@ -141,10 +151,7 @@ class SendReEngagementCommand extends Command
                 $q->whereNull('bids.tender_deadline')
                     ->orWhere('bids.tender_deadline', '>', now());
             })
-            ->orderBy('bids.tender_deadline')
             ->select('bids.*')
-            ->distinct()
-            ->limit(50)
-            ->get();
+            ->distinct();
     }
 }

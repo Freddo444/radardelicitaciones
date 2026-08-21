@@ -138,4 +138,16 @@ class ReEngagementTest extends TestCase
 
         Mail::assertSent(ReEngagementMail::class);
     }
+
+    public function test_email_reports_the_true_match_count_not_the_display_cap(): void
+    {
+        [$user, , $company] = $this->makeOwnerWithCompany();
+        $user->forceFill(['name' => 'Frederick Lopez'])->save();
+        $shown = collect([$this->matchBid($company, closesInDays: 4)]);
+
+        $mail = new ReEngagementMail($user, 122, $shown, total: 213);
+
+        $this->assertStringContainsString('213 licitaciones', $mail->envelope()->subject);
+        $this->assertStringContainsString('213', $mail->render());
+    }
 }
