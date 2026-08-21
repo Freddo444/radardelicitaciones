@@ -3,29 +3,63 @@
 namespace App\Mail;
 
 use App\Mail\Concerns\RepliesToSupport;
+use App\Models\Bid;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ReEngagementMail extends Mailable
 {
     use Queueable, RepliesToSupport, SerializesModels;
 
+    /** @param Collection<int, Bid> $missedBids */
     public function __construct(
         public User $user,
         public int $daysAway,
+        public Collection $missedBids,
     ) {}
 
     public function envelope(): Envelope
     {
+        $count = $this->missedBids->count();
+        $first = Str::of((string) $this->user->name)->before(' ')->trim();
+
+        $subject = $count === 1
+            ? 'encontramos 1 licitación para ti'
+            : "encontramos {$count} licitaciones para ti";
+        $subject = $first->isNotEmpty() ? "{$first}, {$subject}" : ucfirst($subject);
+
+        // Real urgency only — taken from the soonest actual closing date.
+        if ($days = $this->daysToSoonestDeadline()) {
+            $subject .= $days <= 1 ? ' (una cierra mañana)' : " (una cierra en {$days} días)";
+        }
+
         return new Envelope(
-            subject: 'Hay nuevas licitaciones esperándote en '.config('app.name'),
+            subject: $subject,
             from: $this->lifecycleFrom(),
             replyTo: $this->supportReplyTo(),
         );
+    }
+
+    private function daysToSoonestDeadline(): ?int
+    {
+        $soonest = $this->missedBids
+            ->filter(fn ($b) => $b->tender_deadline && $b->tender_deadline->isFuture())
+            ->sortBy('tender_deadline')
+            ->first();
+
+        if (! $soonest) {
+            return null;
+        }
+
+        $days = (int) ceil(now()->floatDiffInDays($soonest->tender_deadline));
+
+        return $days <= 7 ? max(1, $days) : null;
     }
 
     public function content(): Content
@@ -34,8 +68,10 @@ class ReEngagementMail extends Mailable
             markdown: 'emails.re-engagement',
             with: [
                 'name' => $this->user->name,
-                'daysAway' => $this->daysAway,
-                'url' => route('dashboard'),
+                'total' => $this->missedBids->count(),
+                'highlights' => $this->missedBids->take(5),
+                'soonestDays' => $this->daysToSoonestDeadline(),
+                'url' => route('convocatorias.index'),
             ],
         );
     }
