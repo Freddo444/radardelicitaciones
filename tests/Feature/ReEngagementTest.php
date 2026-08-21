@@ -150,4 +150,17 @@ class ReEngagementTest extends TestCase
         $this->assertStringContainsString('213 licitaciones', $mail->envelope()->subject);
         $this->assertStringContainsString('213', $mail->render());
     }
+
+    public function test_disposable_addresses_are_never_emailed(): void
+    {
+        Mail::fake();
+        [$user, , $company] = $this->makeOwnerWithCompany();
+        $user->forceFill(['email' => 'mjyf5yflyp@lnovic.com', 'last_sign_in_at' => now()->subDays(20)])->save();
+        $this->matchBid($company);
+
+        $this->artisan('secp:send-reengagement')->assertSuccessful();
+
+        Mail::assertNothingSent();
+        $this->assertNull($user->fresh()->reengagement_sent_at);
+    }
 }

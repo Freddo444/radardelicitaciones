@@ -50,9 +50,16 @@ class SendReEngagementCommand extends Command
 
         $sent = 0;
         $skippedEmpty = 0;
+        $skippedDisposable = 0;
 
         foreach ($users as $user) {
             if (! filter_var($user->email, FILTER_VALIDATE_EMAIL)) {
+                continue;
+            }
+
+            if ($this->isDisposable($user->email)) {
+                $skippedDisposable++;
+
                 continue;
             }
 
@@ -100,13 +107,21 @@ class SendReEngagementCommand extends Command
         }
 
         $this->info($dryRun
-            ? "Dry run: {$users->count()} candidate(s), {$skippedEmpty} with no matches to show."
-            : "Sent {$sent} re-engagement email(s); skipped {$skippedEmpty} with nothing to show.");
+            ? "Dry run: {$users->count()} candidate(s), {$skippedEmpty} with no matches to show, {$skippedDisposable} disposable."
+            : "Sent {$sent} re-engagement email(s); skipped {$skippedEmpty} with nothing to show, {$skippedDisposable} disposable.");
         Log::info('[ReEngagement] run complete', [
-            'candidates' => $users->count(), 'sent' => $sent, 'skipped_empty' => $skippedEmpty, 'dry_run' => $dryRun,
+            'candidates' => $users->count(), 'sent' => $sent, 'skipped_empty' => $skippedEmpty,
+            'skipped_disposable' => $skippedDisposable, 'dry_run' => $dryRun,
         ]);
 
         return self::SUCCESS;
+    }
+
+    private function isDisposable(string $email): bool
+    {
+        $domain = strtolower(trim(substr(strrchr($email, '@') ?: '', 1)));
+
+        return $domain !== '' && in_array($domain, config('services.disposable_email_domains', []), true);
     }
 
     private ?int $openBidCount = null;

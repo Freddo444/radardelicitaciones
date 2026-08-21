@@ -62,6 +62,17 @@ return [
         'rnc' => env('BANK_RNC', '1-33-64987-1'),
     ],
 
+    /*
+    | Throwaway/disposable inbox providers. Lifecycle mail is skipped for these:
+    | they are almost always abandoned signups, and bouncing off them damages
+    | sending reputation for every other message. Comma-separated env override.
+    */
+    'disposable_email_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('DISPOSABLE_EMAIL_DOMAINS',
+        'mailinator.com,guerrillamail.com,10minutemail.com,yopmail.com,sharklasers.com,'.
+        'trashmail.com,dispostable.com,maildrop.cc,getnada.com,temp-mail.org,tempmail.com,'.
+        'throwawaymail.com,luxudata.com,lnovic.com,atomicmail.io'
+    ))))),
+
     'support' => [
         // Publicly displayed contact address (footer, terms, privacy).
         'email' => env('SUPPORT_EMAIL', 'info@radardelicitaciones.com'),
