@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class ReEngagementMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     public function __construct(
         public User $user,
@@ -22,6 +23,8 @@ class ReEngagementMail extends Mailable
     {
         return new Envelope(
             subject: 'Hay nuevas licitaciones esperándote en '.config('app.name'),
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
         );
     }
 

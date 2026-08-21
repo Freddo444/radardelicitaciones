@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class TrialEndingMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     public function __construct(
         public User $user,
@@ -24,6 +25,8 @@ class TrialEndingMail extends Mailable
 
         return new Envelope(
             subject: 'Tu prueba gratis termina '.$when,
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
         );
     }
 

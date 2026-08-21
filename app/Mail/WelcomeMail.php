@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class WelcomeMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     public function __construct(public User $user) {}
 
@@ -19,6 +20,8 @@ class WelcomeMail extends Mailable
     {
         return new Envelope(
             subject: 'Bienvenido a '.config('app.name').' — empecemos',
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
         );
     }
 

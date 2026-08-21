@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SetupReminderMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     public function __construct(public User $user) {}
 
@@ -19,6 +20,8 @@ class SetupReminderMail extends Mailable
     {
         return new Envelope(
             subject: 'Estás a un paso de empezar a recibir licitaciones',
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
         );
     }
 

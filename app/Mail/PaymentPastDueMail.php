@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class PaymentPastDueMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     public function __construct(public Subscription $subscription) {}
 
@@ -19,6 +20,8 @@ class PaymentPastDueMail extends Mailable
     {
         return new Envelope(
             subject: 'No pudimos procesar tu pago — actualiza tu método',
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
         );
     }
 

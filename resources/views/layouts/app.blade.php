@@ -76,6 +76,31 @@
         </button>
         <div aria-hidden="true" class="h-6 w-px bg-gray-900/10 lg:hidden"></div>
 
+        {{-- Active company: the sidebar copy is hidden behind the hamburger on
+             mobile, so surface it here on every page and breakpoint. --}}
+        @php
+            $__topCompany = $currentCompany ?? currentCompany() ?? auth()->user()?->currentCompany();
+            $__topCompanyCount = auth()->user()?->companies()->count() ?? 0;
+        @endphp
+        @if($__topCompany)
+        <div class="flex min-w-0 items-center gap-x-2">
+            <span class="flex size-7 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-[0.7rem] font-semibold text-white">
+                {{ strtoupper(substr($__topCompany->razon_social ?? 'E', 0, 1)) }}
+            </span>
+            @if($__topCompanyCount > 1)
+                <a href="{{ route('companies.index') }}" title="Cambiar empresa activa"
+                   class="group flex min-w-0 items-center gap-x-1 rounded-md px-1.5 py-1 hover:bg-gray-50">
+                    <span class="max-w-36 truncate text-sm font-semibold text-gray-900 sm:max-w-xs">{{ $__topCompany->razon_social }}</span>
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-4 shrink-0 text-gray-400 group-hover:text-blue-600">
+                        <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd"/>
+                    </svg>
+                </a>
+            @else
+                <span class="max-w-36 truncate px-1.5 text-sm font-semibold text-gray-900 sm:max-w-xs">{{ $__topCompany->razon_social }}</span>
+            @endif
+        </div>
+        @endif
+
         <div class="flex flex-1 items-center justify-end gap-x-4 lg:gap-x-6">
 
             {{-- Last poll status --}}

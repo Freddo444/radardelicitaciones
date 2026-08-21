@@ -7,7 +7,9 @@
     <div class="sm:flex sm:items-center sm:justify-between">
         <div>
             <h1 class="text-base font-semibold text-gray-900">Perfil de empresa</h1>
-            <p class="mt-1 text-sm text-gray-500">Información de la empresa usada para auto-completar formularios de oferta.</p>
+            <p class="mt-1 text-sm text-gray-500">
+                Estás editando <span class="font-semibold text-gray-900">{{ $company->razon_social ?? 'esta empresa' }}</span>. Información usada para auto-completar formularios de oferta.
+            </p>
         </div>
     </div>
 

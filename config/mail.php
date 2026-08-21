@@ -115,6 +115,16 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    | Sender for lifecycle mail (welcome, trial, win-back, dunning). These
+    | invite a reply, so they go out from a monitored alias instead of the
+    | no-reply sender used for the rest. Falls back to 'from' when unset.
+    */
+    'lifecycle_from' => [
+        'address' => env('MAIL_LIFECYCLE_FROM_ADDRESS'),
+        'name' => env('MAIL_LIFECYCLE_FROM_NAME', env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel'))),
+    ],
+
     'markdown' => [
         'theme' => env('MAIL_MARKDOWN_THEME', 'default'),
 

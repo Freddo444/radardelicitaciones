@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Mail\Concerns\RepliesToSupport;
 use App\Models\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 
 class SubscriptionEndedMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable, RepliesToSupport, SerializesModels;
 
     /** @param 'suspended'|'cancelled' $reason */
     public function __construct(
@@ -25,7 +26,11 @@ class SubscriptionEndedMail extends Mailable
             ? 'Tu suscripción se suspendió — reactívala cuando quieras'
             : 'Tu suscripción fue cancelada';
 
-        return new Envelope(subject: $subject);
+        return new Envelope(
+            subject: $subject,
+            from: $this->lifecycleFrom(),
+            replyTo: $this->supportReplyTo(),
+        );
     }
 
     public function content(): Content
