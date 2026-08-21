@@ -48,13 +48,10 @@ jobs:
       - name: Lint Blade/PHP formatting
         run: ./vendor/bin/pint --test
 
-      - name: Prepare test environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
       - name: Run tests
-        run: php artisan test
+        run: |
+          printf 'APP_KEY=base64:UtqyemUT+eP8onBHLPtboRZROlJ559oxaHRz/03/MuQ=\n' > .env
+          php artisan test
 
   deploy:
     name: Deploy to Vultr (non-atomic)
