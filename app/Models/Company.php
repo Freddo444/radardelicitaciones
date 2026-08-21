@@ -51,6 +51,22 @@ class Company extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    public function subscription(): ?Subscription
+    {
+        return $this->owner_id
+            ? Subscription::where('user_id', $this->owner_id)->first()
+            : null;
+    }
+
+    /**
+     * Whether this company's account is entitled to the service. Used to gate
+     * outbound notifications so lapsed/cancelled accounts stop receiving them.
+     */
+    public function hasActiveSubscription(): bool
+    {
+        return (bool) $this->subscription()?->isActive();
+    }
+
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withPivot('joined_at')->withTimestamps();

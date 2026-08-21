@@ -38,6 +38,11 @@ class SendDigestCommand extends Command
                 continue;
             }
 
+            // Don't keep emailing accounts that no longer pay for the service.
+            if (! $company->hasActiveSubscription()) {
+                continue;
+            }
+
             // Check frequency
             $freq = Setting::get('digest_frequency', 'daily_9am', $cid);
             $hour = (int) now()->format('G');

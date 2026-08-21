@@ -34,7 +34,7 @@ class SendExpiryAlertsCommand extends Command
         $companiesNotified = 0;
         foreach ($byCompany as $companyId => $docs) {
             $company = Company::find($companyId);
-            if (! $company) {
+            if (! $company || ! $company->hasActiveSubscription()) {
                 continue;
             }
 

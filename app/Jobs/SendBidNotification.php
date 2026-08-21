@@ -43,6 +43,11 @@ class SendBidNotification implements ShouldQueue
             return;
         }
 
+        // Don't notify accounts that no longer pay for the service.
+        if (! $company->hasActiveSubscription()) {
+            return;
+        }
+
         if (! $this->markAsNotifiedIfPending($bid, $company)) {
             return;
         }
