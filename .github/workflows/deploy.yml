@@ -50,7 +50,8 @@ jobs:
 
       - name: Run tests
         run: |
-          printf 'APP_KEY=base64:UtqyemUT+eP8onBHLPtboRZROlJ559oxaHRz/03/MuQ=\n' > .env
+          printf 'APP_KEY=\n' > .env
+          php artisan key:generate
           mkdir -p storage/framework/views storage/framework/cache/data storage/framework/sessions storage/framework/testing bootstrap/cache
           php artisan test
 
