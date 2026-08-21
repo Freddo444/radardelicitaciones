@@ -211,16 +211,28 @@
     </div>
 
     {{-- Flash toast --}}
-    @if(session('success') || session('error'))
+    @php
+        $__flashType = collect(['success', 'error', 'warning', 'info'])->first(fn ($t) => filled(session($t)));
+        $__flashMessage = $__flashType ? session($__flashType) : null;
+    @endphp
+    @if($__flashMessage)
     <div id="toast" aria-live="assertive" class="pointer-events-none fixed inset-0 z-50 flex items-end px-4 py-6 sm:items-start sm:p-6">
         <div class="flex w-full flex-col items-center space-y-4 sm:items-end">
             <div class="pointer-events-auto w-full max-w-sm rounded-lg bg-white shadow-lg outline-1 outline-black/5">
                 <div class="p-4">
                     <div class="flex items-start">
                         <div class="shrink-0">
-                            @if(session('success'))
+                            @if($__flashType === 'success')
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 text-green-400">
                                 <path d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            @elseif($__flashType === 'info')
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 text-blue-400">
+                                <path d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            @elseif($__flashType === 'warning')
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 text-amber-400">
+                                <path d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
                             @else
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 text-red-400">
@@ -229,7 +241,7 @@
                             @endif
                         </div>
                         <div class="ml-3 w-0 flex-1 pt-0.5">
-                            <p class="text-sm font-medium text-gray-900">{{ session('success') ?? session('error') }}</p>
+                            <p class="text-sm font-medium text-gray-900">{{ $__flashMessage }}</p>
                         </div>
                     </div>
                 </div>
