@@ -125,4 +125,17 @@ class ReEngagementTest extends TestCase
         $this->assertStringContainsString('1 licitación', $subject);
         $this->assertStringContainsString('cierra en 3 días', $subject);
     }
+
+    public function test_user_who_never_signed_in_but_has_a_company_does_not_crash(): void
+    {
+        Mail::fake();
+        [$user, , $company] = $this->makeOwnerWithCompany();
+        // Registered, set up a company, then never returned: last_sign_in_at is null.
+        $user->forceFill(['last_sign_in_at' => null, 'created_at' => now()->subDays(40)])->save();
+        $this->matchBid($company);
+
+        $this->artisan('secp:send-reengagement')->assertSuccessful();
+
+        Mail::assertSent(ReEngagementMail::class);
+    }
 }

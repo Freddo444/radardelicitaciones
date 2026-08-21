@@ -56,7 +56,13 @@ class SendReEngagementCommand extends Command
                 continue;
             }
 
+            // Legacy rows can carry neither date; without a reference point there
+            // is nothing meaningful to say, so leave them alone.
             $since = $user->last_sign_in_at ?? $user->created_at;
+            if (! $since) {
+                continue;
+            }
+
             $daysAway = (int) $since->diffInDays(now());
 
             // Branch on what the user actually did: someone who never set up a
@@ -122,7 +128,7 @@ class SendReEngagementCommand extends Command
         $since = $user->last_sign_in_at ?? $user->created_at;
         $companyIds = $user->companies()->pluck('companies.id');
 
-        if ($companyIds->isEmpty()) {
+        if (! $since || $companyIds->isEmpty()) {
             return collect();
         }
 
@@ -130,7 +136,7 @@ class SendReEngagementCommand extends Command
             ->join('company_bid', 'company_bid.bid_id', '=', 'bids.id')
             ->whereIn('company_bid.company_id', $companyIds)
             ->whereNotNull('company_bid.first_matched_at')
-            ->where('company_bid.first_matched_at', '>', $user->last_sign_in_at)
+            ->where('company_bid.first_matched_at', '>', $since)
             ->where(function ($q) {
                 $q->whereNull('bids.tender_deadline')
                     ->orWhere('bids.tender_deadline', '>', now());
