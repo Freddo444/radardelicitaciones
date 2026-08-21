@@ -45,7 +45,18 @@ class SendReEngagementCommand extends Command
                         ->orWhere('reengagement_sent_at', '<', now()->subDays(30));
                 });
             })
-            ->whereHas('subscription', fn ($q) => $q->whereIn('status', $statuses))
+            // A lapsed trial keeps status 'trialing' forever, so filter on the
+            // date as well: someone whose trial ended already had their one
+            // win-back (TrialExpiredMail) and has made their decision.
+            ->whereHas('subscription', function ($q) use ($statuses) {
+                $q->whereIn('status', $statuses)
+                    ->where(function ($q2) {
+                        $q2->where('status', '!=', 'trialing')
+                            ->orWhereNull('trial_ends_at')
+                            ->orWhere('trial_ends_at', '>=', now()->startOfDay());
+                    });
+            })
+            ->whereNull('lifecycle_opt_out_at')
             ->get();
 
         $sent = 0;

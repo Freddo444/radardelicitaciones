@@ -23,6 +23,7 @@ class SendSetupRemindersCommand extends Command
         // avoids nagging stale signups (e.g. after a scheduler outage).
         $users = User::query()
             ->whereNull('setup_reminder_sent_at')
+            ->whereNull('lifecycle_opt_out_at')
             ->whereHas('subscription', function ($q) {
                 $q->where('status', 'trialing')
                     ->whereBetween('created_at', [now()->subHours(72), now()->subHours(6)]);

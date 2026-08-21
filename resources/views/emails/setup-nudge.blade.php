@@ -24,6 +24,7 @@ Equipo {{ config('app.name') }}
 
 <x-mail::subcopy>
 Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
-<span class="break-all">{{ $url }}</span>
+<span class="break-all">{{ $url }}</span><br><br>
+¿Prefieres no recibir estos recordatorios? <a href="{{ $unsubscribeUrl }}">Date de baja</a> — seguirás recibiendo lo esencial de tu cuenta.
 </x-mail::subcopy>
 </x-mail::message>

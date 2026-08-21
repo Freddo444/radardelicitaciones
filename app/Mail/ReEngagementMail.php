@@ -11,6 +11,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class ReEngagementMail extends Mailable
@@ -78,6 +79,7 @@ class ReEngagementMail extends Mailable
                 'total' => $this->total,
                 'highlights' => $this->missedBids->take(5),
                 'soonestDays' => $this->daysToSoonestDeadline(),
+                'unsubscribeUrl' => URL::signedRoute('lifecycle.unsubscribe', ['user' => $this->user->getKey()]),
                 'url' => route('convocatorias.index'),
             ],
         );

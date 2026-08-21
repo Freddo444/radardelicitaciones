@@ -9,6 +9,7 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 class SetupNudgeMail extends Mailable
@@ -39,6 +40,7 @@ class SetupNudgeMail extends Mailable
             with: [
                 'name' => $this->user->name,
                 'openBids' => $this->openBids,
+                'unsubscribeUrl' => URL::signedRoute('lifecycle.unsubscribe', ['user' => $this->user->getKey()]),
                 'url' => route('company-setup.show'),
             ],
         );

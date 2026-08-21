@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Tests\Concerns\CreatesTenant;
 use Tests\TestCase;
 
@@ -162,5 +163,74 @@ class ReEngagementTest extends TestCase
 
         Mail::assertNothingSent();
         $this->assertNull($user->fresh()->reengagement_sent_at);
+    }
+
+    public function test_expired_trials_are_left_alone(): void
+    {
+        Mail::fake();
+        // Trial ended long ago: they already had their one win-back email and
+        // chose not to subscribe. Status stays 'trialing' forever.
+        [$user, , $company] = $this->makeOwnerWithCompany([
+            'status' => 'trialing',
+            'trial_ends_at' => now()->subDays(90),
+        ]);
+        $user->forceFill(['last_sign_in_at' => now()->subDays(120)])->save();
+        $this->matchBid($company);
+
+        $this->artisan('secp:send-reengagement --force')->assertSuccessful();
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_a_running_trial_is_still_contacted(): void
+    {
+        Mail::fake();
+        [$user, , $company] = $this->makeOwnerWithCompany([
+            'status' => 'trialing',
+            'trial_ends_at' => now()->addDays(4),
+        ]);
+        $user->forceFill(['last_sign_in_at' => now()->subDays(20)])->save();
+        $this->matchBid($company);
+
+        $this->artisan('secp:send-reengagement')->assertSuccessful();
+
+        Mail::assertSent(ReEngagementMail::class);
+    }
+
+    public function test_opted_out_users_are_never_emailed_again(): void
+    {
+        Mail::fake();
+        [$user, , $company] = $this->makeOwnerWithCompany();
+        $user->forceFill([
+            'last_sign_in_at' => now()->subDays(20),
+            'lifecycle_opt_out_at' => now()->subDay(),
+        ])->save();
+        $this->matchBid($company);
+
+        $this->artisan('secp:send-reengagement --force')->assertSuccessful();
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_the_signed_unsubscribe_link_opts_the_user_out(): void
+    {
+        [$user] = $this->makeOwnerWithCompany();
+        $this->assertTrue($user->acceptsLifecycleEmail());
+
+        $url = URL::signedRoute('lifecycle.unsubscribe', ['user' => $user->getKey()]);
+
+        $this->get($url)->assertOk()->assertSee('no te escribimos más', false);
+        $this->assertNotNull($user->fresh()->lifecycle_opt_out_at);
+        $this->assertFalse($user->fresh()->acceptsLifecycleEmail());
+    }
+
+    public function test_an_unsigned_unsubscribe_link_is_rejected(): void
+    {
+        [$user] = $this->makeOwnerWithCompany();
+
+        // The app turns 403s into a redirect; what matters is that a tampered
+        // link cannot opt anyone out.
+        $this->get("/preferencias/correo/{$user->getKey()}/baja")->assertRedirect();
+        $this->assertNull($user->fresh()->lifecycle_opt_out_at);
     }
 }

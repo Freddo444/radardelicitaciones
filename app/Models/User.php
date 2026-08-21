@@ -29,6 +29,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'newsletter_consented_at',
         'welcome_sent_at',
         'reengagement_sent_at',
+        'lifecycle_opt_out_at',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'setup_reminder_sent_at' => 'datetime',
             'welcome_sent_at' => 'datetime',
             'reengagement_sent_at' => 'datetime',
+            'lifecycle_opt_out_at' => 'datetime',
             'password' => 'hashed',
             'is_super_admin' => 'boolean',
             'newsletter_subscribed' => 'boolean',
@@ -92,6 +94,16 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return $this->companies->first();
+    }
+
+    /**
+     * Whether this user still accepts optional nudges (re-engagement, setup
+     * reminders). Never gate transactional mail — billing, verification and the
+     * alerts they subscribed to — on this.
+     */
+    public function acceptsLifecycleEmail(): bool
+    {
+        return $this->lifecycle_opt_out_at === null;
     }
 
     public function belongsToCompany(int $companyId): bool

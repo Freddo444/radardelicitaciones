@@ -22,6 +22,7 @@ use App\Http\Controllers\FinancieroController;
 use App\Http\Controllers\FormulariosController;
 use App\Http\Controllers\InteligenciaController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\LifecycleEmailPreferenceController;
 use App\Http\Controllers\LogsController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\NotificationController;
@@ -117,6 +118,11 @@ Route::post('/paypal/webhook', [PayPalController::class, 'webhook'])->name('payp
 Route::get('/azul/checkout', [AzulController::class, 'showCheckout'])->name('azul.checkout');
 Route::get('/azul/callback', [AzulController::class, 'handleCallback'])->name('azul.callback');
 Route::post('/azul/webhook', [AzulController::class, 'handleWebhook'])->name('azul.webhook');
+
+// Lifecycle email opt-out — signed link from the email itself, no login needed.
+Route::get('/preferencias/correo/{user}/baja', [LifecycleEmailPreferenceController::class, 'unsubscribe'])
+    ->name('lifecycle.unsubscribe')
+    ->middleware('signed');
 
 // ── Billing & company setup (auth, no tenant required) ───────────────
 Route::middleware('auth')->group(function () {
