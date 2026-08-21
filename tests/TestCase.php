@@ -23,8 +23,11 @@ abstract class TestCase extends BaseTestCase
         //    like a 'trialing' subscription can be inserted.
         $connection->statement('PRAGMA ignore_check_constraints = ON');
 
-        // 2) FIELD() (used to order by enum priority) is a MySQL builtin; shim it.
-        $connection->getPdo()->sqliteCreateFunction('field', function ($value, ...$list) {
+        // 2) shim the MySQL builtins the app uses in raw SQL so every page is
+        //    exercisable: FIELD() (order by enum priority), YEAR(), DATE_FORMAT().
+        $pdo = $connection->getPdo();
+
+        $pdo->sqliteCreateFunction('field', function ($value, ...$list) {
             foreach ($list as $index => $candidate) {
                 if ((string) $candidate === (string) $value) {
                     return $index + 1;
@@ -33,5 +36,22 @@ abstract class TestCase extends BaseTestCase
 
             return 0;
         });
+
+        $pdo->sqliteCreateFunction('year', function ($date) {
+            return $date ? (int) date('Y', strtotime((string) $date)) : null;
+        }, 1);
+
+        $pdo->sqliteCreateFunction('date_format', function ($date, $format) {
+            if (! $date) {
+                return null;
+            }
+            $timestamp = strtotime((string) $date);
+            if ($timestamp === false) {
+                return null;
+            }
+            $map = ['%Y' => 'Y', '%m' => 'm', '%d' => 'd', '%H' => 'H', '%i' => 'i', '%s' => 's'];
+
+            return date(strtr((string) $format, $map), $timestamp);
+        }, 2);
     }
 }
