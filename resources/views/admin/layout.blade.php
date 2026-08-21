@@ -95,6 +95,16 @@
                                 Tipo de cambio USD/DOP
                             </a>
                         </li>
+                        <li>
+                            <a href="{{ route('admin.health') }}"
+                               class="group flex gap-x-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors {{ request()->routeIs('admin.health') ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"
+                                     class="size-5 shrink-0 opacity-80">
+                                    <path d="M4.5 12.75l6 6 9-13.5" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                Salud del sistema
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="mt-auto space-y-1.5 border-t border-white/10 pt-6">
@@ -164,6 +174,7 @@
                 <a href="{{ route('admin.subscriptions.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.subscriptions.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Suscripciones</a>
                 <a href="{{ route('admin.payments.index') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.payments.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Pagos</a>
                 <a href="{{ route('admin.billing-settings.edit') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.billing-settings.*') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Tipo de cambio USD/DOP</a>
+                <a href="{{ route('admin.health') }}" class="block rounded-lg px-3 py-2.5 text-sm font-semibold {{ request()->routeIs('admin.health') ? 'bg-white/10 text-white' : 'text-slate-300' }}">Salud del sistema</a>
             </nav>
         </div>
     </div>
