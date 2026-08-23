@@ -25,6 +25,12 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Only answer to the application's own host. url() builds absolute links
+        // from the request host — including password-reset and signed unsubscribe
+        // links — so an unvalidated Host header would let those point elsewhere.
+        // Derived from APP_URL; auto-disabled in local and during tests.
+        $middleware->trustHosts();
+
         $middleware->validateCsrfTokens(except: [
             'paypal/webhook',
             'azul/webhook',
