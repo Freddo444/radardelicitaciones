@@ -145,6 +145,16 @@ class AdminHealthController extends Controller
         $mailDefault = config('mail.default');
         $pollFresh = ! $freshness['poll']['stale'] && ! $freshness['poll']['missing'];
 
+        // This panel reports configuration presence, not live reachability.
+        // The sondeo entry is derived from last_polled_at, so a stale value means
+        // "the poll has not run" — the cause may be the scheduler, the database
+        // or the DGCP API. Say that, rather than blaming DGCP.
+        $pollNote = match (true) {
+            $freshness['poll']['missing'] => 'Nunca ha corrido',
+            ! $pollFresh => 'Sin correr '.($freshness['poll']['ago'] ?? 'desde hace un tiempo').' — revisa el scheduler',
+            default => null,
+        };
+
         return [
             ['label' => 'Correo ('.$mailDefault.')', 'ok' => $mailDefault !== 'log' && ! empty($mailDefault), 'note' => $mailDefault === 'log' ? 'Modo log' : null],
             ['label' => 'Gemini (IA pliegos)', 'ok' => ! empty(config('services.gemini.key'))],
@@ -152,7 +162,7 @@ class AdminHealthController extends Controller
             ['label' => 'PayPal', 'ok' => ! empty(config('services.paypal.client_id'))],
             ['label' => 'Azul', 'ok' => ! empty(config('services.azul.merchant_id'))],
             ['label' => 'Sentry', 'ok' => ! empty(config('sentry.dsn'))],
-            ['label' => 'DGCP API', 'ok' => $pollFresh, 'note' => $pollFresh ? null : 'Verificar'],
+            ['label' => 'Sondeo DGCP', 'ok' => $pollFresh, 'note' => $pollNote],
         ];
     }
 }
