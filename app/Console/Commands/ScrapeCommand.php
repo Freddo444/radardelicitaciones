@@ -139,9 +139,11 @@ class ScrapeCommand extends Command
             }
 
             try {
-                // Create global bid
-                $bid = Bid::create([
+                // The hourly poll writes to this table too, so make the insert
+                // idempotent rather than racing it into a duplicate-key error.
+                $bid = Bid::firstOrCreate([
                     'process_code' => $notice['process_code'],
+                ], [
                     'ocid' => 'ocds-6550wx-'.$notice['process_code'],
                     'title' => $notice['title'] ?: $notice['process_code'],
                     'buyer_name' => $notice['buyer_name'],
@@ -156,6 +158,10 @@ class ScrapeCommand extends Command
                     'cached_articles' => $detail['articles'] ?: null,
                     'cache_refreshed_at' => ($detail['documents'] || $detail['articles']) ? now() : null,
                 ]);
+
+                if (! $bid->wasRecentlyCreated) {
+                    $this->line("      [YA EXISTÍA] {$notice['process_code']} — insertado por el sondeo");
+                }
 
                 $saved++;
                 $this->info("[SAVED] {$notice['process_code']} — {$notice['title']}");

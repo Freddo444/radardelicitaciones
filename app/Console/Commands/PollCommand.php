@@ -176,68 +176,94 @@ class PollCommand extends Command
 
         $saved = 0;
         $notified = 0;
+        $failed = 0;
 
-        foreach ($newMatches as $processCode => $matchedRubros) {
-            try {
-                $process = $api->fetchProcessByCode($processCode);
-            } catch (DgcpApiException $e) {
-                $this->progress("Advertencia: no se pudo obtener detalles de {$processCode}: {$e->getMessage()}", 'warn');
-                $process = null;
-            }
-
-            $firstArticle = $firstArticleByProcess->get($processCode, []);
-
-            if ($this->option('dry-run')) {
-                $this->progress("[DRY] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
-
-                continue;
-            }
-
-            // Create global bid record
-            $bid = Bid::create([
-                'process_code' => $processCode,
-                'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
-                'title' => $process['titulo'] ?? $firstArticle['descripcion_articulo'] ?? $processCode,
-                'buyer_name' => $process['unidad_compra'] ?? null,
-                'buyer_code' => $process['codigo_unidad_compra'] ?? null,
-                'procurement_method' => $process['modalidad'] ?? null,
-                'status' => $process['estado_proceso'] ?? null,
-                'amount_estimated' => $this->parseAmount($process['monto_estimado'] ?? null),
-                'currency' => $process['divisa'] ?? 'DOP',
-                'published_at' => $this->parseDate($process['fecha_publicacion'] ?? $firstArticle['fecha_publicacion'] ?? null),
-                'tender_deadline' => $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null),
-                'secp_url' => isset($process['url']) ? preg_replace('#([^:])//+#', '$1/', $process['url']) : "https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index?q={$processCode}",
-                'raw_data' => $process ?? $firstArticle,
-                'mipymes' => filter_var($process['dirigido_mipymes'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'mipymes_mujeres' => filter_var($process['dirigido_mipymes_mujeres'] ?? false, FILTER_VALIDATE_BOOLEAN),
-            ]);
-
-            $saved++;
-
-            // Fan out to matching companies
-            $companyIds = $matcher->fanOutToCompanies($bid, $matchedRubros->values()->all(), $rubroMap);
-
-            $this->progress("[GUARDADO] {$processCode} — ".$matchedRubros->pluck('name')->join(', ').' ['.count($companyIds).' empresa(s)]', 'match');
-
-            // Per-company notification dispatch
-            foreach ($companyIds as $companyId) {
-                if ($matcher->shouldNotify($bid, $companyId)) {
-                    $company = Company::find($companyId);
-                    if ($company) {
-                        SendBidNotification::dispatch($bid, $company);
-                        $notified++;
+        try {
+            foreach ($newMatches as $processCode => $matchedRubros) {
+                try {
+                    try {
+                        $process = $api->fetchProcessByCode($processCode);
+                    } catch (DgcpApiException $e) {
+                        $this->progress("Advertencia: no se pudo obtener detalles de {$processCode}: {$e->getMessage()}", 'warn');
+                        $process = null;
                     }
-                } else {
-                    // Mark as notified so it doesn't appear as missed
-                    CompanyBid::where('bid_id', $bid->id)
-                        ->where('company_id', $companyId)
-                        ->update(['notified_at' => now()]);
+
+                    $firstArticle = $firstArticleByProcess->get($processCode, []);
+
+                    if ($this->option('dry-run')) {
+                        $this->progress("[DRY] {$processCode} — ".$matchedRubros->pluck('name')->join(', '), 'match');
+
+                        continue;
+                    }
+
+                    // The scrape writes to this table too, so between the known-codes
+                    // lookup above and this insert another process may have stored the
+                    // same process_code. firstOrCreate makes the write idempotent
+                    // instead of throwing a duplicate-key error and killing the run.
+                    $bid = Bid::firstOrCreate([
+                        'process_code' => $processCode,
+                    ], [
+                        'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
+                        'title' => $process['titulo'] ?? $firstArticle['descripcion_articulo'] ?? $processCode,
+                        'buyer_name' => $process['unidad_compra'] ?? null,
+                        'buyer_code' => $process['codigo_unidad_compra'] ?? null,
+                        'procurement_method' => $process['modalidad'] ?? null,
+                        'status' => $process['estado_proceso'] ?? null,
+                        'amount_estimated' => $this->parseAmount($process['monto_estimado'] ?? null),
+                        'currency' => $process['divisa'] ?? 'DOP',
+                        'published_at' => $this->parseDate($process['fecha_publicacion'] ?? $firstArticle['fecha_publicacion'] ?? null),
+                        'tender_deadline' => $this->parseDate($process['fecha_fin_recepcion_ofertas'] ?? null),
+                        'secp_url' => isset($process['url']) ? preg_replace('#([^:])//+#', '$1/', $process['url']) : "https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement/Index?q={$processCode}",
+                        'raw_data' => $process ?? $firstArticle,
+                        'mipymes' => filter_var($process['dirigido_mipymes'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                        'mipymes_mujeres' => filter_var($process['dirigido_mipymes_mujeres'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    ]);
+
+                    if (! $bid->wasRecentlyCreated) {
+                        // Stored by the scrape mid-run; still fan it out below so the
+                        // companies that matched it do not lose the notification.
+                        $this->progress("[YA EXISTÍA] {$processCode} — insertado por otro proceso durante el sondeo", 'info');
+                    }
+
+                    $saved++;
+
+                    // Fan out to matching companies
+                    $companyIds = $matcher->fanOutToCompanies($bid, $matchedRubros->values()->all(), $rubroMap);
+
+                    $this->progress("[GUARDADO] {$processCode} — ".$matchedRubros->pluck('name')->join(', ').' ['.count($companyIds).' empresa(s)]', 'match');
+
+                    // Per-company notification dispatch
+                    foreach ($companyIds as $companyId) {
+                        if ($matcher->shouldNotify($bid, $companyId)) {
+                            $company = Company::find($companyId);
+                            if ($company) {
+                                SendBidNotification::dispatch($bid, $company);
+                                $notified++;
+                            }
+                        } else {
+                            // Mark as notified so it doesn't appear as missed
+                            CompanyBid::where('bid_id', $bid->id)
+                                ->where('company_id', $companyId)
+                                ->update(['notified_at' => now()]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // One bad process must not abort the whole batch.
+                    $failed++;
+                    $this->progress("Error al guardar {$processCode}: {$e->getMessage()}", 'warn');
+                    Log::error('[SECP] Poll failed to store process', ['process_code' => $processCode, 'error' => $e->getMessage()]);
                 }
+            }
+        } finally {
+            // Advance the window even on partial failure. Otherwise one failing
+            // process pins last_polled_at and every later run re-fetches an
+            // ever-growing window, hitting the same failure forever.
+            if (! $this->option('dry-run')) {
+                Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
             }
         }
 
         if (! $this->option('dry-run')) {
-            Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
             $this->checkWatchedBids($api);
             $this->cleanup($api);
             $this->refreshAllBidStatuses($api);
@@ -246,6 +272,9 @@ class PollCommand extends Command
         }
 
         $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Guardados: {$saved} | Notificados: {$notified}";
+        if ($failed > 0) {
+            $summary .= " | Fallidos: {$failed}";
+        }
         $this->progress($summary, 'success');
         Log::info("[SECP] {$summary}");
 
