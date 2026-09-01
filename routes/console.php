@@ -8,8 +8,16 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-$php = 'php -d memory_limit=4G '.base_path('artisan');
+// Scheduled commands share the host with MySQL, two PHP-FPM pools and the queue
+// worker. A 4G limit exceeded the machine's own RAM, so a runaway command could
+// not fail on its own — it grew until the kernel OOM-killer picked a victim, and
+// that victim was usually MySQL. Cap it well below total memory so a runaway
+// command dies loudly (and lands in Sentry) instead of taking the database down.
+// Raise SCHEDULE_MEMORY_LIMIT temporarily if a one-off backfill needs more.
+$php = 'php -d memory_limit='.env('SCHEDULE_MEMORY_LIMIT', '768M').' '.base_path('artisan');
 
+// Staggered across the hour: these used to all start at :00, so their peak
+// memory landed at the same moment on a host that cannot absorb it.
 Schedule::exec("{$php} secp:poll")
     ->hourly()
     ->withoutOverlapping()
@@ -18,13 +26,13 @@ Schedule::exec("{$php} secp:poll")
 
 // Periodic digest — per-company frequency checked inside the command
 Schedule::exec("{$php} secp:send-digest")
-    ->hourly()
+    ->hourlyAt(10)
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/secp-digest.log'));
 
 // Nudge trial users who signed up but never finished company setup
 Schedule::exec("{$php} secp:send-setup-reminders")
-    ->hourly()
+    ->hourlyAt(20)
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/secp-setup-reminders.log'));
 
@@ -35,7 +43,7 @@ Schedule::exec("{$php} secp:scrape")
     ->appendOutputTo(storage_path('logs/secp-scrape.log'));
 
 Schedule::exec("{$php} secp:backfill-portal-docs")
-    ->hourly()
+    ->hourlyAt(40)
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-backfill-portal-docs.log'));
