@@ -258,8 +258,15 @@ class PollCommand extends Command
             // Advance the window even on partial failure. Otherwise one failing
             // process pins last_polled_at and every later run re-fetches an
             // ever-growing window, hitting the same failure forever.
+            // Guarded: if the database is the thing that broke, this write fails
+            // too, and an exception thrown from a finally block would replace the
+            // original one and hide the real cause.
             if (! $this->option('dry-run')) {
-                Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
+                try {
+                    Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
+                } catch (\Throwable $e) {
+                    Log::error('[SECP] Could not advance last_polled_at', ['error' => $e->getMessage()]);
+                }
             }
         }
 
