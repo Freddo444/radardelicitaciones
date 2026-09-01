@@ -8,16 +8,17 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Scheduled commands share the host with MySQL, two PHP-FPM pools and the queue
-// worker. A 4G limit exceeded the machine's own RAM, so a runaway command could
-// not fail on its own — it grew until the kernel OOM-killer picked a victim, and
-// that victim was usually MySQL. Cap it well below total memory so a runaway
-// command dies loudly (and lands in Sentry) instead of taking the database down.
-// Raise SCHEDULE_MEMORY_LIMIT temporarily if a one-off backfill needs more.
-$php = 'php -d memory_limit='.env('SCHEDULE_MEMORY_LIMIT', '768M').' '.base_path('artisan');
+// Scheduled commands share the host with MySQL, PHP-FPM and the queue worker.
+// The limit was 4G — more than the machine's total RAM — which made it useless
+// as a ceiling: a runaway command could never fail on its own budget. This is a
+// guardrail, not a fix for any observed incident (the MySQL restarts we chased
+// turned out to be unattended-upgrades, not memory pressure). Keep it generous
+// enough for a large backlog drain but below total RAM, so a genuine runaway
+// dies with a PHP memory error that reaches Sentry.
+$php = 'php -d memory_limit='.env('SCHEDULE_MEMORY_LIMIT', '2G').' '.base_path('artisan');
 
-// Staggered across the hour: these used to all start at :00, so their peak
-// memory landed at the same moment on a host that cannot absorb it.
+// Staggered across the hour: these all used to start at :00, contending for the
+// database, the DGCP API and CPU at the same moment.
 Schedule::exec("{$php} secp:poll")
     ->hourly()
     ->withoutOverlapping()
