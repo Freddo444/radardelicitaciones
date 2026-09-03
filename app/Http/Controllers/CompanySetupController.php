@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CatalogItem;
 use App\Models\Company;
 use App\Models\Rubro;
+use App\Models\TrialClaim;
 use App\Services\BidMatchingService;
 use App\Services\DgcpProviderService;
 use App\Services\SubscriptionService;
@@ -160,6 +161,15 @@ class CompanySetupController extends Controller
                 ->with('error', 'Has alcanzado el límite de empresas de tu plan.');
         }
 
+        // One free trial per business, keyed by RNC. The claim outlives a purge,
+        // so a lapsed company cannot restart the clock under a new email. Paid
+        // subscriptions are unaffected.
+        if ($subscription->status === 'trialing'
+            && TrialClaim::hasClaimed($request->input('rnc'), $user->id)) {
+            return back()->withInput()->with('warning',
+                'Esta empresa ya utilizó su prueba gratuita. Activa una suscripción para continuar.');
+        }
+
         $request->validate([
             'razon_social' => 'required|string|max:255',
             'rnc' => 'required|string|max:20',
@@ -192,6 +202,10 @@ class CompanySetupController extends Controller
             ]);
 
             $company->users()->attach($user->id, ['joined_at' => now()]);
+
+            if ($user->subscription?->status === 'trialing') {
+                TrialClaim::claim($company->rnc, $company->razon_social, $user->id);
+            }
 
             if ($request->rubros) {
                 $seenCodes = [];

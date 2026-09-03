@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Company extends Model
 {
@@ -65,6 +66,43 @@ class Company extends Model
     public function hasActiveSubscription(): bool
     {
         return (bool) $this->subscription()?->isActive();
+    }
+
+    /**
+     * IDs of every company whose account still deserves work: an active
+     * subscription, a trial that has not run out, or a past_due account still
+     * inside its dunning grace. Everything else is a lapsed account we should
+     * stop polling the DGCP for.
+     *
+     * Mirrors Subscription::isActive() in SQL so the poll can filter in one
+     * query instead of loading a subscription per company.
+     *
+     * @return Collection<int, int>
+     */
+    public static function entitledIds(): Collection
+    {
+        return static::query()
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')
+                    ->from('subscriptions')
+                    ->whereColumn('subscriptions.user_id', 'companies.owner_id')
+                    ->where(function ($q2) {
+                        $q2->where('subscriptions.status', 'active')
+                            ->orWhere(function ($q3) {
+                                $q3->where('subscriptions.status', 'trialing')
+                                    ->where(function ($q4) {
+                                        $q4->whereNull('subscriptions.trial_ends_at')
+                                            ->orWhere('subscriptions.trial_ends_at', '>=', now()->startOfDay());
+                                    });
+                            })
+                            ->orWhere(function ($q3) {
+                                $q3->where('subscriptions.status', 'past_due')
+                                    ->whereNotNull('subscriptions.grace_ends_at')
+                                    ->where('subscriptions.grace_ends_at', '>', now());
+                            });
+                    });
+            })
+            ->pluck('id');
     }
 
     public function users(): BelongsToMany

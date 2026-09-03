@@ -17,7 +17,13 @@ class BidMatchingService
      */
     public function aggregateRubros(): array
     {
-        $allRubros = Rubro::withoutGlobalScopes()->where('active', true)->get();
+        // Only poll for companies that still have a live account. A lapsed trial
+        // otherwise keeps the DGCP being queried for its rubro codes forever and
+        // keeps accruing company_bid rows nobody will ever read.
+        $allRubros = Rubro::withoutGlobalScopes()
+            ->where('active', true)
+            ->whereIn('company_id', Company::entitledIds())
+            ->get();
         $map = [];
 
         foreach ($allRubros as $rubro) {

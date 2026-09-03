@@ -83,6 +83,13 @@ Schedule::exec("{$php} billing:reconcile-azul-orphans")
     ->daily()
     ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));
 
+// Delete the data of companies whose subscription lapsed months ago. Users,
+// subscriptions and payments survive for accounting; so does the trial claim.
+Schedule::exec("{$php} companies:purge-lapsed")
+    ->weeklyOn(0, '04:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/companies-purge.log'));
+
 // Enforce dunning-grace expiry + flag stale active subscriptions
 Schedule::exec("{$php} subscriptions:reconcile")
     ->dailyAt('03:00')
