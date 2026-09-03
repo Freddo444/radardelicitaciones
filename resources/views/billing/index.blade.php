@@ -120,7 +120,19 @@
             </div>
 
             @if($isOwner && $subscription->isActive() && $subscription->status !== 'trialing')
+            @php $__freeCompanySeats = max(0, $usage['max_companies'] - $usage['companies']); @endphp
             <div class="mt-4">
+                @if($__freeCompanySeats > 0)
+                    {{-- Seats already paid for. Adding a company here must not
+                         charge again — send them straight to setup. --}}
+                    <a href="{{ route('company-setup.show') }}"
+                       class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white shadow-xs hover:bg-blue-500">
+                        <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                        Agregar empresa
+                        <span class="text-xs text-blue-100">{{ $__freeCompanySeats }} {{ $__freeCompanySeats === 1 ? 'cupo disponible' : 'cupos disponibles' }}</span>
+                    </a>
+                    <p class="mt-2 text-xs text-gray-500">Ya pagaste por {{ $usage['max_companies'] }} empresas. No se te cobra nada al agregarla.</p>
+                @else
                 <button type="button"
                         @click="if (!preview) { loading = true; fetch('{{ route('billing.preview-addon') }}?type=company').then(r => r.json()).then(d => { preview = d; loading = false; showConfirm = true; }).catch(() => loading = false); } else { showConfirm = true; }"
                         class="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-xs ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
@@ -166,6 +178,7 @@
                         </button>
                     </div>
                 </div>
+                @endif
             </div>
             @endif
         </div>
