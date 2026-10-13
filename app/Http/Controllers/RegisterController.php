@@ -6,6 +6,8 @@ use App\Models\Payment;
 use App\Models\PendingRegistration;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Rules\HumanName;
+use App\Rules\NotDisposableEmail;
 use App\Services\Billing\AzulCheckoutBuilder;
 use App\Services\SubscriptionService;
 use Illuminate\Database\QueryException;
@@ -39,8 +41,8 @@ class RegisterController extends Controller
     public function storeTrial(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'name' => ['required', 'string', 'max:255', new HumanName],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new NotDisposableEmail],
             'password' => 'required|string|min:8|confirmed',
         ]);
 
@@ -98,7 +100,7 @@ class RegisterController extends Controller
     public function createOrder(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new NotDisposableEmail],
             'max_companies' => 'required|integer|min:1|max:10',
             'max_users' => 'required|integer|min:2|max:20',
             'billing_cycle' => 'sometimes|in:monthly,annual',
@@ -199,7 +201,7 @@ class RegisterController extends Controller
     public function createAzulOrder(Request $request, AzulCheckoutBuilder $builder)
     {
         $request->validate([
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new NotDisposableEmail],
             'max_companies' => 'required|integer|min:1|max:10',
             'max_users' => 'required|integer|min:2|max:20',
             'billing_cycle' => 'sometimes|in:monthly,annual',
@@ -337,8 +339,8 @@ class RegisterController extends Controller
         }
 
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'name' => ['required', 'string', 'max:255', new HumanName],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email', new NotDisposableEmail],
             'password' => 'required|string|min:8|confirmed',
         ]);
 

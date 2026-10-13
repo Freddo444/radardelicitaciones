@@ -70,7 +70,7 @@ return [
     'disposable_email_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('DISPOSABLE_EMAIL_DOMAINS',
         'mailinator.com,guerrillamail.com,10minutemail.com,yopmail.com,sharklasers.com,'.
         'trashmail.com,dispostable.com,maildrop.cc,getnada.com,temp-mail.org,tempmail.com,'.
-        'throwawaymail.com,luxudata.com,lnovic.com,atomicmail.io'
+        'throwawaymail.com,luxudata.com,lnovic.com,atomicmail.io,smaqt.com'
     ))))),
 
     'support' => [

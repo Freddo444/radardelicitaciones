@@ -6,6 +6,7 @@ use App\Mail\ReEngagementMail;
 use App\Mail\SetupNudgeMail;
 use App\Models\Bid;
 use App\Models\User;
+use App\Rules\NotDisposableEmail;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -130,9 +131,7 @@ class SendReEngagementCommand extends Command
 
     private function isDisposable(string $email): bool
     {
-        $domain = strtolower(trim(substr(strrchr($email, '@') ?: '', 1)));
-
-        return $domain !== '' && in_array($domain, config('services.disposable_email_domains', []), true);
+        return NotDisposableEmail::isDisposable($email);
     }
 
     private ?int $openBidCount = null;
