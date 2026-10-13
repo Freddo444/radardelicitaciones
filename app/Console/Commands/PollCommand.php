@@ -208,7 +208,14 @@ class PollCommand extends Command
 
         $this->progress("{$matchesByProcess->count()} proceso(s) con coincidencias.", 'info');
 
-        $knownCodes = Bid::whereIn('process_code', $matchesByProcess->keys()->all())
+        // withTrashed is load-bearing. cleanup() archives bids whose deadline has
+        // passed, and a soft-deleted row still occupies bids_process_code_unique
+        // while being invisible to ordinary queries. Without this an archived bid
+        // looks new every hour, the insert collides with its own archived row,
+        // and the run logs a duplicate-key failure for it forever — 38 of them
+        // on 2026-10-13, the same process codes every time.
+        $knownCodes = Bid::withTrashed()
+            ->whereIn('process_code', $matchesByProcess->keys()->all())
             ->pluck('process_code');
 
         $newMatches = $matchesByProcess->filter(fn ($rubros, $code) => ! $knownCodes->contains($code));
@@ -354,7 +361,8 @@ class PollCommand extends Command
      */
     private function fanOutExistingBids($existingMatches, array $rubroMap, BidMatchingService $matcher): void
     {
-        $bids = Bid::whereIn('process_code', $existingMatches->keys()->all())
+        $bids = Bid::withTrashed()
+            ->whereIn('process_code', $existingMatches->keys()->all())
             ->get()
             ->keyBy('process_code');
 
@@ -363,6 +371,12 @@ class PollCommand extends Command
         foreach ($existingMatches as $processCode => $matchedRubros) {
             $bid = $bids->get($processCode);
             if (! $bid) {
+                continue;
+            }
+
+            // Found only so the insert above is not attempted. An archived bid
+            // is closed or past its deadline; nobody should be notified of it.
+            if ($bid->trashed()) {
                 continue;
             }
 

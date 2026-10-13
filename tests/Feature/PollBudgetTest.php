@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Bid;
 use App\Models\Rubro;
 use App\Models\Setting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -140,5 +141,89 @@ class PollBudgetTest extends TestCase
 
         // The run survived and still advanced the window — the whole point.
         $this->assertNotSame('2026-10-13 11:00:00', Setting::get('last_polled_at'));
+    }
+
+    // ── Archived bids must not collide with themselves ────────────────
+
+    public function test_an_archived_bid_is_not_treated_as_new(): void
+    {
+        [, , $company] = $this->makeOwnerWithCompany(['status' => 'active']);
+
+        Rubro::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'code' => '43211500',
+            'name' => 'Computadores',
+            'level' => 'familia',
+            'active' => true,
+            'first_polled_at' => now()->subDay(),
+        ]);
+
+        // Archived by cleanup() because its deadline passed. The row still
+        // occupies bids_process_code_unique while being invisible to queries.
+        $bid = Bid::create([
+            'process_code' => 'INFOTEP-DAF-CD-2026-1983',
+            'title' => 'Compra de computadores',
+            'status' => 'Proceso adjudicado y celebrado',
+        ]);
+        $bid->delete();
+        $this->assertSoftDeleted('bids', ['id' => $bid->id]);
+
+        // The DGCP still lists it, so the poll matches it again.
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => Http::response([
+            'payload' => ['content' => [[
+                'codigo_proceso' => 'INFOTEP-DAF-CD-2026-1983',
+                'familia_unspsc' => '43211500',
+                'descripcion_articulo' => 'Computadores',
+                'fecha_publicacion' => now()->subDays(2)->toDateString(),
+            ]]],
+            'pages' => 1,
+        ])]);
+
+        // The row count and soft-delete state look identical whether or not the
+        // insert was attempted, because the insert fails. The failure itself is
+        // the thing to assert on.
+        $this->artisan('secp:poll', ['--budget' => 45])
+            ->doesntExpectOutputToContain('Error al guardar')
+            ->doesntExpectOutputToContain('Fallidos')
+            ->assertSuccessful();
+
+        $this->assertSame(1, Bid::withTrashed()
+            ->where('process_code', 'INFOTEP-DAF-CD-2026-1983')->count());
+        $this->assertSoftDeleted('bids', ['id' => $bid->id]);
+    }
+
+    public function test_an_archived_bid_is_not_fanned_out_to_companies(): void
+    {
+        [, , $company] = $this->makeOwnerWithCompany(['status' => 'active']);
+
+        Rubro::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'code' => '43211500',
+            'name' => 'Computadores',
+            'level' => 'familia',
+            'active' => true,
+            'first_polled_at' => now()->subDay(),
+        ]);
+
+        $bid = Bid::create([
+            'process_code' => 'ARCHIVED-2026-0001',
+            'title' => 'Compra vieja',
+            'status' => 'Proceso desierto',
+        ]);
+        $bid->delete();
+
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => Http::response([
+            'payload' => ['content' => [[
+                'codigo_proceso' => 'ARCHIVED-2026-0001',
+                'familia_unspsc' => '43211500',
+                'descripcion_articulo' => 'Computadores',
+                'fecha_publicacion' => now()->subDays(2)->toDateString(),
+            ]]],
+            'pages' => 1,
+        ])]);
+
+        $this->artisan('secp:poll', ['--budget' => 45])->assertSuccessful();
+
+        $this->assertDatabaseMissing('company_bid', ['bid_id' => $bid->id]);
     }
 }
