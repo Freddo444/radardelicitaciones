@@ -59,17 +59,31 @@ class CompanySetupController extends Controller
                 'limit' => 1,
             ]);
 
-            if ($providerResponse->failed()) {
-                return response()->json([
-                    'found' => false,
-                    'dgcp_unavailable' => true,
-                    'error' => 'La DGCP no está respondiendo en este momento. Puedes continuar llenando los datos manualmente.',
-                ]);
-            }
+            $providers = $providerResponse->failed()
+                ? []
+                : $providerResponse->json('payload.content', []);
 
-            $providers = $providerResponse->json('payload.content', []);
+            // /proveedores returns HTTP 500 for some genuinely registered
+            // suppliers — Grupo Alzare's own record does, on every parameter —
+            // while /proveedores/rubro returns that same company without
+            // complaint. Those users were getting an empty form and a "DGCP
+            // unavailable" notice. Fall back to the endpoint that answers: it
+            // yields the registered name and, more usefully, the real rubro
+            // list, which is the part of this form that takes actual work.
             if (empty($providers)) {
-                return response()->json(['found' => false]);
+                $partial = $this->lookupViaRubros($rpe);
+
+                if ($partial !== null) {
+                    return response()->json($partial);
+                }
+
+                return response()->json($providerResponse->failed()
+                    ? [
+                        'found' => false,
+                        'dgcp_unavailable' => true,
+                        'error' => 'La DGCP no está respondiendo en este momento. Puedes continuar llenando los datos manualmente.',
+                    ]
+                    : ['found' => false]);
             }
 
             $provider = $providers[0];
@@ -112,6 +126,42 @@ class CompanySetupController extends Controller
             ],
             'rubros' => $rubros,
         ]);
+    }
+
+    /**
+     * Identify a supplier using only the rubro endpoint.
+     *
+     * Returns the same shape as a full lookup, with the fields that endpoint
+     * cannot supply left blank and 'partial' set so the UI can say why. Null
+     * means it could not identify the company either.
+     */
+    private function lookupViaRubros(int $rpe): ?array
+    {
+        $dgcp = app(DgcpProviderService::class);
+
+        $razonSocial = $dgcp->razonSocialByRpe($rpe);
+
+        if ($razonSocial === null) {
+            return null;
+        }
+
+        return [
+            'found' => true,
+            'partial' => true,
+            'notice' => 'La DGCP solo devolvió tu nombre y tus rubros registrados. Completa el resto de los datos a mano.',
+            'company' => [
+                'razon_social' => $razonSocial,
+                'rnc' => '',
+                'telefono' => '',
+                'email' => '',
+                'direccion' => '',
+                'municipio' => '',
+                'provincia' => '',
+                'rpe_numero' => $rpe,
+                'registro_mercantil' => '',
+            ],
+            'rubros' => $dgcp->fetchRubros($rpe),
+        ];
     }
 
     /**

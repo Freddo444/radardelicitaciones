@@ -67,6 +67,10 @@
 
             {{-- Any lookup failure (DGCP down, server error) still offers a way
                  forward, so a broken API never traps the user at step one. --}}
+            <div x-show="lookupNotice" x-cloak class="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+                <p x-text="lookupNotice"></p>
+            </div>
+
             <div x-show="lookupError" x-cloak class="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800">
                 <p x-text="lookupError"></p>
                 <button type="button" @click="startManualEntry()" class="mt-2 block font-semibold text-amber-900 underline">
@@ -259,6 +263,7 @@ function companySetup() {
         rpeInput: '',
         loading: false,
         lookupError: null,
+        lookupNotice: null,
         notFound: false,
         formReady: false,
         wasLookedUp: false,
@@ -304,6 +309,7 @@ function companySetup() {
             if (!this.rpeInput) return;
             this.loading = true;
             this.lookupError = null;
+            this.lookupNotice = null;
             this.notFound = false;
 
             try {
@@ -336,6 +342,10 @@ function companySetup() {
                     this.rubros = (data.rubros || []).map(r => ({ ...r, selected: true }));
                     this.wasLookedUp = true;
                     this.formReady = true;
+                    // A partial hit filled the name and rubros but not the
+                    // address fields; say so rather than leaving them blank
+                    // with no explanation.
+                    this.lookupNotice = data.notice || null;
                 } else if (data.error) {
                     this.lookupError = data.error;
                 } else {

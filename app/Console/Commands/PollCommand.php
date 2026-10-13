@@ -41,12 +41,21 @@ class PollCommand extends Command
     /**
      * Whether the fetch budget is spent.
      *
-     * A run against a flaky DGCP used to take over four hours — each dead
-     * rubro costs a 30s timeout, and there are ~100 of them. withoutOverlapping
-     * then suppressed every hourly slot underneath it, so an "hourly" poll ran
-     * about five times a day. Stopping at a deadline keeps runs predictable;
-     * nothing is lost because the window always reaches 24h back beyond
-     * last_polled_at, so a skipped rubro is covered by a later run.
+     * A healthy run takes about 20 minutes. The budget is for the degraded
+     * case, which is reachable by arithmetic rather than speculation: each
+     * unanswered rubro costs its 30s timeout twice over (one retry), and there
+     * are ~100 rubros, so a DGCP that stops answering turns a 20-minute run
+     * into a 100-minute one. The schedule's withoutOverlapping(150) mutex is
+     * only safe because this caps that — without a bound, a run could outlive
+     * its own mutex and a second poll would start alongside it.
+     *
+     * Nothing is lost by stopping early: the window always reaches 24h back
+     * beyond last_polled_at, so a skipped rubro is covered by a later run.
+     *
+     * (An earlier version of this comment claimed runs had been observed
+     * taking over four hours. That was a measurement error — the server clock
+     * is UTC and the app renders America/Santo_Domingo, and the "four hours"
+     * was the offset between them.)
      */
     private function budgetSpent(): bool
     {

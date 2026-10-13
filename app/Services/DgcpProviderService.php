@@ -79,6 +79,36 @@ class DgcpProviderService
     }
 
     /**
+     * The registered name for an RPE, read from the rubro endpoint.
+     *
+     * Every rubro row carries the supplier's razon_social, which makes this the
+     * only way to identify a company whose /proveedores record returns HTTP 500
+     * — Grupo Alzare's does, on every parameter.
+     */
+    public function razonSocialByRpe(int $rpe): ?string
+    {
+        try {
+            $response = Http::connectTimeout(5)->timeout(10)->get(self::BASE.'/proveedores/rubro', [
+                'rpe' => $rpe,
+                'limit' => 1,
+            ]);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $content = $response->json('payload.content');
+        $name = is_array($content) && isset($content[0]['razon_social'])
+            ? trim((string) $content[0]['razon_social'])
+            : '';
+
+        return $name === '' ? null : $name;
+    }
+
+    /**
      * Does this RPE have any rubros declared at the DGCP?
      *
      * True is a positive confirmation of registration. Empty is not a denial —
