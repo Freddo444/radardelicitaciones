@@ -18,7 +18,9 @@ use Illuminate\Support\Facades\Log;
 
 class PollCommand extends Command
 {
-    protected $signature = 'secp:poll {--dry-run : Fetch and filter but do not save or notify}';
+    protected $signature = 'secp:poll
+        {--dry-run : Fetch and filter but do not save or notify}
+        {--budget=45 : Minutes to spend fetching rubros before moving on}';
 
     protected $description = 'Poll the DGCP API for new procurement processes and notify on matches';
 
@@ -34,8 +36,39 @@ class PollCommand extends Command
 
     private array $logBuffer = [];
 
+    private ?float $startedAt = null;
+
+    /**
+     * Whether the fetch budget is spent.
+     *
+     * A run against a flaky DGCP used to take over four hours — each dead
+     * rubro costs a 30s timeout, and there are ~100 of them. withoutOverlapping
+     * then suppressed every hourly slot underneath it, so an "hourly" poll ran
+     * about five times a day. Stopping at a deadline keeps runs predictable;
+     * nothing is lost because the window always reaches 24h back beyond
+     * last_polled_at, so a skipped rubro is covered by a later run.
+     */
+    private function budgetSpent(): bool
+    {
+        $budget = (float) $this->option('budget');
+
+        if ($budget <= 0 || $this->startedAt === null) {
+            return false;
+        }
+
+        return (microtime(true) - $this->startedAt) > ($budget * 60);
+    }
+
+    private function elapsedMinutes(): int
+    {
+        return $this->startedAt === null
+            ? 0
+            : (int) round((microtime(true) - $this->startedAt) / 60);
+    }
+
     public function handle(DgcpApiClient $api, BidMatchingService $matcher): int
     {
+        $this->startedAt = microtime(true);
         $this->resetStaleLock();
 
         Setting::set('poll_status', 'running');
@@ -95,8 +128,38 @@ class PollCommand extends Command
         $rubroIndex = 0;
         $totalRubros = count($rubroMap);
 
-        foreach ($rubroMap as $code => $entry) {
+        // Resume where the last run stopped. Without this a run that spends its
+        // budget always stops at the same place, and the rubros at the end of
+        // the list would never be polled at all.
+        $codes = array_keys($rubroMap);
+        $cursor = $totalRubros > 0
+            ? ((int) (Setting::get('poll_rubro_cursor') ?? 0)) % $totalRubros
+            : 0;
+        if ($cursor > 0) {
+            $codes = array_merge(array_slice($codes, $cursor), array_slice($codes, 0, $cursor));
+            $this->progress("Reanudando en el rubro {$cursor} de {$totalRubros}.", 'info');
+        }
+
+        $skipped = 0;
+
+        foreach ($codes as $position => $code) {
+            $entry = $rubroMap[$code];
             $rubroIndex++;
+
+            if ($this->budgetSpent()) {
+                $skipped = $totalRubros - $rubroIndex + 1;
+                $next = ($cursor + $position) % $totalRubros;
+                $this->progress(
+                    "Presupuesto de {$this->option('budget')} min agotado tras {$this->elapsedMinutes()} min; "
+                    ."{$skipped} rubro(s) quedan para la próxima corrida (cursor {$next}).",
+                    'warn'
+                );
+                if (! $this->option('dry-run')) {
+                    Setting::set('poll_rubro_cursor', (string) $next);
+                }
+
+                break;
+            }
 
             // New rubros (never polled) get 90-day backfill; existing ones use global window
             $isNew = $entry['first_polled_at'] === null;
@@ -158,15 +221,15 @@ class PollCommand extends Command
             $this->fanOutExistingBids($existingMatches, $rubroMap, $matcher);
         }
 
+        if ($skipped === 0 && ! $this->option('dry-run')) {
+            Setting::set('poll_rubro_cursor', '0');
+        }
+
         if ($newMatches->isEmpty()) {
             $this->progress('Sin procesos nuevos. Sondeo completo.', 'success');
             if (! $this->option('dry-run')) {
                 Setting::set('last_polled_at', $to->format('Y-m-d H:i:s'));
-                $this->checkWatchedBids($api);
-                $this->cleanup($api);
-                $this->refreshAllBidStatuses($api);
-                $this->backfillMissingData($api);
-                $this->enrichPortalBids($api, $matcher);
+                $this->runMaintenance($api, $matcher);
             }
 
             return self::SUCCESS;
@@ -273,11 +336,7 @@ class PollCommand extends Command
         }
 
         if (! $this->option('dry-run')) {
-            $this->checkWatchedBids($api);
-            $this->cleanup($api);
-            $this->refreshAllBidStatuses($api);
-            $this->backfillMissingData($api);
-            $this->enrichPortalBids($api, $matcher);
+            $this->runMaintenance($api, $matcher);
         }
 
         $summary = "Sondeo completo. Coincidencias: {$matchesByProcess->count()} | Nuevos: {$newMatches->count()} | Guardados: {$saved} | Notificados: {$notified}";
@@ -371,6 +430,34 @@ class PollCommand extends Command
             Log::warning("[SECP] Reset stale poll lock after {$minutesRunning} minutes");
             $this->progress("Lock anterior reseteado ({$minutesRunning} min sin respuesta).", 'warn');
         }
+    }
+
+    /**
+     * Enrichment phases, run only if the clock allows.
+     *
+     * None of these is required for a bid to reach a user — they refresh
+     * statuses, backfill missing fields and tidy up. Given twice the fetch
+     * budget has already gone, they are skipped rather than allowed to stretch
+     * the run further; the next poll performs them.
+     */
+    private function runMaintenance(DgcpApiClient $api, BidMatchingService $matcher): void
+    {
+        $budget = (float) $this->option('budget');
+
+        if ($budget > 0 && $this->elapsedMinutes() > $budget * 2) {
+            $this->progress(
+                "Omitiendo mantenimiento: la corrida ya lleva {$this->elapsedMinutes()} min.",
+                'warn'
+            );
+
+            return;
+        }
+
+        $this->checkWatchedBids($api);
+        $this->cleanup($api);
+        $this->refreshAllBidStatuses($api);
+        $this->backfillMissingData($api);
+        $this->enrichPortalBids($api, $matcher);
     }
 
     private function refreshAllBidStatuses(DgcpApiClient $api): void

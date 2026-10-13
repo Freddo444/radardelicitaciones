@@ -19,9 +19,13 @@ $php = 'php -d memory_limit='.env('SCHEDULE_MEMORY_LIMIT', '2G').' '.base_path('
 
 // Staggered across the hour: these all used to start at :00, contending for the
 // database, the DGCP API and CPU at the same moment.
+// withoutOverlapping defaults to a 24-hour mutex: a poll killed rather than
+// exited would block every later run for a day. The command now stops at its
+// own budget (45 min of fetching, plus maintenance capped at twice that), so
+// 150 minutes comfortably covers a legitimate run and caps a wedged one.
 Schedule::exec("{$php} secp:poll")
     ->hourly()
-    ->withoutOverlapping()
+    ->withoutOverlapping(150)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-poll.log'));
 
