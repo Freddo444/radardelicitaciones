@@ -65,8 +65,15 @@ class VerifyCompanyRncCommand extends Command
                 continue;
             }
 
+            // Two very different causes, and merging them cost real time
+            // diagnosing a company whose RNC was fine: the DGCP answers HTTP
+            // 500 for some valid numbers, so "could not tell" is a recurring
+            // state and the output has to say which it was.
             $unknown++;
-            $this->warn('  sin respuesta '.$label.'  (RNC mal formado o DGCP no disponible)');
+            $digits = preg_replace('/\D+/', '', (string) $company->rnc);
+            $this->warn(in_array(strlen((string) $digits), [9, 11], true)
+                ? '  DGCP no respondió '.$label
+                : '  RNC mal formado    '.$label);
         }
 
         $summary = sprintf(
