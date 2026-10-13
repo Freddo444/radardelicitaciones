@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -25,17 +26,30 @@ class DgcpProviderService
         $page = 1;
 
         do {
-            $response = Http::timeout(10)->get(self::BASE.'/proveedores/rubro', [
-                'rpe' => $rpe,
-                'limit' => 100,
-                'page' => $page,
-            ]);
+            try {
+                $response = Http::timeout(10)->get(self::BASE.'/proveedores/rubro', [
+                    'rpe' => $rpe,
+                    'limit' => 100,
+                    'page' => $page,
+                ]);
+            } catch (ConnectionException) {
+                break;
+            }
 
             if ($response->failed()) {
                 break;
             }
 
-            foreach ($response->json('payload.content', []) as $r) {
+            // An RPE the DGCP has no rubros for still answers 200, with
+            // payload.content explicitly null. The key exists, so data_get
+            // returns that null rather than the default — hence the cast.
+            $content = $response->json('payload.content');
+
+            foreach (is_array($content) ? $content : [] as $r) {
+                if (! is_array($r)) {
+                    continue;
+                }
+
                 $code = $r['familia_unspsc'] ?? null;
                 if ($code) {
                     $rubros[] = ['code' => (string) $code, 'name' => trim((string) ($r['descripcion'] ?? ''))];
