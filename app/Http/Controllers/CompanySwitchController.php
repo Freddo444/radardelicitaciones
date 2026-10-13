@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Rules\ValidRnc;
 use App\Services\SubscriptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -68,7 +69,7 @@ class CompanySwitchController extends Controller
         abort_unless(SubscriptionService::canAddCompany($subscription), 422, 'Has alcanzado el límite de empresas de tu plan.');
         $validated = $request->validate([
             'razon_social' => 'required|string|max:255',
-            'rnc' => 'required|string|max:20',
+            'rnc' => ['required', 'string', 'max:20', new ValidRnc],
             'nombre_comercial' => 'nullable|string|max:255',
             'direccion' => 'nullable|string|max:500',
             'municipio' => 'nullable|string|max:100',

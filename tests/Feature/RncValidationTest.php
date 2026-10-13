@@ -186,4 +186,43 @@ class RncValidationTest extends TestCase
 
         $this->assertFalse(app(DgcpProviderService::class)->isRegistered('130514331'));
     }
+
+    // ── Every door, not just the setup form ───────────────────────────
+
+    public function test_the_add_company_path_also_refuses_a_bad_rnc(): void
+    {
+        $this->fakeRegistry(null);
+
+        [$user] = $this->makeOwnerWithCompany(['status' => 'active', 'max_companies' => 3]);
+
+        $this->actingAs($user)
+            ->post(route('companies.store'), ['razon_social' => 'Pepito Dos SRL', 'rnc' => '9999'])
+            ->assertSessionHasErrors('rnc');
+
+        $this->assertDatabaseMissing('companies', ['razon_social' => 'Pepito Dos SRL']);
+    }
+
+    public function test_the_profile_edit_path_cannot_replace_a_good_rnc_with_junk(): void
+    {
+        $this->fakeRegistry(null);
+
+        [$user, , $company] = $this->makeOwnerWithCompany(['status' => 'active'], ['rnc' => '130514331']);
+
+        $this->actingAs($user)
+            ->post(route('empresa.update'), ['razon_social' => $company->razon_social, 'rnc' => '32928'])
+            ->assertSessionHasErrors('rnc');
+
+        $this->assertDatabaseHas('companies', ['id' => $company->id, 'rnc' => '130514331']);
+    }
+
+    public function test_the_profile_edit_path_still_allows_clearing_the_rnc(): void
+    {
+        $this->fakeRegistry(null);
+
+        [$user, , $company] = $this->makeOwnerWithCompany(['status' => 'active'], ['rnc' => '130514331']);
+
+        $this->actingAs($user)
+            ->post(route('empresa.update'), ['razon_social' => $company->razon_social, 'rnc' => null])
+            ->assertSessionHasNoErrors();
+    }
 }

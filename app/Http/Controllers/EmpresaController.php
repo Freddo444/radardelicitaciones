@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\ValidRnc;
 use App\Support\SobreTheme;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,7 @@ class EmpresaController extends Controller
         $data = $request->validate([
             'razon_social' => 'required|string|max:255',
             'nombre_comercial' => 'nullable|string|max:255',
-            'rnc' => 'nullable|string|max:20',
+            'rnc' => ['nullable', 'string', 'max:20', new ValidRnc],
             'direccion' => 'nullable|string|max:500',
             'municipio' => 'nullable|string|max:100',
             'provincia' => 'nullable|string|max:100',
