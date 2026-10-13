@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Models\Subscription;
+use App\Models\User;
 use App\Rules\NotDisposableEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Concerns\CreatesTenant;
 use Tests\TestCase;
 
 class RegistrationSpamTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesTenant, RefreshDatabase;
 
     /** Verbatim from the four accounts that got through in production. */
     public static function spamNames(): array
@@ -96,5 +99,58 @@ class RegistrationSpamTest extends TestCase
         $this->assertFalse(NotDisposableEmail::isDisposable('fred@grupoalzare.com'));
         $this->assertFalse(NotDisposableEmail::isDisposable('sin-arroba'));
         $this->assertFalse(NotDisposableEmail::isDisposable(null));
+    }
+
+    // ── Purge command ─────────────────────────────────────────────────
+
+    public function test_purge_removes_spam_accounts_but_spares_real_ones(): void
+    {
+        $spamName = User::create([
+            'name' => 'Вам перевод 102707 руб. получить тут  https://goo.su/EfLU4GeK',
+            'email' => 'spam1@empresa.do',
+            'password' => bcrypt('secret1234'),
+        ]);
+        $spamEmail = User::create([
+            'name' => 'Lisa Garcia',
+            'email' => 'lisagarcia76238@smaqt.com',
+            'password' => bcrypt('secret1234'),
+        ]);
+        Subscription::create([
+            'user_id' => $spamEmail->id, 'plan' => 'trial', 'status' => 'trialing',
+            'max_companies' => 1, 'max_users' => 2, 'monthly_amount' => 0,
+        ]);
+
+        // A real signup that has not finished setup yet — must survive.
+        $realPending = User::create([
+            'name' => 'José Ramón Peña',
+            'email' => 'jose@constructora.do',
+            'password' => bcrypt('secret1234'),
+        ]);
+
+        // A spam-looking name that nonetheless owns a company — must survive.
+        [$withCompany] = $this->makeOwnerWithCompany();
+        $withCompany->update(['name' => 'Вам перевод 999 руб. https://goo.su/x']);
+
+        $this->artisan('users:purge-spam')->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['id' => $spamName->id]);
+        $this->assertDatabaseMissing('users', ['id' => $spamEmail->id]);
+        $this->assertDatabaseMissing('subscriptions', ['user_id' => $spamEmail->id]);
+
+        $this->assertDatabaseHas('users', ['id' => $realPending->id]);
+        $this->assertDatabaseHas('users', ['id' => $withCompany->id]);
+    }
+
+    public function test_purge_dry_run_deletes_nothing(): void
+    {
+        $spam = User::create([
+            'name' => 'Вам перевод 102707 руб. https://goo.su/x',
+            'email' => 'spam2@empresa.do',
+            'password' => bcrypt('secret1234'),
+        ]);
+
+        $this->artisan('users:purge-spam', ['--dry-run' => true])->assertSuccessful();
+
+        $this->assertDatabaseHas('users', ['id' => $spam->id]);
     }
 }
