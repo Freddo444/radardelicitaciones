@@ -404,6 +404,11 @@ class DgcpApiClient
         try {
             $response = Http::connectTimeout(10)
                 ->timeout(30)
+                // Two attempts, i.e. one retry — deliberately not more. A full
+                // poll makes ~100 of these calls and already runs for hours
+                // when the DGCP is flaky, so every extra attempt adds another
+                // 30s per failing rubro. One retry absorbs a single blip, which
+                // is the common case, without doubling that again.
                 ->retry(2, 1000, throw: false)
                 ->get($url, $params);
         } catch (ConnectionException $e) {
