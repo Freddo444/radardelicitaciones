@@ -190,7 +190,10 @@ class CompanySetupController extends Controller
         // A flag, not a gate. The DGCP registry can take a couple of months to
         // list a newly incorporated business, so "not found" cannot refuse a
         // signup — it only marks the company for review.
-        $rncVerified = $dgcp->isRegistered($request->input('rnc')) === true;
+        $rncVerified = $dgcp->isRegistered(
+            $request->input('rnc'),
+            $request->filled('rpe_numero') ? (int) $request->input('rpe_numero') : null
+        ) === true;
 
         if (! $rncVerified) {
             Log::info('[CompanySetup] RNC not found in the DGCP registry', [

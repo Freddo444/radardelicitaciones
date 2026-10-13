@@ -28,8 +28,18 @@ class DgcpProviderService
      * endpoint. Passing rnc= is silently ignored and returns the full 128k-row
      * list, whose first record would look like a match for anything.
      */
-    public function isRegistered(?string $rnc): ?bool
+    public function isRegistered(?string $rnc, ?int $rpe = null): ?bool
     {
+        // Ask the rubro endpoint first when we have an RPE. /proveedores answers
+        // HTTP 500 for some genuinely registered suppliers — Grupo Alzare among
+        // them, seven months after incorporation, on both the rpe and the
+        // numero_documento parameter — while /proveedores/rubro returns that
+        // same company without complaint. A supplier with declared rubros is
+        // registered by definition, so a hit here settles it.
+        if ($rpe && $this->rpeHasRubros($rpe) === true) {
+            return true;
+        }
+
         $digits = preg_replace('/\D+/', '', (string) $rnc);
 
         if (! in_array(strlen((string) $digits), [9, 11], true)) {
@@ -66,6 +76,34 @@ class DgcpProviderService
         }
 
         return false;
+    }
+
+    /**
+     * Does this RPE have any rubros declared at the DGCP?
+     *
+     * True is a positive confirmation of registration. Empty is not a denial —
+     * a supplier may be registered without having declared any rubro — so it
+     * returns false and lets the caller fall through to the RNC lookup rather
+     * than concluding anything.
+     */
+    private function rpeHasRubros(int $rpe): ?bool
+    {
+        try {
+            $response = Http::connectTimeout(5)->timeout(10)->get(self::BASE.'/proveedores/rubro', [
+                'rpe' => $rpe,
+                'limit' => 1,
+            ]);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $content = $response->json('payload.content');
+
+        return is_array($content) && $content !== [];
     }
 
     /**

@@ -43,7 +43,7 @@ class VerifyCompanyRncCommand extends Command
         $unknown = 0;
 
         foreach ($companies as $company) {
-            $result = $dgcp->isRegistered($company->rnc);
+            $result = $dgcp->isRegistered($company->rnc, $company->rpe_numero ? (int) $company->rpe_numero : null);
             $label = sprintf('#%-3d %-12s %s', $company->id, $company->rnc, mb_substr((string) $company->razon_social, 0, 32));
 
             if ($result === true) {

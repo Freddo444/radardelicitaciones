@@ -94,4 +94,64 @@ class VerifyCompanyRncTest extends TestCase
 
         $this->assertSame(0, Company::withoutGlobalScopes()->whereNull('rnc_verified_at')->count());
     }
+
+    // ── The /proveedores endpoint is not always answerable ────────────
+
+    public function test_an_rpe_with_rubros_verifies_even_when_proveedores_errors(): void
+    {
+        // Grupo Alzare's real shape: /proveedores answers HTTP 500 for its
+        // record on every parameter, while /proveedores/rubro returns it fine.
+        Http::fake([
+            'datosabiertos.dgcp.gob.do/api-dgcp/v1/proveedores/rubro*' => Http::response([
+                'payload' => ['content' => [[
+                    'rpe' => 135240,
+                    'razon_social' => 'Grupo Alzare, SRL',
+                    'familia_unspsc' => '43210000',
+                ]]],
+                'totalResults' => 13,
+            ]),
+            'datosabiertos.dgcp.gob.do/api-dgcp/v1/proveedores*' => Http::response([
+                'code' => 500,
+                'hasError' => true,
+                'payload' => ['content' => null, 'message' => 'Ha ocurrido un error al completar la consulta...'],
+            ], 500),
+        ]);
+
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '133649871', 'rpe_numero' => 135240]);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        $this->assertNotNull($company->fresh()->rnc_verified_at,
+            'A supplier with declared rubros is registered, whatever /proveedores says.');
+    }
+
+    public function test_an_rpe_with_no_rubros_does_not_by_itself_verify(): void
+    {
+        // VOCASER's 647726 and pepito srl's 374044 both answer 200 with nothing.
+        Http::fake([
+            'datosabiertos.dgcp.gob.do/api-dgcp/v1/proveedores/rubro*' => Http::response([
+                'payload' => ['content' => null],
+            ]),
+            'datosabiertos.dgcp.gob.do/api-dgcp/v1/proveedores*' => Http::response([
+                'payload' => ['content' => null],
+            ]),
+        ]);
+
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '130107505', 'rpe_numero' => 647726]);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        $this->assertNull($company->fresh()->rnc_verified_at);
+    }
+
+    public function test_the_rnc_lookup_still_works_without_an_rpe(): void
+    {
+        $this->fakeRegistryKnowing(['133697718']);
+
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '133697718', 'rpe_numero' => null]);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        $this->assertNotNull($company->fresh()->rnc_verified_at);
+    }
 }
