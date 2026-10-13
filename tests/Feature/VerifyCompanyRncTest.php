@@ -1,0 +1,97 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Company;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Tests\Concerns\CreatesTenant;
+use Tests\TestCase;
+
+class VerifyCompanyRncTest extends TestCase
+{
+    use CreatesTenant, RefreshDatabase;
+
+    private const PROVIDERS = 'datosabiertos.dgcp.gob.do/api-dgcp/v1/proveedores*';
+
+    /** Answer as the registry does: found only for the numbers listed. */
+    private function fakeRegistryKnowing(array $known): void
+    {
+        Http::fake([self::PROVIDERS => function ($request) use ($known) {
+            $asked = (string) ($request->data()['numero_documento'] ?? '');
+
+            return Http::response([
+                'payload' => ['content' => in_array($asked, $known, true)
+                    ? [['numero_documento' => $asked, 'razon_social' => 'Empresa SRL']]
+                    : null],
+            ]);
+        }]);
+    }
+
+    public function test_it_flags_only_the_companies_the_registry_knows(): void
+    {
+        [, , $listed] = $this->makeOwnerWithCompany([], ['rnc' => '130514331']);
+        [, , $unlisted] = $this->makeOwnerWithCompany([], ['rnc' => '132978961']);
+        [, , $malformed] = $this->makeOwnerWithCompany([], ['rnc' => '9999']);
+
+        $this->fakeRegistryKnowing(['130514331']);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        $this->assertNotNull($listed->fresh()->rnc_verified_at);
+        $this->assertNull($unlisted->fresh()->rnc_verified_at,
+            'Not listed yet is not the same as not real — the registry lags.');
+        $this->assertNull($malformed->fresh()->rnc_verified_at);
+    }
+
+    public function test_a_dry_run_writes_nothing(): void
+    {
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '130514331']);
+
+        $this->fakeRegistryKnowing(['130514331']);
+
+        $this->artisan('companies:verify-rnc', ['--dry-run' => true])->assertSuccessful();
+
+        $this->assertNull($company->fresh()->rnc_verified_at);
+    }
+
+    public function test_an_outage_never_clears_an_existing_flag(): void
+    {
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '130514331']);
+        $company->forceFill(['rnc_verified_at' => now()->subMonth()])->save();
+        $verifiedAt = $company->fresh()->rnc_verified_at;
+
+        Http::fake([self::PROVIDERS => Http::response('', 503)]);
+
+        $this->artisan('companies:verify-rnc', ['--recheck' => true])->assertSuccessful();
+
+        $this->assertEquals($verifiedAt, $company->fresh()->rnc_verified_at,
+            'A transient failure must not un-verify a company.');
+    }
+
+    public function test_already_verified_companies_are_skipped_without_recheck(): void
+    {
+        [, , $company] = $this->makeOwnerWithCompany([], ['rnc' => '130514331']);
+        $company->forceFill(['rnc_verified_at' => now()->subMonth()])->save();
+
+        $this->fakeRegistryKnowing(['130514331']);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        Http::assertNothingSent();
+    }
+
+    public function test_it_reaches_companies_across_every_tenant(): void
+    {
+        // The command runs outside a request, so the tenant scope must be off
+        // or it would only ever see one company.
+        $this->makeOwnerWithCompany([], ['rnc' => '130514331']);
+        $this->makeOwnerWithCompany([], ['rnc' => '101870087']);
+
+        $this->fakeRegistryKnowing(['130514331', '101870087']);
+
+        $this->artisan('companies:verify-rnc')->assertSuccessful();
+
+        $this->assertSame(0, Company::withoutGlobalScopes()->whereNull('rnc_verified_at')->count());
+    }
+}

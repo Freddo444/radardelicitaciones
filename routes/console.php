@@ -87,6 +87,14 @@ Schedule::exec("{$php} billing:reconcile-azul-orphans")
     ->daily()
     ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));
 
+// Re-check unverified RNCs monthly. The DGCP registry can take a couple of
+// months to list a newly incorporated business, so a company unverified at
+// signup is expected to become verified later without anyone intervening.
+Schedule::exec("{$php} companies:verify-rnc")
+    ->monthlyOn(1, '06:00')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/companies-verify-rnc.log'));
+
 // Keep storage/logs bounded. The scheduler's own appendOutputTo files are
 // plain shell appends that Laravel's daily driver does not rotate.
 Schedule::exec("{$php} logs:prune")
