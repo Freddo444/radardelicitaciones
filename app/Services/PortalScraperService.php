@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use GuzzleHttp\Cookie\CookieJar;
+use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -33,17 +34,38 @@ class PortalScraperService
      *
      * @return Collection of parsed notice arrays
      */
+    /** @var list<string> Procedure types whose search did not come back this run. */
+    private array $failures = [];
+
+    /** @return list<string> */
+    public function failedProcedures(): array
+    {
+        return $this->failures;
+    }
+
+    public function procedureCount(): int
+    {
+        return count(self::PROCEDURE_TYPES);
+    }
+
     public function scrapeAll(int $maxAgeDays = 90): Collection
     {
         $cutoff = now()->subDays($maxAgeDays);
         $allNotices = collect();
         $seenCodes = collect();
+        $this->failures = [];
 
         foreach (self::PROCEDURE_TYPES as $procedure) {
             Log::debug("[PortalScraper] Searching procedure: {$procedure}");
 
             $html = $this->advancedSearch($procedure);
             if (! $html) {
+                // Recorded rather than ignored: an empty result because the
+                // portal is unreachable is not the same as an empty result
+                // because nothing is published, and the caller must be able
+                // to tell them apart.
+                $this->failures[] = $procedure;
+
                 continue;
             }
 
@@ -79,6 +101,17 @@ class PortalScraperService
     }
 
     /**
+     * Every portal request goes through here so the CA bundle is applied in one
+     * place. The portal omits its intermediate certificates, which curl will not
+     * fetch on its own — see resources/certs/comprasdominicana-ca.pem.
+     */
+    private function client(int $timeout): PendingRequest
+    {
+        return Http::timeout($timeout)
+            ->withOptions(['verify' => resource_path('certs/comprasdominicana-ca.pem')]);
+    }
+
+    /**
      * Execute an AdvancedSearchAjax for a specific procedure type.
      * Requires two HTTP calls: initial page (to get session cookie + mkey), then AJAX search.
      */
@@ -86,7 +119,7 @@ class PortalScraperService
     {
         try {
             // Step 1: Get session cookie and mkey from initial page load
-            $initResponse = Http::timeout(30)
+            $initResponse = $this->client(30)
                 ->withHeaders(['Accept' => 'text/html'])
                 ->get(self::PORTAL_BASE.'/Index');
 
@@ -112,7 +145,7 @@ class PortalScraperService
             );
 
             // Step 2: Execute AdvancedSearchAjax
-            $searchResponse = Http::timeout(30)
+            $searchResponse = $this->client(30)
                 ->withHeaders(['Accept' => 'text/html'])
                 ->withOptions(['cookies' => $cookieJar])
                 ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
@@ -161,7 +194,7 @@ class PortalScraperService
         $empty = ['unspsc' => [], 'documents' => [], 'articles' => []];
 
         try {
-            $response = Http::timeout(30)
+            $response = $this->client(30)
                 ->withHeaders(['Accept' => 'text/html'])
                 ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
                     'noticeUID' => $noticeUid,
@@ -197,7 +230,7 @@ class PortalScraperService
     {
         try {
             // Step 1: Fetch detail page — get session cookie and page HTML
-            $detailRes = Http::timeout(30)
+            $detailRes = $this->client(30)
                 ->withHeaders(['Accept' => 'text/html'])
                 ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
                     'noticeUID' => $noticeUid,
@@ -223,7 +256,7 @@ class PortalScraperService
 
             // Step 3: Hit DownloadFile — returns HTTP 200 with an HTML body containing a JS redirect,
             // not the file itself. Do not reject HTML here.
-            $hopRes = Http::timeout(30)
+            $hopRes = $this->client(30)
                 ->withOptions(['cookies' => $cookieJar])
                 ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/DownloadFile', [
                     'documentFileId' => $fileId,
@@ -242,7 +275,7 @@ class PortalScraperService
             $fileUrl = 'https://comunidad.comprasdominicana.gob.do'.$r[1];
 
             // Step 5: Fetch the actual file
-            $fileRes = Http::timeout(120)
+            $fileRes = $this->client(120)
                 ->withOptions(['cookies' => $cookieJar])
                 ->get($fileUrl);
 

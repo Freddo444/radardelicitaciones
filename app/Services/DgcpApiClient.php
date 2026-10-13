@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\DgcpApiException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -384,17 +385,38 @@ class DgcpApiClient
 
     /**
      * Perform a GET request. Handles 429 by sleeping and retrying once.
+     *
+     * A read timeout arrives as ConnectionException, not DgcpApiException, so
+     * before this it escaped every caller's catch block. One slow DGCP response
+     * mid-poll therefore killed the whole command — losing ~96 rubros of
+     * finished work and leaving last_polled_at pinned, because the write that
+     * advances it sits further down the run. Converting here fixes every
+     * caller at once: they all already handle DgcpApiException.
+     *
+     * throw: false keeps retry() from turning a failed status into an
+     * exception, so the 429 handling below still owns that case; only genuine
+     * connection failures are retried.
      */
     private function get(string $endpoint, array $params = []): array
     {
         $url = self::BASE_URL.$endpoint;
 
-        $response = Http::timeout(30)->get($url, $params);
+        try {
+            $response = Http::connectTimeout(10)
+                ->timeout(30)
+                ->retry(2, 1000, throw: false)
+                ->get($url, $params);
+        } catch (ConnectionException $e) {
+            throw new DgcpApiException(
+                "DGCP API unreachable on {$endpoint}: {$e->getMessage()}",
+                previous: $e
+            );
+        }
 
         if ($response->status() === 429) {
             Log::warning("[DGCP] Rate limited on {$endpoint}, sleeping ".self::RATE_LIMIT_WAIT.'s');
             sleep(self::RATE_LIMIT_WAIT);
-            $response = Http::timeout(30)->get($url, $params);
+            $response = Http::connectTimeout(10)->timeout(30)->get($url, $params);
         }
 
         if ($response->failed()) {

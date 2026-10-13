@@ -24,8 +24,24 @@ class ScrapeCommand extends Command
         $this->info('Scraping portal for open notices...');
 
         $notices = $scraper->scrapeAll();
+        $failed = $scraper->failedProcedures();
+
+        if ($failed !== []) {
+            $this->warn(count($failed).' procedure type(s) did not respond: '.implode(', ', $failed));
+        }
 
         if ($notices->isEmpty()) {
+            // Every type failing means the portal is unreachable, not that the
+            // day was quiet. Reported as a failure so it shows up instead of
+            // reading as a successful empty run, which hid a three-day TLS
+            // outage in October 2026.
+            if (count($failed) === $scraper->procedureCount()) {
+                $this->error('Portal unreachable on every procedure type — this is not an empty result.');
+                Log::error('[SECP] Portal scrape failed for every procedure type', ['failed' => $failed]);
+
+                return self::FAILURE;
+            }
+
             $this->info('No notices found on portal.');
 
             return self::SUCCESS;
@@ -139,9 +155,10 @@ class ScrapeCommand extends Command
             }
 
             try {
-                // The hourly poll writes to this table too, so make the insert
-                // idempotent rather than racing it into a duplicate-key error.
-                $bid = Bid::firstOrCreate([
+                // The hourly poll writes to this table too. createOrFirst, not
+                // firstOrCreate: the latter's SELECT-then-INSERT still collides
+                // when both commands reach the same process_code at once.
+                $bid = Bid::createOrFirst([
                     'process_code' => $notice['process_code'],
                 ], [
                     'ocid' => 'ocds-6550wx-'.$notice['process_code'],

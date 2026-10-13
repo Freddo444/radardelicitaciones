@@ -83,6 +83,12 @@ Schedule::exec("{$php} billing:reconcile-azul-orphans")
     ->daily()
     ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));
 
+// Keep storage/logs bounded. The scheduler's own appendOutputTo files are
+// plain shell appends that Laravel's daily driver does not rotate.
+Schedule::exec("{$php} logs:prune")
+    ->dailyAt('05:00')
+    ->withoutOverlapping();
+
 // Delete the data of companies whose subscription lapsed months ago. Users,
 // subscriptions and payments survive for accounting; so does the trial claim.
 Schedule::exec("{$php} companies:purge-lapsed")

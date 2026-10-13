@@ -198,9 +198,11 @@ class PollCommand extends Command
 
                     // The scrape writes to this table too, so between the known-codes
                     // lookup above and this insert another process may have stored the
-                    // same process_code. firstOrCreate makes the write idempotent
-                    // instead of throwing a duplicate-key error and killing the run.
-                    $bid = Bid::firstOrCreate([
+                    // same process_code. firstOrCreate still lost that race — its
+                    // SELECT misses, then the INSERT collides — which logged ~70
+                    // duplicate-key errors a day. createOrFirst catches the unique
+                    // violation and re-reads the winning row instead.
+                    $bid = Bid::createOrFirst([
                         'process_code' => $processCode,
                     ], [
                         'ocid' => $process['ocid'] ?? ('ocds-6550wx-'.$processCode),
