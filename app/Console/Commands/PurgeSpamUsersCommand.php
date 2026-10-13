@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Validator;
 class PurgeSpamUsersCommand extends Command
 {
     protected $signature = 'users:purge-spam
-        {--dry-run : List what would be removed without deleting anything}';
+        {--dry-run : List what would be removed without deleting anything}
+        {--include-disposable : Also remove accounts whose only flag is a throwaway mail domain}';
 
     protected $description = 'Remove signup-spam accounts: no company, no payment, and a name or address that fails the registration rules';
 
@@ -73,18 +74,28 @@ class PurgeSpamUsersCommand extends Command
     /**
      * Reuses the registration rules so this command and the signup form can
      * never disagree about what counts as spam.
+     *
+     * A name carrying a link or a foreign script is unambiguous and is reason
+     * enough on its own. A throwaway domain is not: that list exists to stop
+     * marketing mail going somewhere it will bounce, which is a far lower bar
+     * than deleting an account — atomicmail.io is a privacy provider a real
+     * prospect might use. Sweeping those needs --include-disposable.
      */
     private function reasonFor(User $user): ?string
     {
-        if (NotDisposableEmail::isDisposable($user->email)) {
-            return 'correo desechable';
-        }
-
-        $fails = Validator::make(
+        $nameFails = Validator::make(
             ['name' => (string) $user->name],
             ['name' => [new HumanName]]
         )->fails();
 
-        return $fails ? 'nombre con payload' : null;
+        if ($nameFails) {
+            return 'nombre con payload';
+        }
+
+        if ($this->option('include-disposable') && NotDisposableEmail::isDisposable($user->email)) {
+            return 'correo desechable';
+        }
+
+        return null;
     }
 }

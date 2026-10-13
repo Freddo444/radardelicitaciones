@@ -134,11 +134,18 @@ class RegistrationSpamTest extends TestCase
         $this->artisan('users:purge-spam')->assertSuccessful();
 
         $this->assertDatabaseMissing('users', ['id' => $spamName->id]);
-        $this->assertDatabaseMissing('users', ['id' => $spamEmail->id]);
-        $this->assertDatabaseMissing('subscriptions', ['user_id' => $spamEmail->id]);
-
         $this->assertDatabaseHas('users', ['id' => $realPending->id]);
         $this->assertDatabaseHas('users', ['id' => $withCompany->id]);
+
+        // A human name on a throwaway domain is not grounds for deletion on
+        // its own — that list exists to suppress mail, not to judge accounts.
+        $this->assertDatabaseHas('users', ['id' => $spamEmail->id]);
+
+        $this->artisan('users:purge-spam', ['--include-disposable' => true])->assertSuccessful();
+
+        $this->assertDatabaseMissing('users', ['id' => $spamEmail->id]);
+        $this->assertDatabaseMissing('subscriptions', ['user_id' => $spamEmail->id]);
+        $this->assertDatabaseHas('users', ['id' => $realPending->id]);
     }
 
     public function test_purge_dry_run_deletes_nothing(): void
