@@ -16,6 +16,7 @@ class Company extends Model
         'razon_social',
         'nombre_comercial',
         'rnc',
+        'rnc_verified_at',
         'direccion',
         'municipio',
         'provincia',
@@ -42,6 +43,7 @@ class Company extends Model
 
     protected $casts = [
         'cpa_vence' => 'date',
+        'rnc_verified_at' => 'datetime',
         'onboarding_dismissed_at' => 'datetime',
     ];
 

@@ -16,6 +16,59 @@ class DgcpProviderService
     private const BASE = 'https://datosabiertos.dgcp.gob.do/api-dgcp/v1';
 
     /**
+     * Is this RNC in the DGCP supplier registry?
+     *
+     * Returns null when we could not find out — the API was down, or the RNC is
+     * not a shape worth asking about. Null and false are different answers and
+     * callers must not conflate them: the registry lags a newly incorporated
+     * business by up to a couple of months, so false means "not there yet",
+     * not "not real". It is a flag for review, never grounds for refusal.
+     *
+     * numero_documento is the only parameter that actually filters this
+     * endpoint. Passing rnc= is silently ignored and returns the full 128k-row
+     * list, whose first record would look like a match for anything.
+     */
+    public function isRegistered(?string $rnc): ?bool
+    {
+        $digits = preg_replace('/\D+/', '', (string) $rnc);
+
+        if (! in_array(strlen((string) $digits), [9, 11], true)) {
+            return null;
+        }
+
+        try {
+            $response = Http::connectTimeout(5)->timeout(10)->get(self::BASE.'/proveedores', [
+                'numero_documento' => $digits,
+                'limit' => 1,
+            ]);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        $content = $response->json('payload.content');
+
+        if (! is_array($content)) {
+            return false;
+        }
+
+        foreach ($content as $provider) {
+            $found = preg_replace('/\D+/', '', (string) ($provider['numero_documento'] ?? ''));
+
+            // Confirm the row actually carries the number we asked for, rather
+            // than trusting that the filter was applied.
+            if ($found === $digits) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Fetch the familia-level rubros a provider is registered for at the DGCP.
      *
      * @return array<int, array{code: string, name: string}> deduped by code

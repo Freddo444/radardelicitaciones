@@ -6,6 +6,7 @@ use App\Models\CatalogItem;
 use App\Models\Company;
 use App\Models\Rubro;
 use App\Models\TrialClaim;
+use App\Rules\ValidRnc;
 use App\Services\BidMatchingService;
 use App\Services\DgcpProviderService;
 use App\Services\SubscriptionService;
@@ -147,7 +148,7 @@ class CompanySetupController extends Controller
         );
     }
 
-    public function store(Request $request, BidMatchingService $matcher)
+    public function store(Request $request, BidMatchingService $matcher, DgcpProviderService $dgcp)
     {
         $user = Auth::user();
         $subscription = $user->subscription;
@@ -172,7 +173,7 @@ class CompanySetupController extends Controller
 
         $request->validate([
             'razon_social' => 'required|string|max:255',
-            'rnc' => 'required|string|max:20',
+            'rnc' => ['required', 'string', 'max:20', new ValidRnc],
             'nombre_comercial' => 'nullable|string|max:255',
             'telefono' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:255',
@@ -186,9 +187,23 @@ class CompanySetupController extends Controller
             'rubros.*.name' => 'required|string|max:255',
         ]);
 
-        $company = DB::transaction(function () use ($request, $user) {
+        // A flag, not a gate. The DGCP registry can take a couple of months to
+        // list a newly incorporated business, so "not found" cannot refuse a
+        // signup — it only marks the company for review.
+        $rncVerified = $dgcp->isRegistered($request->input('rnc')) === true;
+
+        if (! $rncVerified) {
+            Log::info('[CompanySetup] RNC not found in the DGCP registry', [
+                'user_id' => $user->id,
+                'rnc' => $request->input('rnc'),
+                'razon_social' => $request->input('razon_social'),
+            ]);
+        }
+
+        $company = DB::transaction(function () use ($request, $user, $rncVerified) {
             $company = Company::create([
                 'owner_id' => $user->id,
+                'rnc_verified_at' => $rncVerified ? now() : null,
                 'razon_social' => $request->razon_social,
                 'rnc' => $request->rnc,
                 'nombre_comercial' => $request->nombre_comercial,
