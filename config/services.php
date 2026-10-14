@@ -73,6 +73,34 @@ return [
         'throwawaymail.com,luxudata.com,lnovic.com,atomicmail.io,smaqt.com'
     ))))),
 
+    /*
+     * Banco Popular Dominicano — ConsultaTasa (published FX rates).
+     *
+     * No production default on purpose: the bank does not publish the
+     * production URL, it is issued by email after an approval process, and
+     * catalogue paths differ. The value below is the sandbox host from
+     * My-Plans/api/BPDConsultaTasa-2.6.1.json.
+     */
+    'bpd' => [
+        'base_url' => env('BPD_BASE_URL', 'https://api.us-east-a.apiconnect.ibmappdomain.cloud/apiportalpopular/bpdsandbox/consultatasa'),
+        'client_id' => env('BPD_CLIENT_ID'),
+        'client_secret' => env('BPD_CLIENT_SECRET'),
+        'scope' => env('BPD_SCOPE', 'scope_1'),
+
+        // 'venta' keeps us whole: we price in USD and collect DOP, so the
+        // relevant rate is the one the bank sells dollars at.
+        'rate_side' => env('BPD_RATE_SIDE', 'venta'),
+
+        // A rate outside this band is refused rather than billed. Guards
+        // against a shifted decimal reaching a customer's card.
+        'rate_min' => (float) env('BPD_RATE_MIN', 40),
+        'rate_max' => (float) env('BPD_RATE_MAX', 120),
+
+        // Beyond this, the stored automatic rate is reported as stale. It is
+        // still used — a real rate from last week beats a hardcoded constant.
+        'max_age_hours' => (int) env('BPD_RATE_MAX_AGE_HOURS', 48),
+    ],
+
     'support' => [
         // Publicly displayed contact address (footer, terms, privacy).
         'email' => env('SUPPORT_EMAIL', 'info@radardelicitaciones.com'),

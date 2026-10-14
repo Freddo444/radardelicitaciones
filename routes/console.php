@@ -83,6 +83,15 @@ Schedule::exec("{$php} secp:import-catalog")
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-import-catalog.log'));
 
+// Refresh the USD/DOP rate used for Azul charges, bank-transfer instructions
+// and invoices. Twice daily: the bank publishes once a day, and ConsultaTasa
+// sits on a Premium plan whose rate limits are not documented, so this stays
+// deliberately infrequent. Checkout only ever reads the stored value.
+Schedule::exec("{$php} billing:refresh-usd-rate")
+    ->twiceDailyAt(7, 13, 5)
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/billing-usd-rate.log'));
+
 Schedule::exec("{$php} billing:reconcile-azul-orphans")
     ->daily()
     ->appendOutputTo(storage_path('logs/billing-reconcile-orphans.log'));
