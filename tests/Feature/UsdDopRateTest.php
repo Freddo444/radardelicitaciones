@@ -20,7 +20,8 @@ class UsdDopRateTest extends TestCase
 
     private const BASE = 'https://bpd.test/consultatasa';
 
-    private const TOKEN = 'https://bpd.test/consultatasa/bpd/Authentication/oauth2/token';
+    // Catalogue root, NOT under /consultatasa — the live sandbox 404s otherwise.
+    private const TOKEN = 'https://bpd.test/bpd/Authentication/oauth2/token';
 
     private const TASA = 'https://bpd.test/consultatasa/consultaTasa';
 
@@ -402,5 +403,31 @@ class UsdDopRateTest extends TestCase
 
         $this->assertFalse(UsdDopExchange::isManualMode());
         $this->assertSame(63.25, UsdDopExchange::rate(), 'Switching back must hand control to the bank.');
+    }
+
+    public function test_the_token_url_sits_above_the_api_segment(): void
+    {
+        // Appending the token path to the full base URL yields
+        // /consultatasa/bpd/Authentication/... which the sandbox answers with
+        // 404 "No resources match requested URI". Pinned because the spec
+        // describes this endpoint twice and inconsistently.
+        $this->fakeBank($this->monedas(63.25));
+
+        app(BpdRateClient::class)->rates();
+
+        Http::assertSent(fn ($request) => $request->url() === self::TOKEN);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/consultatasa/bpd/Authentication'));
+    }
+
+    public function test_an_explicit_token_url_overrides_the_derivation(): void
+    {
+        config(['services.bpd.token_url' => 'https://bpd.test/custom/token']);
+
+        Http::fake([
+            'https://bpd.test/custom/token' => Http::response(['access_token' => 'tok-x', 'expires_in' => 3600]),
+            self::TASA => Http::response($this->monedas(63.25)),
+        ]);
+
+        $this->assertSame(63.25, app(BpdRateClient::class)->rates()['USD']['venta']);
     }
 }

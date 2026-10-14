@@ -159,6 +159,38 @@ class BpdRateClient
         return (is_finite($rate) && $rate > 0) ? $rate : null;
     }
 
+    /**
+     * The OAuth token endpoint.
+     *
+     * It sits at the catalogue root, one level ABOVE the API's own base path:
+     *   https://host/apiportalpopular/bpdsandbox/bpd/Authentication/oauth2/token
+     * not
+     *   https://host/apiportalpopular/bpdsandbox/consultatasa/bpd/Authentication/...
+     *
+     * The spec says this twice and inconsistently: securityDefinitions gives a
+     * relative "/bpd/Authentication/oauth2/token", which reads as though it
+     * hangs off basePath, while x-ibm-configuration.oauth-servers gives the
+     * absolute URL without the consultatasa segment. The absolute one is
+     * right; resolving the relative one against basePath returns 404
+     * "No resources match requested URI".
+     *
+     * Deriving it by dropping the last segment means a production base URL
+     * works without a second environment variable, and BPD_TOKEN_URL remains
+     * available if the bank's production catalogue is laid out differently.
+     */
+    private function tokenUrl(): string
+    {
+        $explicit = trim((string) config('services.bpd.token_url'));
+
+        if ($explicit !== '') {
+            return rtrim($explicit, '/');
+        }
+
+        $catalogue = preg_replace('~/[^/]+$~', '', $this->baseUrl);
+
+        return $catalogue.'/bpd/Authentication/oauth2/token';
+    }
+
     private function accessToken(): ?string
     {
         $cached = Cache::get(self::TOKEN_CACHE_KEY);
@@ -167,7 +199,7 @@ class BpdRateClient
             return $cached;
         }
 
-        $url = $this->baseUrl.'/bpd/Authentication/oauth2/token';
+        $url = $this->tokenUrl();
         $scope = (string) config('services.bpd.scope');
 
         $form = [

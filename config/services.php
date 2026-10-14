@@ -87,6 +87,10 @@ return [
         'client_secret' => env('BPD_CLIENT_SECRET'),
         'scope' => env('BPD_SCOPE', 'scope_1'),
 
+        // Optional. Left empty, it is derived from base_url by dropping the
+        // API segment, because the token endpoint lives at the catalogue root.
+        'token_url' => env('BPD_TOKEN_URL', ''),
+
         // 'venta' keeps us whole: we price in USD and collect DOP, so the
         // relevant rate is the one the bank sells dollars at.
         'rate_side' => env('BPD_RATE_SIDE', 'venta'),
