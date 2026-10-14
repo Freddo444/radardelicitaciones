@@ -55,7 +55,7 @@ class BpdRateClient
     public function rates(): ?array
     {
         if (! $this->isConfigured()) {
-            Log::warning('[BPD] Skipped rate lookup: credentials or base URL not configured.');
+            Log::error('[BPD] Skipped rate lookup: credentials or base URL not configured.');
 
             return null;
         }
@@ -76,7 +76,7 @@ class BpdRateClient
                 ->withToken($token)
                 ->get($this->baseUrl.'/consultaTasa');
         } catch (ConnectionException $e) {
-            Log::warning('[BPD] consultaTasa unreachable', ['error' => $e->getMessage()]);
+            Log::error('[BPD] consultaTasa unreachable', ['error' => $e->getMessage()]);
 
             return null;
         }
@@ -84,13 +84,13 @@ class BpdRateClient
         if ($response->status() === 401) {
             // The cached token may have been revoked before its stated expiry.
             Cache::forget(self::TOKEN_CACHE_KEY);
-            Log::warning('[BPD] consultaTasa rejected the token; cache cleared for the next run.');
+            Log::error('[BPD] consultaTasa rejected the token; cache cleared for the next run.');
 
             return null;
         }
 
         if ($response->failed()) {
-            Log::warning('[BPD] consultaTasa failed', [
+            Log::error('[BPD] consultaTasa failed', [
                 'status' => $response->status(),
                 'body' => mb_substr($response->body(), 0, 300),
             ]);
@@ -109,7 +109,7 @@ class BpdRateClient
         $rows = data_get($payload, 'monedas.moneda');
 
         if (! is_array($rows) || $rows === []) {
-            Log::warning('[BPD] consultaTasa returned no currencies', [
+            Log::error('[BPD] consultaTasa returned no currencies', [
                 'payload' => mb_substr(json_encode($payload) ?: '', 0, 300),
             ]);
 
@@ -224,21 +224,33 @@ class BpdRateClient
                 ->post($url, array_diff_key($form, ['client_id' => '', 'client_secret' => ''])),
         ];
 
+        $lastFailure = null;
+        $lastStatus = null;
+        $lastBody = null;
+
         foreach ($attempts as $i => $attempt) {
             try {
                 $response = $attempt();
             } catch (ConnectionException $e) {
-                Log::warning('[BPD] Token endpoint unreachable', ['error' => $e->getMessage()]);
+                Log::error('[BPD] Token endpoint unreachable', ['error' => $e->getMessage()]);
 
                 return null;
             }
 
             if ($response->failed()) {
+                // Per-attempt detail stays at warning: the first rejection is
+                // expected when the credentials belong in a Basic header. The
+                // exhausted case below is an error, because production runs at
+                // LOG_LEVEL=error and a silent failure here means billing
+                // quietly keeps using a stale rate.
                 Log::warning('[BPD] Token request rejected', [
                     'style' => $i === 0 ? 'form-body' : 'basic-auth',
                     'status' => $response->status(),
                     'body' => mb_substr($response->body(), 0, 200),
                 ]);
+                $lastFailure = $i === 0 ? 'form-body' : 'basic-auth';
+                $lastStatus = $response->status();
+                $lastBody = mb_substr($response->body(), 0, 200);
 
                 continue;
             }
@@ -257,6 +269,13 @@ class BpdRateClient
 
             return $token;
         }
+
+        Log::error('[BPD] Could not obtain an access token', [
+            'last_style' => $lastFailure,
+            'status' => $lastStatus,
+            'body' => $lastBody,
+            'token_url' => $this->tokenUrl(),
+        ]);
 
         return null;
     }

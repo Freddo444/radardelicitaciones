@@ -35,6 +35,12 @@ class RefreshUsdDopRateCommand extends Command
 
         if ($rates === null) {
             $this->error('No se pudo leer la tasa del Banco Popular. El cobro sigue usando la tasa almacenada.');
+            // BpdRateClient has already logged the specific cause at error
+            // level; this line is what makes the scheduled run itself visible.
+            Log::error('[BPD] Rate refresh produced nothing; billing continues on the stored rate.', [
+                'effective_rate' => UsdDopExchange::rate(),
+                'source' => UsdDopExchange::source(),
+            ]);
 
             return self::FAILURE;
         }
