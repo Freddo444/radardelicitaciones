@@ -62,31 +62,94 @@ class IngestionResilienceTest extends TestCase
 
     // ── 2. Portal TLS + honest reporting ──────────────────────────────
 
-    public function test_the_portal_ca_bundle_is_present_and_complete(): void
+    public function test_the_portal_ca_bundle_is_present_and_every_chain_is_complete(): void
     {
         $path = resource_path('certs/comprasdominicana-ca.pem');
 
         $this->assertFileExists($path);
 
-        $pem = (string) file_get_contents($path);
+        preg_match_all('/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s',
+            (string) file_get_contents($path), $m);
 
-        preg_match_all('/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s', $pem, $m);
         $certs = array_map(fn ($c) => openssl_x509_parse($c), $m[0]);
+        $this->assertNotEmpty($certs, 'The bundle holds no certificates.');
 
-        $this->assertCount(3, $certs,
-            'Expected the YR2 intermediate, the cross-signed Root YR, and ISRG Root X1.');
-
+        $subjects = [];
         foreach ($certs as $cert) {
             $this->assertIsArray($cert, 'Every entry must parse as a certificate.');
             $this->assertGreaterThan(time(), $cert['validTo_time_t'],
                 'Bundled certificate has expired: '.$cert['name']);
+            $subjects[] = $cert['subject']['CN'];
         }
 
-        // Each certificate must be issued by the next one, ending at a root
-        // that is already in the OS trust store — we add no new anchor.
-        $this->assertSame($certs[0]['issuer']['CN'], $certs[1]['subject']['CN']);
-        $this->assertSame($certs[1]['issuer']['CN'], $certs[2]['subject']['CN']);
-        $this->assertSame('ISRG Root X1', $certs[2]['subject']['CN']);
+        // Completeness, chain by chain: anything not self-signed must have its
+        // own issuer in the bundle, so each path ends at a root. Asserted
+        // generically rather than against one named chain — the bundle carries
+        // more than one CA on purpose, and asserting a fixed count is what had
+        // to be rewritten when the portal changed CA.
+        $roots = 0;
+        foreach ($certs as $cert) {
+            if ($cert['subject']['CN'] === $cert['issuer']['CN']) {
+                $roots++;
+
+                continue;
+            }
+
+            $this->assertContains($cert['issuer']['CN'], $subjects,
+                "Chain is broken: nothing in the bundle issues {$cert['subject']['CN']}.");
+        }
+
+        $this->assertGreaterThan(0, $roots, 'No chain terminates at a self-signed root.');
+
+        // The issuer the portal's live leaf needs. If DGCP changes CA again,
+        // this is the line that should fail and send you to the bundle.
+        $this->assertContains('Sectigo Public Server Authentication CA EV R36', $subjects,
+            'The bundle no longer carries the issuer the portal is currently using.');
+    }
+
+    public function test_a_trust_failure_falls_back_to_the_os_store_rather_than_losing_the_run(): void
+    {
+        $calls = 0;
+
+        // The portal omits its intermediates, so the pinned bundle is the
+        // primary. When the bundle stops verifying — which is what a CA change
+        // looks like — the run must not be written off before the OS store has
+        // been tried.
+        Http::fake(['comunidad.comprasdominicana.gob.do/*' => function () use (&$calls) {
+            $calls++;
+
+            if ($calls === 1) {
+                throw new ConnectionException(
+                    'cURL error 60: SSL certificate problem: unable to get local issuer certificate'
+                );
+            }
+
+            return Http::response('<html>AdvancedSearchAjax?mkey=abc123_0 <table></table></html>');
+        }]);
+
+        $scraper = app(PortalScraperService::class);
+        $scraper->scrapeAll();
+
+        $this->assertSame([], $scraper->failedProcedures(),
+            'The first procedure should have been retried against the OS trust store.');
+    }
+
+    public function test_a_non_trust_failure_is_not_retried_against_the_os_store(): void
+    {
+        $calls = 0;
+
+        Http::fake(['comunidad.comprasdominicana.gob.do/*' => function () use (&$calls) {
+            $calls++;
+
+            throw new ConnectionException('cURL error 28: Operation timed out');
+        }]);
+
+        $scraper = app(PortalScraperService::class);
+        $scraper->scrapeAll();
+
+        $this->assertCount($scraper->procedureCount(), $scraper->failedProcedures());
+        $this->assertSame($scraper->procedureCount(), $calls,
+            'A timeout is not a trust problem and must not cost a second handshake.');
     }
 
     public function test_a_total_portal_failure_is_reported_not_called_empty(): void

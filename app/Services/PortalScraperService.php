@@ -101,6 +101,14 @@ class PortalScraperService
     }
 
     /**
+     * Set once a flow has had to fall back, so the rest of this instance's run
+     * stops paying for a handshake that is already known to fail. Per instance,
+     * not static: a later run should try the bundle again, because the bundle
+     * being wrong is a thing that gets fixed.
+     */
+    private bool $useSystemTrustStore = false;
+
+    /**
      * Every portal request goes through here so the CA bundle is applied in one
      * place. The portal omits its intermediate certificates, which curl will not
      * fetch on its own — see resources/certs/comprasdominicana-ca.pem.
@@ -108,7 +116,61 @@ class PortalScraperService
     private function client(int $timeout): PendingRequest
     {
         return Http::timeout($timeout)
-            ->withOptions(['verify' => resource_path('certs/comprasdominicana-ca.pem')]);
+            ->withOptions(['verify' => $this->useSystemTrustStore
+                ? true
+                : resource_path('certs/comprasdominicana-ca.pem')]);
+    }
+
+    /**
+     * Run a portal flow, retrying once against the OS trust store if the
+     * pinned bundle cannot verify the portal.
+     *
+     * The bundle has to pin a CA, and pinning is what caused the outage of
+     * 2026-11-02: the portal moved from Let's Encrypt to Sectigo EV and every
+     * request failed verification for three days. The OS store cannot be the
+     * primary — it fails too, because the portal omits its intermediates — but
+     * it does succeed the moment the portal starts serving a complete chain,
+     * which is how the 2026-10-13 episode ended. So try the bundle, and if the
+     * trust path itself is what failed, say so at error level and give the OS
+     * store a chance before giving up on the run.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $flow
+     * @return T
+     */
+    private function withTrustFallback(string $context, callable $flow)
+    {
+        try {
+            return $flow();
+        } catch (\Throwable $e) {
+            if ($this->useSystemTrustStore || ! $this->isTrustFailure($e)) {
+                throw $e;
+            }
+
+            Log::error('[PortalScraper] The pinned CA bundle no longer verifies the portal. '
+                .'Retrying with the OS trust store; if that works the portal has fixed its chain, '
+                .'and if it does not, add the new issuer to resources/certs/comprasdominicana-ca.pem '
+                .'(the file documents how).', ['context' => $context, 'error' => $e->getMessage()]);
+
+            $this->useSystemTrustStore = true;
+
+            return $flow();
+        }
+    }
+
+    private function isTrustFailure(\Throwable $e): bool
+    {
+        $message = $e->getMessage();
+
+        foreach (['cURL error 60', 'SSL certificate problem', 'unable to get local issuer',
+            'certificate verify failed', 'self-signed certificate'] as $needle) {
+            if (stripos($message, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -118,57 +180,59 @@ class PortalScraperService
     private function advancedSearch(string $procedure): ?string
     {
         try {
-            // Step 1: Get session cookie and mkey from initial page load
-            $initResponse = $this->client(30)
-                ->withHeaders(['Accept' => 'text/html'])
-                ->get(self::PORTAL_BASE.'/Index');
+            return $this->withTrustFallback("search {$procedure}", function () use ($procedure) {
+                // Step 1: Get session cookie and mkey from initial page load
+                $initResponse = $this->client(30)
+                    ->withHeaders(['Accept' => 'text/html'])
+                    ->get(self::PORTAL_BASE.'/Index');
 
-            if ($initResponse->failed()) {
-                return null;
-            }
+                if ($initResponse->failed()) {
+                    return null;
+                }
 
-            $cookies = $initResponse->cookies();
-            $initHtml = $initResponse->body();
+                $cookies = $initResponse->cookies();
+                $initHtml = $initResponse->body();
 
-            // Extract mkey from AdvancedSearchAjax JS
-            if (! preg_match('/AdvancedSearchAjax[^;]*mkey=([a-f0-9_]+)/', $initHtml, $m)) {
-                Log::warning('[PortalScraper] Could not extract mkey from initial page');
+                // Extract mkey from AdvancedSearchAjax JS
+                if (! preg_match('/AdvancedSearchAjax[^;]*mkey=([a-f0-9_]+)/', $initHtml, $m)) {
+                    Log::warning('[PortalScraper] Could not extract mkey from initial page');
 
-                return null;
-            }
-            $mkey = $m[1];
+                    return null;
+                }
+                $mkey = $m[1];
 
-            // Build cookie jar for the session
-            $cookieJar = CookieJar::fromArray(
-                ['PublicSessionCookie' => $cookies->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
-                'comunidad.comprasdominicana.gob.do'
-            );
+                // Build cookie jar for the session
+                $cookieJar = CookieJar::fromArray(
+                    ['PublicSessionCookie' => $cookies->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
+                    'comunidad.comprasdominicana.gob.do'
+                );
 
-            // Step 2: Execute AdvancedSearchAjax
-            $searchResponse = $this->client(30)
-                ->withHeaders(['Accept' => 'text/html'])
-                ->withOptions(['cookies' => $cookieJar])
-                ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
-                    'mkey' => $mkey,
-                    'perspective' => 'All',
-                    'initAction' => 'Index',
-                    'pageNumber' => 0,
-                    'startIndex' => 1,
-                    'endIndex' => 100,
-                    'currentPagingStyle' => 0,
-                    'displayAdvancedParams' => 'true',
-                    'orderParam' => 'RequestOnlinePublishingDateDESC',
-                    'searchExecuted' => 'True',
-                    'procedure' => $procedure,
-                ]);
+                // Step 2: Execute AdvancedSearchAjax
+                $searchResponse = $this->client(30)
+                    ->withHeaders(['Accept' => 'text/html'])
+                    ->withOptions(['cookies' => $cookieJar])
+                    ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
+                        'mkey' => $mkey,
+                        'perspective' => 'All',
+                        'initAction' => 'Index',
+                        'pageNumber' => 0,
+                        'startIndex' => 1,
+                        'endIndex' => 100,
+                        'currentPagingStyle' => 0,
+                        'displayAdvancedParams' => 'true',
+                        'orderParam' => 'RequestOnlinePublishingDateDESC',
+                        'searchExecuted' => 'True',
+                        'procedure' => $procedure,
+                    ]);
 
-            if ($searchResponse->failed()) {
-                Log::warning("[PortalScraper] AdvancedSearchAjax failed for {$procedure}");
+                if ($searchResponse->failed()) {
+                    Log::warning("[PortalScraper] AdvancedSearchAjax failed for {$procedure}");
 
-                return null;
-            }
+                    return null;
+                }
 
-            return $searchResponse->body();
+                return $searchResponse->body();
+            });
         } catch (\Throwable $e) {
             Log::error("[PortalScraper] Search failed for {$procedure}: {$e->getMessage()}");
 
@@ -194,23 +258,25 @@ class PortalScraperService
         $empty = ['unspsc' => [], 'documents' => [], 'articles' => []];
 
         try {
-            $response = $this->client(30)
-                ->withHeaders(['Accept' => 'text/html'])
-                ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
-                    'noticeUID' => $noticeUid,
-                ]);
+            return $this->withTrustFallback("detail {$noticeUid}", function () use ($noticeUid, $empty) {
+                $response = $this->client(30)
+                    ->withHeaders(['Accept' => 'text/html'])
+                    ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
+                        'noticeUID' => $noticeUid,
+                    ]);
 
-            if ($response->failed()) {
-                return $empty;
-            }
+                if ($response->failed()) {
+                    return $empty;
+                }
 
-            $html = $response->body();
+                $html = $response->body();
 
-            return [
-                'unspsc' => $this->parseUnspsc($html),
-                'documents' => $this->parseDocuments($html),
-                'articles' => $this->parseArticles($html),
-            ];
+                return [
+                    'unspsc' => $this->parseUnspsc($html),
+                    'documents' => $this->parseDocuments($html),
+                    'articles' => $this->parseArticles($html),
+                ];
+            });
         } catch (\Throwable $e) {
             Log::warning("[PortalScraper] Detail fetch failed for {$noticeUid}: {$e->getMessage()}");
 
@@ -229,78 +295,80 @@ class PortalScraperService
     public function downloadPortalDocument(string $noticeUid, string $fileId): ?array
     {
         try {
-            // Step 1: Fetch detail page — get session cookie and page HTML
-            $detailRes = $this->client(30)
-                ->withHeaders(['Accept' => 'text/html'])
-                ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
-                    'noticeUID' => $noticeUid,
-                ]);
+            return $this->withTrustFallback("download {$fileId}", function () use ($noticeUid, $fileId) {
+                // Step 1: Fetch detail page — get session cookie and page HTML
+                $detailRes = $this->client(30)
+                    ->withHeaders(['Accept' => 'text/html'])
+                    ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index', [
+                        'noticeUID' => $noticeUid,
+                    ]);
 
-            if ($detailRes->failed()) {
-                return null;
-            }
+                if ($detailRes->failed()) {
+                    return null;
+                }
 
-            // Step 2: Extract the per-file mkey from the onclick handler for this fileId.
-            // Portal format: 'documentFileId=' + '12788233' + '&mkey=826ed0b5_822b_4799_8a9f_0e299a5381ca'
-            $mkeyPattern = "/documentFileId='\\s*\\+\\s*'".preg_quote($fileId, '/')."'\\s*\\+\\s*'&mkey=([a-f0-9_]+)'/";
-            if (! preg_match($mkeyPattern, $detailRes->body(), $m)) {
-                return null;
-            }
-            $mkey = $m[1];
+                // Step 2: Extract the per-file mkey from the onclick handler for this fileId.
+                // Portal format: 'documentFileId=' + '12788233' + '&mkey=826ed0b5_822b_4799_8a9f_0e299a5381ca'
+                $mkeyPattern = "/documentFileId='\\s*\\+\\s*'".preg_quote($fileId, '/')."'\\s*\\+\\s*'&mkey=([a-f0-9_]+)'/";
+                if (! preg_match($mkeyPattern, $detailRes->body(), $m)) {
+                    return null;
+                }
+                $mkey = $m[1];
 
-            // Reuse this session for all subsequent requests — the mkey is bound to it
-            $cookieJar = CookieJar::fromArray(
-                ['PublicSessionCookie' => $detailRes->cookies()->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
-                'comunidad.comprasdominicana.gob.do'
-            );
+                // Reuse this session for all subsequent requests — the mkey is bound to it
+                $cookieJar = CookieJar::fromArray(
+                    ['PublicSessionCookie' => $detailRes->cookies()->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
+                    'comunidad.comprasdominicana.gob.do'
+                );
 
-            // Step 3: Hit DownloadFile — returns HTTP 200 with an HTML body containing a JS redirect,
-            // not the file itself. Do not reject HTML here.
-            $hopRes = $this->client(30)
-                ->withOptions(['cookies' => $cookieJar])
-                ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/DownloadFile', [
-                    'documentFileId' => $fileId,
-                    'mkey' => $mkey,
-                ]);
+                // Step 3: Hit DownloadFile — returns HTTP 200 with an HTML body containing a JS redirect,
+                // not the file itself. Do not reject HTML here.
+                $hopRes = $this->client(30)
+                    ->withOptions(['cookies' => $cookieJar])
+                    ->get('https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/DownloadFile', [
+                        'documentFileId' => $fileId,
+                        'mkey' => $mkey,
+                    ]);
 
-            if ($hopRes->failed()) {
-                return null;
-            }
+                if ($hopRes->failed()) {
+                    return null;
+                }
 
-            // Step 4: Parse the JS redirect URL from the body
-            // e.g. <script>window.location.href = '/Public/Archive/RetrieveFile/Index?DocumentId=...'</script>
-            if (! preg_match("/window\\.location\\.href\\s*=\\s*['\"]([^'\"]+)['\"]/", $hopRes->body(), $r)) {
-                return null;
-            }
-            $fileUrl = 'https://comunidad.comprasdominicana.gob.do'.$r[1];
+                // Step 4: Parse the JS redirect URL from the body
+                // e.g. <script>window.location.href = '/Public/Archive/RetrieveFile/Index?DocumentId=...'</script>
+                if (! preg_match("/window\\.location\\.href\\s*=\\s*['\"]([^'\"]+)['\"]/", $hopRes->body(), $r)) {
+                    return null;
+                }
+                $fileUrl = 'https://comunidad.comprasdominicana.gob.do'.$r[1];
 
-            // Step 5: Fetch the actual file
-            $fileRes = $this->client(120)
-                ->withOptions(['cookies' => $cookieJar])
-                ->get($fileUrl);
+                // Step 5: Fetch the actual file
+                $fileRes = $this->client(120)
+                    ->withOptions(['cookies' => $cookieJar])
+                    ->get($fileUrl);
 
-            if ($fileRes->failed()) {
-                return null;
-            }
+                if ($fileRes->failed()) {
+                    return null;
+                }
 
-            $contentType = $fileRes->header('Content-Type') ?? 'application/octet-stream';
+                $contentType = $fileRes->header('Content-Type') ?? 'application/octet-stream';
 
-            // Only reject HTML at this final step — a real file should never be HTML
-            if (str_starts_with($contentType, 'text/html')) {
-                return null;
-            }
+                // Only reject HTML at this final step — a real file should never be HTML
+                if (str_starts_with($contentType, 'text/html')) {
+                    return null;
+                }
 
-            $disposition = $fileRes->header('Content-Disposition') ?? '';
-            $filename = '';
-            if (preg_match('/filename[^;=\n]*=[\'""]?([^\'""\n;]+)/', $disposition, $fm)) {
-                $filename = trim($fm[1], ' "\'');
-            }
+                $disposition = $fileRes->header('Content-Disposition') ?? '';
+                $filename = '';
+                if (preg_match('/filename[^;=\n]*=[\'""]?([^\'""\n;]+)/', $disposition, $fm)) {
+                    $filename = trim($fm[1], ' "\'');
+                }
 
-            return [
-                'body' => $fileRes->body(),
-                'content_type' => $contentType,
-                'filename' => $filename ?: "document-{$fileId}",
-            ];
+                return [
+                    'body' => $fileRes->body(),
+                    'content_type' => $contentType,
+                    'filename' => $filename ?: "document-{$fileId}",
+                ];
+            });
         } catch (\Throwable $e) {
             Log::warning("[PortalScraper] Download failed for fileId={$fileId}: {$e->getMessage()}");
 
