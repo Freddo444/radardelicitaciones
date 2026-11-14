@@ -23,6 +23,10 @@ $php = 'php -d memory_limit='.env('SCHEDULE_MEMORY_LIMIT', '2G').' '.base_path('
 // exited would block every later run for a day. The command now stops at its
 // own budget (45 min of fetching, plus maintenance capped at twice that), so
 // 150 minutes comfortably covers a legitimate run and caps a wedged one.
+// The other sub-daily jobs are capped the same way, below their own interval.
+// The lock lives in the database, and on 2026-11-14 a three-second MySQL
+// restart (unattended upgrades) left the poll's lock unreleased; on the 24-hour
+// default the same blip would have stopped the scraper for a day.
 Schedule::exec("{$php} secp:poll")
     ->hourly()
     ->withoutOverlapping(150)
@@ -32,24 +36,24 @@ Schedule::exec("{$php} secp:poll")
 // Periodic digest — per-company frequency checked inside the command
 Schedule::exec("{$php} secp:send-digest")
     ->hourlyAt(10)
-    ->withoutOverlapping()
+    ->withoutOverlapping(50)
     ->appendOutputTo(storage_path('logs/secp-digest.log'));
 
 // Nudge trial users who signed up but never finished company setup
 Schedule::exec("{$php} secp:send-setup-reminders")
     ->hourlyAt(20)
-    ->withoutOverlapping()
+    ->withoutOverlapping(50)
     ->appendOutputTo(storage_path('logs/secp-setup-reminders.log'));
 
 Schedule::exec("{$php} secp:scrape")
     ->everyFifteenMinutes()
-    ->withoutOverlapping()
+    ->withoutOverlapping(60)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-scrape.log'));
 
 Schedule::exec("{$php} secp:backfill-portal-docs")
     ->hourlyAt(40)
-    ->withoutOverlapping()
+    ->withoutOverlapping(50)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/secp-backfill-portal-docs.log'));
 
