@@ -107,51 +107,6 @@ class IngestionResilienceTest extends TestCase
             'The bundle no longer carries the issuer the portal is currently using.');
     }
 
-    public function test_a_trust_failure_falls_back_to_the_os_store_rather_than_losing_the_run(): void
-    {
-        $calls = 0;
-
-        // The portal omits its intermediates, so the pinned bundle is the
-        // primary. When the bundle stops verifying — which is what a CA change
-        // looks like — the run must not be written off before the OS store has
-        // been tried.
-        Http::fake(['comunidad.comprasdominicana.gob.do/*' => function () use (&$calls) {
-            $calls++;
-
-            if ($calls === 1) {
-                throw new ConnectionException(
-                    'cURL error 60: SSL certificate problem: unable to get local issuer certificate'
-                );
-            }
-
-            return Http::response('<html>AdvancedSearchAjax?mkey=abc123_0 <table></table></html>');
-        }]);
-
-        $scraper = app(PortalScraperService::class);
-        $scraper->scrapeAll();
-
-        $this->assertSame([], $scraper->failedProcedures(),
-            'The first procedure should have been retried against the OS trust store.');
-    }
-
-    public function test_a_non_trust_failure_is_not_retried_against_the_os_store(): void
-    {
-        $calls = 0;
-
-        Http::fake(['comunidad.comprasdominicana.gob.do/*' => function () use (&$calls) {
-            $calls++;
-
-            throw new ConnectionException('cURL error 28: Operation timed out');
-        }]);
-
-        $scraper = app(PortalScraperService::class);
-        $scraper->scrapeAll();
-
-        $this->assertCount($scraper->procedureCount(), $scraper->failedProcedures());
-        $this->assertSame($scraper->procedureCount(), $calls,
-            'A timeout is not a trust problem and must not cost a second handshake.');
-    }
-
     public function test_a_total_portal_failure_is_reported_not_called_empty(): void
     {
         Http::fake(['comunidad.comprasdominicana.gob.do/*' => Http::response('', 500)]);

@@ -100,39 +100,36 @@ class PortalScraperService
         return $allNotices;
     }
 
-    /**
-     * Set once a flow has had to fall back, so the rest of this instance's run
-     * stops paying for a handshake that is already known to fail. Per instance,
-     * not static: a later run should try the bundle again, because the bundle
-     * being wrong is a thing that gets fixed.
-     */
-    private bool $useSystemTrustStore = false;
+    public function __construct(private PortalTrustStore $trust) {}
+
+    /** One repair attempt per instance, so a chain that cannot be fixed costs one AIA chase, not one per request. */
+    private bool $repairAttempted = false;
 
     /**
-     * Every portal request goes through here so the CA bundle is applied in one
-     * place. The portal omits its intermediate certificates, which curl will not
-     * fetch on its own — see resources/certs/comprasdominicana-ca.pem.
+     * Every portal request goes through here so trust is applied in one place:
+     * the bundle (shipped intermediates plus any learned over AIA) and the OS
+     * trust directory, so either a known intermediate or a complete served
+     * chain is enough. See PortalTrustStore.
      */
     private function client(int $timeout): PendingRequest
     {
-        return Http::timeout($timeout)
-            ->withOptions(['verify' => $this->useSystemTrustStore
-                ? true
-                : resource_path('certs/comprasdominicana-ca.pem')]);
+        $options = ['verify' => $this->trust->bundlePath()];
+
+        if ($dir = $this->trust->osCaDirectory()) {
+            $options['curl'] = [CURLOPT_CAPATH => $dir];
+        }
+
+        return Http::timeout($timeout)->withOptions($options);
     }
 
     /**
-     * Run a portal flow, retrying once against the OS trust store if the
-     * pinned bundle cannot verify the portal.
+     * Run a portal flow; if it fails on trust, repair the chain and retry once.
      *
-     * The bundle has to pin a CA, and pinning is what caused the outage of
-     * 2026-11-02: the portal moved from Let's Encrypt to Sectigo EV and every
-     * request failed verification for three days. The OS store cannot be the
-     * primary — it fails too, because the portal omits its intermediates — but
-     * it does succeed the moment the portal starts serving a complete chain,
-     * which is how the 2026-10-13 episode ended. So try the bundle, and if the
-     * trust path itself is what failed, say so at error level and give the OS
-     * store a chance before giving up on the run.
+     * A CA change on the portal is what took the scraper down on 2026-10-13 and
+     * again from 2026-11-02 for twelve days: the portal omits its
+     * intermediates, so a new CA meant an issuer nothing on this side knew.
+     * The repair fetches that issuer the way a browser does and keeps it only
+     * if it chains to a root the OS already trusts.
      *
      * @template T
      *
@@ -144,16 +141,18 @@ class PortalScraperService
         try {
             return $flow();
         } catch (\Throwable $e) {
-            if ($this->useSystemTrustStore || ! $this->isTrustFailure($e)) {
+            if ($this->repairAttempted || ! $this->isTrustFailure($e)) {
                 throw $e;
             }
 
-            Log::error('[PortalScraper] The pinned CA bundle no longer verifies the portal. '
-                .'Retrying with the OS trust store; if that works the portal has fixed its chain, '
-                .'and if it does not, add the new issuer to resources/certs/comprasdominicana-ca.pem '
-                .'(the file documents how).', ['context' => $context, 'error' => $e->getMessage()]);
+            $this->repairAttempted = true;
 
-            $this->useSystemTrustStore = true;
+            if (! $this->trust->repair()) {
+                Log::error('[PortalScraper] The portal\'s certificate cannot be verified and the chain '
+                    .'could not be repaired over AIA.', ['context' => $context, 'error' => $e->getMessage()]);
+
+                throw $e;
+            }
 
             return $flow();
         }
