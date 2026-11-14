@@ -11,6 +11,7 @@ use App\Services\BidMatchingService;
 use App\Services\PortalScraperService;
 use Illuminate\Console\Command;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class ScrapeCommand extends Command
@@ -18,6 +19,10 @@ class ScrapeCommand extends Command
     protected $signature = 'secp:scrape {--dry-run : Show what would be imported without saving}';
 
     protected $description = 'Scrape the DGCP portal for new procurement notices and match against active rubros';
+
+    private const EMPTY_RECHECK_HOURS = 6;
+
+    private const CHECK_RETENTION_DAYS = 120;
 
     public function handle(PortalScraperService $scraper, BidMatchingService $matcher): int
     {
@@ -83,20 +88,63 @@ class ScrapeCommand extends Command
 
         $this->info('Checking detail pages for UNSPSC rubro matches...');
 
+        // A notice's UNSPSC codes do not change, so its detail page is read
+        // once and the codes kept. Before this every unmatched notice in view
+        // was re-fetched every fifteen minutes — over a hundred pages a run for
+        // nothing, which is how a scraper gets itself blocked. Matching against
+        // the stored codes still runs every time, so a rubro a company adds
+        // later is matched against notices already seen.
+        $checks = DB::table('portal_notice_checks')
+            ->whereIn('notice_uid', $newNotices->pluck('notice_uid')->filter()->all())
+            ->get()
+            ->keyBy('notice_uid');
+
         $saved = 0;
         $notified = 0;
+        $fetched = 0;
 
         foreach ($newNotices as $notice) {
             if (! $notice['notice_uid']) {
                 continue;
             }
 
-            // Fetch detail page to get UNSPSC codes and documents
-            $detail = $scraper->fetchDetail($notice['notice_uid']);
-            $unspscCodes = $detail['unspsc'];
+            $check = $checks->get($notice['notice_uid']);
+            $detail = null;
+
+            if ($check) {
+                $unspscCodes = json_decode($check->unspsc, true) ?: [];
+
+                // A page that showed no codes may simply not have finished
+                // loading on the portal's side; look again, but not every run.
+                if ($unspscCodes === [] && $check->checked_at < now()->subHours(self::EMPTY_RECHECK_HOURS)) {
+                    $check = null;
+                }
+            }
+
+            if (! $check) {
+                // Spaced out: a first run, or a busy hour, can mean hundreds
+                // of pages, and the portal is the one source still answering.
+                if ($fetched > 0 && ! app()->runningUnitTests()) {
+                    usleep(300_000);
+                }
+
+                $detail = $scraper->fetchDetail($notice['notice_uid']);
+                $unspscCodes = $detail['unspsc'];
+                $fetched++;
+
+                if (! $this->option('dry-run')) {
+                    DB::table('portal_notice_checks')->upsert([[
+                        'notice_uid' => $notice['notice_uid'],
+                        'unspsc' => json_encode(array_values($unspscCodes)),
+                        'checked_at' => now(),
+                    ]], ['notice_uid'], ['unspsc', 'checked_at']);
+                }
+            }
 
             if (empty($unspscCodes)) {
-                $this->line("  SKIP {$notice['process_code']} — no UNSPSC codes found");
+                if ($detail !== null) {
+                    $this->line("  SKIP {$notice['process_code']} — no UNSPSC codes found");
+                }
 
                 continue;
             }
@@ -153,6 +201,10 @@ class ScrapeCommand extends Command
 
                 continue;
             }
+
+            // Matched on stored codes: the documents and articles saved with
+            // the bid still have to come from the page.
+            $detail ??= $scraper->fetchDetail($notice['notice_uid']);
 
             try {
                 // The hourly poll writes to this table too. createOrFirst, not
@@ -214,7 +266,13 @@ class ScrapeCommand extends Command
 
         Setting::set('last_scraped_at', now()->toDateTimeString());
 
-        $summary = "Portal scrape complete. Checked: {$newNotices->count()} | Saved: {$saved} | Notified: {$notified}";
+        if (! $this->option('dry-run')) {
+            DB::table('portal_notice_checks')
+                ->where('checked_at', '<', now()->subDays(self::CHECK_RETENTION_DAYS))
+                ->delete();
+        }
+
+        $summary = "Portal scrape complete. Checked: {$newNotices->count()} | Detail pages fetched: {$fetched} | Saved: {$saved} | Notified: {$notified}";
         $this->info($summary);
         Log::info("[SECP] {$summary}");
 

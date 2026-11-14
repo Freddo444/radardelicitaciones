@@ -13,9 +13,9 @@ class PortalScraperService
     private const PORTAL_BASE = 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/ContractNoticeManagement';
 
     /**
-     * Procedure types worth scraping — high-value procurement modalities.
-     * Each search returns all open notices of that type (typically <100).
-     * We skip Compras Menores / Compras por Debajo del Umbral (low-value, high-volume).
+     * Every procedure type the portal lists. The DGCP API poll used to be the
+     * only source for the last four; from 2026-11-13 that API answered
+     * production with a Cloudflare challenge, and these went dark with it.
      */
     private const PROCEDURE_TYPES = [
         'DGCP-03-ComparacionDePrecios',       // ~97 open
@@ -24,6 +24,14 @@ class PortalScraperService
         'DGCP-10-SorteoObras',                 // ~97 open (construction lottery)
         'DGCP-08-ProcesosExcepcion',           // ~100 open
         'DGCP-07-LicitacionRestringida',       // ~30 open
+        'DGCP-11-SubastaInversa',              // ~100 open
+        'DGCP-12-LicitacionPublicaAbreviada',  // ~89 open
+        // High volume: the newest 100 span only a few hours (~14/h and ~28/h
+        // on 2026-11-13), and the portal will not page past them. Scraped
+        // every fifteen minutes that still catches every new notice; it
+        // cannot backfill, which the DGCP API poll does when it is reachable.
+        'DGCP-01-ComprasMenores',
+        'DGCP-02-ComprasDebajoUmbral',
     ];
 
     /**
