@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Exceptions\DgcpApiException;
+use App\Exceptions\DgcpBlockedException;
 use App\Jobs\SendBidNotification;
 use App\Jobs\SendWatchedBidChangeNotification;
 use App\Models\Bid;
@@ -25,6 +26,8 @@ class PollCommand extends Command
     protected $description = 'Poll the DGCP API for new procurement processes and notify on matches';
 
     private const STALE_LOCK_MINUTES = 120;
+
+    private const RUBRO_DELAY_MS = 1500;
 
     private const BACKFILL_BATCH_SIZE = 50;
 
@@ -183,10 +186,24 @@ class PollCommand extends Command
             }
             $this->progress($label, 'info');
 
+            // Paced like the client paces pages. A healthy sweep used to fire
+            // its ~100 requests back to back every hour.
+            if ($attempted > 0 && ! app()->runningUnitTests()) {
+                usleep(self::RUBRO_DELAY_MS * 1000);
+            }
+
             $attempted++;
 
             try {
                 $articles = $api->fetchArticlesSince($code, $entry['level'], $rubroFrom);
+            } catch (DgcpBlockedException $e) {
+                // Refused, not failed: every later rubro gets the same answer,
+                // and if the block is rate-based each request only extends it.
+                // So a blocked hour costs one request, not the whole sweep.
+                $this->progress("  DGCP rechazó la solicitud en {$code}; se detiene el barrido: {$e->getMessage()}", 'error');
+                $failedRubros[$code] = $e->getMessage();
+
+                break;
             } catch (DgcpApiException $e) {
                 $this->progress("  Error en {$code}: {$e->getMessage()}", 'warn');
                 $failedRubros[$code] = $e->getMessage();

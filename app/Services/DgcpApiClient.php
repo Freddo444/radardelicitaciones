@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\DgcpApiException;
+use App\Exceptions\DgcpBlockedException;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -409,7 +411,10 @@ class DgcpApiClient
                 // when the DGCP is flaky, so every extra attempt adds another
                 // 30s per failing rubro. One retry absorbs a single blip, which
                 // is the common case, without doubling that again.
-                ->retry(2, 1000, throw: false)
+                // Only what a retry can fix: a dropped connection or a 5xx.
+                // Without this, every 403 and 4xx was sent twice.
+                ->retry(2, 1000, fn (\Throwable $e) => $e instanceof ConnectionException
+                    || ($e instanceof RequestException && $e->response->serverError()), throw: false)
                 ->get($url, $params);
         } catch (ConnectionException $e) {
             throw new DgcpApiException(
@@ -422,6 +427,14 @@ class DgcpApiClient
             Log::warning("[DGCP] Rate limited on {$endpoint}, sleeping ".self::RATE_LIMIT_WAIT.'s');
             sleep(self::RATE_LIMIT_WAIT);
             $response = Http::connectTimeout(10)->timeout(30)->get($url, $params);
+        }
+
+        if (in_array($response->status(), [403, 429], true)) {
+            $challenge = $response->header('cf-mitigated') ? ' ('.$response->header('cf-mitigated').')' : '';
+
+            throw new DgcpBlockedException(
+                "DGCP API refused the request on {$endpoint}: HTTP {$response->status()}{$challenge}"
+            );
         }
 
         if ($response->failed()) {

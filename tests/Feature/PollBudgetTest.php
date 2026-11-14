@@ -163,6 +163,43 @@ class PollBudgetTest extends TestCase
         $this->assertSame('idle', Setting::get('poll_status'));
     }
 
+    public function test_a_blocked_poll_sends_one_request_not_the_whole_sweep(): void
+    {
+        $this->seedRubros(5);
+
+        $calls = 0;
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => function () use (&$calls) {
+            $calls++;
+
+            return Http::response('<title>Just a moment...</title>', 403, ['cf-mitigated' => 'challenge']);
+        }]);
+
+        Setting::set('last_polled_at', '2026-11-13 08:00:00');
+
+        $this->artisan('secp:poll', ['--budget' => 45])
+            ->expectsOutputToContain('se detiene el barrido')
+            ->assertFailed();
+
+        $this->assertSame(1, $calls, 'A refusal must stop the sweep, and must not be retried.');
+        $this->assertSame('2026-11-13 08:00:00', Setting::get('last_polled_at'));
+    }
+
+    public function test_a_server_error_is_still_retried(): void
+    {
+        $this->seedRubros(1);
+
+        $calls = 0;
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => function () use (&$calls) {
+            return ++$calls === 1
+                ? Http::response('bad gateway', 502)
+                : Http::response(['payload' => ['content' => []], 'pages' => 1]);
+        }]);
+
+        $this->artisan('secp:poll', ['--budget' => 45])->assertSuccessful();
+
+        $this->assertSame(2, $calls);
+    }
+
     // ── Archived bids must not collide with themselves ────────────────
 
     public function test_an_archived_bid_is_not_treated_as_new(): void
