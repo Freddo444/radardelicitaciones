@@ -150,6 +150,8 @@ class PollCommand extends Command
         }
 
         $skipped = 0;
+        $attempted = 0;
+        $failedRubros = [];
 
         foreach ($codes as $position => $code) {
             $entry = $rubroMap[$code];
@@ -181,11 +183,13 @@ class PollCommand extends Command
             }
             $this->progress($label, 'info');
 
+            $attempted++;
+
             try {
                 $articles = $api->fetchArticlesSince($code, $entry['level'], $rubroFrom);
             } catch (DgcpApiException $e) {
                 $this->progress("  Error en {$code}: {$e->getMessage()}", 'warn');
-                Log::warning("[SECP] fetchArticlesSince failed for {$code}", ['error' => $e->getMessage()]);
+                $failedRubros[$code] = $e->getMessage();
 
                 continue;
             }
@@ -213,6 +217,35 @@ class PollCommand extends Command
                     $existing->push(['code' => $code, 'name' => $entry['name']]);
                 }
             }
+        }
+
+        // A run that reached DGCP for no rubro at all learned nothing, and must
+        // not be recorded as an empty run. It used to be: each failure was a
+        // warning (dropped in production), the run found "no new processes",
+        // advanced last_polled_at and exited 0. From 2026-11-13 DGCP answered
+        // every request from production with a Cloudflare challenge (HTTP 403)
+        // and the poll reported success hourly while its window — which only
+        // reaches 24h behind last_polled_at — slid past articles it never
+        // fetched. Holding last_polled_at means that whenever DGCP answers
+        // again, the next run reaches back to the last poll that did.
+        if ($attempted > 0 && count($failedRubros) === $attempted) {
+            $this->progress("DGCP no respondió para ninguno de los {$attempted} rubro(s); "
+                .'la ventana no avanza. Último error: '.end($failedRubros), 'error');
+            Log::error('[SECP] Poll reached DGCP for no rubro; last_polled_at held', [
+                'attempted' => $attempted,
+                'last_polled_at' => $lastPolledAt,
+                'error' => end($failedRubros),
+            ]);
+
+            return self::FAILURE;
+        }
+
+        if ($failedRubros !== []) {
+            Log::error('[SECP] Poll could not fetch some rubros', [
+                'failed' => count($failedRubros),
+                'attempted' => $attempted,
+                'errors' => array_slice($failedRubros, 0, 5, true),
+            ]);
         }
 
         $this->progress("{$matchesByProcess->count()} proceso(s) con coincidencias.", 'info');

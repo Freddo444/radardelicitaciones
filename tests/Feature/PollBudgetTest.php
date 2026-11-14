@@ -143,6 +143,26 @@ class PollBudgetTest extends TestCase
         $this->assertNotSame('2026-10-13 11:00:00', Setting::get('last_polled_at'));
     }
 
+    public function test_a_poll_that_reaches_dgcp_for_no_rubro_fails_and_holds_the_window(): void
+    {
+        $this->seedRubros(3);
+
+        // What production got from 2026-11-13: a Cloudflare challenge on every request.
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => Http::response('<title>Just a moment...</title>', 403)]);
+
+        Setting::set('last_polled_at', '2026-11-13 08:00:00');
+        Setting::set('poll_rubro_cursor', '1');
+
+        $this->artisan('secp:poll', ['--budget' => 45])
+            ->expectsOutputToContain('la ventana no avanza')
+            ->assertFailed();
+
+        $this->assertSame('2026-11-13 08:00:00', Setting::get('last_polled_at'),
+            'A run that fetched nothing must not move the window past what it never fetched.');
+        $this->assertSame('1', Setting::get('poll_rubro_cursor'));
+        $this->assertSame('idle', Setting::get('poll_status'));
+    }
+
     // ── Archived bids must not collide with themselves ────────────────
 
     public function test_an_archived_bid_is_not_treated_as_new(): void
