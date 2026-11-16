@@ -42,6 +42,14 @@ class ScrapeCommand extends Command
     /** Tracked bids missing from the sweep are looked up one by one, up to this many a run. */
     private const MAX_REFERENCE_LOOKUPS = 25;
 
+    /**
+     * New detail pages read per run. The sweep surfaces every open notice,
+     * and the first run after it shipped would otherwise have read several
+     * hundred pages at once from a portal that had dropped connections
+     * that morning. Newest first, so a backlog delays old notices, not new.
+     */
+    private const MAX_DISCOVERY_FETCHES = 40;
+
     private int $fetched = 0;
 
     public function handle(PortalScraperService $scraper, BidMatchingService $matcher, WatchedBidNotifier $notifier): int
@@ -155,6 +163,10 @@ class ScrapeCommand extends Command
 
         $saved = 0;
         $notified = 0;
+        $discoveryFetches = 0;
+        $deferred = 0;
+
+        $newNotices = $newNotices->sortByDesc(fn ($n) => $n['published_at'] ?? '');
 
         foreach ($newNotices as $notice) {
             if (! $notice['notice_uid']) {
@@ -175,6 +187,13 @@ class ScrapeCommand extends Command
             }
 
             if (! $check) {
+                if ($discoveryFetches >= self::MAX_DISCOVERY_FETCHES) {
+                    $deferred++;
+
+                    continue;
+                }
+
+                $discoveryFetches++;
                 $detail = $this->fetchDetail($scraper, $notice['notice_uid']);
                 $unspscCodes = $detail['unspsc'];
 
@@ -267,6 +286,10 @@ class ScrapeCommand extends Command
             } catch (QueryException $e) {
                 $this->line("  SKIP {$notice['process_code']} — already saved by poll");
             }
+        }
+
+        if ($deferred > 0) {
+            $this->info("{$deferred} older notice(s) left for the next run.");
         }
 
         return [$newNotices->count(), $saved, $notified];

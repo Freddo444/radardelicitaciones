@@ -80,6 +80,22 @@ class ScrapeNoticeCheckTest extends TestCase
         $this->assertDatabaseHas('bids', ['process_code' => 'CODE-NTC.1']);
     }
 
+    public function test_a_backlog_is_read_newest_first_and_spread_over_runs(): void
+    {
+        $notices = [];
+        for ($i = 0; $i < 50; $i++) {
+            $notices["NTC.{$i}"] = ['80111600'];
+        }
+        $this->portalShows($notices);
+
+        $this->artisan('secp:scrape')->assertSuccessful();
+        $this->assertCount(40, $this->fetches, 'One run reads at most 40 new pages.');
+
+        $this->artisan('secp:scrape')->assertSuccessful();
+        $this->assertCount(50, $this->fetches, 'The rest follow on the next run.');
+        $this->assertSame(1, max($this->fetches));
+    }
+
     public function test_a_dry_run_records_nothing(): void
     {
         $this->portalShows(['NTC.1' => ['80111600']]);
