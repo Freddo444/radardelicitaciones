@@ -50,6 +50,11 @@ class ScrapeCommand extends Command
      */
     private const MAX_DISCOVERY_FETCHES = 40;
 
+    /** A watched bid in a final status only changes by gaining documents; look every few hours. */
+    private const FINAL_STATUSES = ['Cancelado', 'Proceso adjudicado y celebrado', 'Proceso desierto'];
+
+    private const FINAL_RECHECK_HOURS = 6;
+
     private int $fetched = 0;
 
     public function handle(PortalScraperService $scraper, BidMatchingService $matcher, WatchedBidNotifier $notifier): int
@@ -323,6 +328,11 @@ class ScrapeCommand extends Command
         foreach ($tracked as $bid) {
             $watched = isset($watchedIds[$bid->id]);
             $row = $listed->get($bid->process_code);
+
+            if ($row === null && in_array($bid->status, self::FINAL_STATUSES, true)
+                && $bid->cache_refreshed_at?->gt(now()->subHours(self::FINAL_RECHECK_HOURS))) {
+                continue;
+            }
 
             // Open bids the sweep covers are always in it, whatever their
             // status; one missing means its deadline moved earlier or it was

@@ -106,6 +106,23 @@ class ScrapeRefreshTest extends TestCase
         $this->assertDatabaseCount('in_app_notifications', 0);
     }
 
+    public function test_a_closed_watched_bid_is_rechecked_every_few_hours_not_every_run(): void
+    {
+        $bid = $this->bid('HDMTD-DAF-CM-2026-0071', watched: true, docs: 2);
+        $bid->forceFill([
+            'status' => 'Proceso adjudicado y celebrado',
+            'tender_deadline' => now()->subMonths(6),
+            'cache_refreshed_at' => now()->subHour(),
+        ])->save();
+
+        $this->runScrape();
+        $this->assertSame([], $this->referenceLookups);
+
+        $this->travel(7)->hours();
+        $this->runScrape();
+        $this->assertSame(['HDMTD-DAF-CM-2026-0071'], $this->referenceLookups);
+    }
+
     public function test_a_tracked_bid_missing_from_the_sweep_is_looked_up_by_reference(): void
     {
         $bid = $this->bid('MOPC-CCC-LPN-2026-0040');
