@@ -254,6 +254,13 @@ class PollCommand extends Command
                 'error' => end($failedRubros),
             ]);
 
+            // Archiving expired bids needs nothing from DGCP. Skipping it with
+            // the rest of maintenance left 122 past-deadline bids in customers'
+            // lists after three days of the 2026-11-13 block.
+            if (! $this->option('dry-run')) {
+                $this->cleanup($api);
+            }
+
             return self::FAILURE;
         }
 

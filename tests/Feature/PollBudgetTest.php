@@ -184,6 +184,22 @@ class PollBudgetTest extends TestCase
         $this->assertSame('2026-11-13 08:00:00', Setting::get('last_polled_at'));
     }
 
+    public function test_expired_bids_are_still_archived_while_dgcp_refuses_us(): void
+    {
+        $this->seedRubros(1);
+        Http::fake(['datosabiertos.dgcp.gob.do/*' => Http::response('', 403)]);
+
+        $expired = Bid::create(['process_code' => 'X-CM-2026-0001', 'title' => 'Vencida',
+            'status' => 'Proceso publicado', 'tender_deadline' => now()->subDay()]);
+        $open = Bid::create(['process_code' => 'X-CM-2026-0002', 'title' => 'Abierta',
+            'status' => 'Proceso publicado', 'tender_deadline' => now()->addDay()]);
+
+        $this->artisan('secp:poll', ['--budget' => 45])->assertFailed();
+
+        $this->assertSoftDeleted($expired);
+        $this->assertNotSoftDeleted($open);
+    }
+
     public function test_a_server_error_is_still_retried(): void
     {
         $this->seedRubros(1);
