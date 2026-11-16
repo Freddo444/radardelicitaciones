@@ -9,84 +9,138 @@ use App\Models\CompanyBid;
 use App\Models\Setting;
 use App\Services\BidMatchingService;
 use App\Services\PortalScraperService;
+use App\Services\WatchedBidNotifier;
+use App\Support\PortalStatus;
 use Illuminate\Console\Command;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * The portal, read every fifteen minutes, as the source of truth for open
+ * notices — DGCP's API has refused production since 2026-11-13.
+ *
+ * Two jobs per run. Discovery: the newest 100 of each procedure type plus a
+ * sweep of every open notice, matched against the companies' rubros. Refresh:
+ * every bid we track takes its status, deadline and amount from the same
+ * sweep, and watched bids also have their documents re-read, so what a
+ * customer sees trails the portal by one run.
+ */
 class ScrapeCommand extends Command
 {
     protected $signature = 'secp:scrape {--dry-run : Show what would be imported without saving}';
 
-    protected $description = 'Scrape the DGCP portal for new procurement notices and match against active rubros';
+    protected $description = 'Scrape the DGCP portal for new notices, and refresh tracked bids from it';
 
     private const EMPTY_RECHECK_HOURS = 6;
 
     private const CHECK_RETENTION_DAYS = 120;
 
-    public function handle(PortalScraperService $scraper, BidMatchingService $matcher): int
+    private const DISCOVERY_MAX_AGE_DAYS = 90;
+
+    /** Tracked bids missing from the sweep are looked up one by one, up to this many a run. */
+    private const MAX_REFERENCE_LOOKUPS = 25;
+
+    private int $fetched = 0;
+
+    public function handle(PortalScraperService $scraper, BidMatchingService $matcher, WatchedBidNotifier $notifier): int
     {
         $this->info('Scraping portal for open notices...');
 
-        $notices = $scraper->scrapeAll();
+        $newest = $scraper->scrapeAll();
         $failed = $scraper->failedProcedures();
 
         if ($failed !== []) {
             $this->warn(count($failed).' procedure type(s) did not respond: '.implode(', ', $failed));
         }
 
-        if ($notices->isEmpty()) {
-            // Every type failing means the portal is unreachable, not that the
-            // day was quiet. Reported as a failure so it shows up instead of
-            // reading as a successful empty run, which hid a three-day TLS
-            // outage in October 2026.
-            if (count($failed) === $scraper->procedureCount()) {
-                $this->error('Portal unreachable on every procedure type — this is not an empty result.');
-                Log::error('[SECP] Portal scrape failed for every procedure type', ['failed' => $failed]);
+        // Every type failing means the portal is unreachable, not that the
+        // day was quiet. Reported as a failure so it shows up instead of
+        // reading as a successful empty run, which hid a three-day TLS outage
+        // in October 2026.
+        if ($newest->isEmpty() && count($failed) === $scraper->procedureCount()) {
+            $this->error('Portal unreachable on every procedure type — this is not an empty result.');
+            Log::error('[SECP] Portal scrape failed for every procedure type', ['failed' => $failed]);
 
-                return self::FAILURE;
-            }
-
-            $this->info('No notices found on portal.');
-
-            return self::SUCCESS;
+            return self::FAILURE;
         }
 
-        $this->info("Found {$notices->count()} open notice(s) across all procedure types.");
+        $hints = json_decode((string) Setting::get('portal_sweep_windows'), true) ?: [];
+        $sweep = $scraper->sweepOpenNotices($hints);
+        $open = $sweep['notices'];
 
-        // Filter to notices not already in DB
-        $existingCodes = Bid::whereIn('process_code', $notices->pluck('process_code')->all())
-            ->pluck('process_code');
+        if (! $this->option('dry-run')) {
+            Setting::set('portal_sweep_windows', json_encode($sweep['hints']));
+        }
 
-        $newNotices = $notices->filter(fn ($n) => ! $existingCodes->contains($n['process_code']));
+        $this->info("Sweep: {$open->count()} open notice(s) on the portal".
+            ($sweep['failed'] ? ' — incomplete for '.implode(', ', $sweep['failed']) : '').
+            ($sweep['capped'] ? " — {$sweep['capped']} window(s) still full" : ''));
+
+        // Discovery candidates: the newest-100 lists (which also catch notices
+        // without a deadline) and anything open the sweep found.
+        $cutoff = now()->subDays(self::DISCOVERY_MAX_AGE_DAYS)->toDateTimeString();
+        $candidates = $newest->keyBy('process_code');
+        foreach ($open as $code => $row) {
+            if (! $candidates->has($code) && ($row['published_at'] === null || $row['published_at'] >= $cutoff)) {
+                $candidates->put($code, $row);
+            }
+        }
+        $candidates = $candidates->filter(fn ($n) => PortalStatus::isOpenForOffers($n['portal_status'] ?? null));
+
+        [$checked, $saved, $notified] = $this->discover($candidates, $scraper, $matcher);
+
+        $listed = $open->union($newest->keyBy('process_code'));
+        [$refreshed, $changed, $alerts] = $this->refresh($listed, $sweep['failed'] !== [], $scraper, $notifier);
+
+        if (! $this->option('dry-run')) {
+            Setting::set('last_scraped_at', now()->toDateTimeString());
+
+            DB::table('portal_notice_checks')
+                ->where('checked_at', '<', now()->subDays(self::CHECK_RETENTION_DAYS))
+                ->delete();
+        }
+
+        $summary = "Portal scrape complete. Open on portal: {$open->count()} | New checked: {$checked} | ".
+            "Detail pages fetched: {$this->fetched} | Saved: {$saved} | Notified: {$notified} | ".
+            "Refreshed: {$refreshed} | Changed: {$changed} | Watch alerts: {$alerts} | ".
+            'Listing requests: '.$scraper->listingRequests();
+        $this->info($summary);
+        Log::info("[SECP] {$summary}");
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * @return array{0: int, 1: int, 2: int} checked, saved, notified
+     */
+    private function discover(Collection $candidates, PortalScraperService $scraper, BidMatchingService $matcher): array
+    {
+        $existingCodes = Bid::withTrashed()
+            ->whereIn('process_code', $candidates->keys()->all())
+            ->pluck('process_code')
+            ->flip();
+
+        $newNotices = $candidates->reject(fn ($n, $code) => $existingCodes->has($code));
 
         $this->info("{$newNotices->count()} new notice(s) not yet in our database.");
 
         if ($newNotices->isEmpty()) {
-            $this->info('All portal notices already tracked.');
-
-            return self::SUCCESS;
+            return [0, 0, 0];
         }
 
-        // Aggregate rubros across all companies
         $rubroMap = $matcher->aggregateRubros();
         if (empty($rubroMap)) {
             $this->warn('No active rubros configured in any company. Skipping.');
 
-            return self::SUCCESS;
+            return [$newNotices->count(), 0, 0];
         }
 
-        // Build lookup sets for fast matching at each UNSPSC level
-        $rubrosByLevel = [
-            'subclase' => [],
-            'clase' => [],
-            'familia' => [],
-        ];
+        $rubrosByLevel = ['subclase' => [], 'clase' => [], 'familia' => []];
         foreach ($rubroMap as $code => $entry) {
             $rubrosByLevel[$entry['level']][$code] = $entry['name'];
         }
-
-        $this->info('Checking detail pages for UNSPSC rubro matches...');
 
         // A notice's UNSPSC codes do not change, so its detail page is read
         // once and the codes kept. Before this every unmatched notice in view
@@ -101,7 +155,6 @@ class ScrapeCommand extends Command
 
         $saved = 0;
         $notified = 0;
-        $fetched = 0;
 
         foreach ($newNotices as $notice) {
             if (! $notice['notice_uid']) {
@@ -122,15 +175,8 @@ class ScrapeCommand extends Command
             }
 
             if (! $check) {
-                // Spaced out: a first run, or a busy hour, can mean hundreds
-                // of pages, and the portal is the one source still answering.
-                if ($fetched > 0 && ! app()->runningUnitTests()) {
-                    usleep(300_000);
-                }
-
-                $detail = $scraper->fetchDetail($notice['notice_uid']);
+                $detail = $this->fetchDetail($scraper, $notice['notice_uid']);
                 $unspscCodes = $detail['unspsc'];
-                $fetched++;
 
                 if (! $this->option('dry-run')) {
                     DB::table('portal_notice_checks')->upsert([[
@@ -149,42 +195,7 @@ class ScrapeCommand extends Command
                 continue;
             }
 
-            // Match UNSPSC codes against aggregated rubros
-            $matchedRubros = collect();
-
-            foreach ($unspscCodes as $code) {
-                if (isset($rubrosByLevel['subclase'][$code])) {
-                    $matchedRubros->push(['code' => $code, 'name' => $rubrosByLevel['subclase'][$code]]);
-
-                    continue;
-                }
-
-                if (isset($rubrosByLevel['clase'][$code])) {
-                    $matchedRubros->push(['code' => $code, 'name' => $rubrosByLevel['clase'][$code]]);
-
-                    continue;
-                }
-
-                // Check clase level by first 6 digits
-                $clasePrefix = substr($code, 0, 6);
-                foreach ($rubrosByLevel['clase'] as $rubroCode => $rubroName) {
-                    if (substr($rubroCode, 0, 6) === $clasePrefix) {
-                        $matchedRubros->push(['code' => $rubroCode, 'name' => $rubroName]);
-                        break;
-                    }
-                }
-
-                // Check familia level (first 4 digits)
-                $familiaPrefix = substr($code, 0, 4);
-                foreach ($rubrosByLevel['familia'] as $rubroCode => $rubroName) {
-                    if (substr($rubroCode, 0, 4) === $familiaPrefix) {
-                        $matchedRubros->push(['code' => $rubroCode, 'name' => $rubroName]);
-                        break;
-                    }
-                }
-            }
-
-            $matchedRubros = $matchedRubros->unique('code')->values();
+            $matchedRubros = $this->matchRubros($unspscCodes, $rubrosByLevel);
 
             if ($matchedRubros->isEmpty()) {
                 if ($this->option('dry-run')) {
@@ -204,7 +215,7 @@ class ScrapeCommand extends Command
 
             // Matched on stored codes: the documents and articles saved with
             // the bid still have to come from the page.
-            $detail ??= $scraper->fetchDetail($notice['notice_uid']);
+            $detail ??= $this->fetchDetail($scraper, $notice['notice_uid']);
 
             try {
                 // The hourly poll writes to this table too. createOrFirst, not
@@ -216,7 +227,7 @@ class ScrapeCommand extends Command
                     'ocid' => 'ocds-6550wx-'.$notice['process_code'],
                     'title' => $notice['title'] ?: $notice['process_code'],
                     'buyer_name' => $notice['buyer_name'],
-                    'status' => 'Proceso publicado',
+                    'status' => PortalStatus::toApp($notice['portal_status'] ?? null) ?? 'Proceso publicado',
                     'amount_estimated' => $notice['amount_estimated'],
                     'currency' => $notice['currency'],
                     'published_at' => $notice['published_at'],
@@ -236,12 +247,10 @@ class ScrapeCommand extends Command
                 $this->info("[SAVED] {$notice['process_code']} — {$notice['title']}");
                 $this->info('        Rubros: '.$matchedRubros->pluck('name')->join(', '));
 
-                // Fan out to matching companies
                 $companyIds = $matcher->fanOutToCompanies($bid, $matchedRubros->all(), $rubroMap);
 
                 $this->info('        → '.count($companyIds).' empresa(s) vinculada(s)');
 
-                // Per-company notification dispatch
                 foreach ($companyIds as $companyId) {
                     if ($matcher->shouldNotify($bid, $companyId)) {
                         $company = Company::find($companyId);
@@ -257,25 +266,197 @@ class ScrapeCommand extends Command
                 }
             } catch (QueryException $e) {
                 $this->line("  SKIP {$notice['process_code']} — already saved by poll");
+            }
+        }
+
+        return [$newNotices->count(), $saved, $notified];
+    }
+
+    /**
+     * Bring every tracked bid in line with the portal: the open ones and
+     * anything watched. Status, deadline and amount come from the listing
+     * rows already in hand; a tracked bid the sweep did not see is looked up
+     * by reference; watched bids also have their documents re-read.
+     *
+     * @param  Collection<string, array>  $listed  listing rows by process code
+     * @return array{0: int, 1: int, 2: int} refreshed, changed, watch alerts
+     */
+    private function refresh(Collection $listed, bool $sweepIncomplete, PortalScraperService $scraper, WatchedBidNotifier $notifier): array
+    {
+        $watchedIds = array_flip($notifier->watchedBidIds());
+
+        $tracked = Bid::where('tender_deadline', '>=', now())
+            ->orWhereIn('id', array_keys($watchedIds))
+            ->get();
+
+        $refreshed = 0;
+        $changed = 0;
+        $alerts = 0;
+        $lookups = 0;
+
+        // Watched first, so they are never the ones the lookup cap leaves out.
+        $tracked = $tracked->sortByDesc(fn (Bid $b) => isset($watchedIds[$b->id]));
+
+        foreach ($tracked as $bid) {
+            $watched = isset($watchedIds[$bid->id]);
+            $row = $listed->get($bid->process_code);
+
+            // Open bids the sweep covers are always in it, whatever their
+            // status; one missing means its deadline moved earlier or it was
+            // withdrawn, and a closed watched bid is outside the sweep anyway.
+            if ($row === null && ($watched || ! $sweepIncomplete) && $lookups < self::MAX_REFERENCE_LOOKUPS) {
+                $lookups++;
+                $row = $scraper->findByReference($bid->process_code);
+            }
+
+            $changes = $row ? $this->listingChanges($bid, $row) : [];
+
+            if ($watched) {
+                $changes = array_merge($changes, $this->documentChanges($bid, $row, $scraper));
+            }
+
+            if ($row) {
+                $refreshed++;
+            }
+
+            if ($changes === []) {
+                continue;
+            }
+
+            $changed++;
+            $this->info("  [CAMBIO] {$bid->process_code}: ".implode(', ', $changes));
+
+            if ($this->option('dry-run')) {
+                continue;
+            }
+
+            $bid->save();
+
+            if ($watched) {
+                $notifier->notify($bid, $changes);
+                $alerts++;
+            }
+        }
+
+        return [$refreshed, $changed, $alerts];
+    }
+
+    /**
+     * Applies the listing row to the bid (unsaved) and describes what moved.
+     *
+     * @return list<string>
+     */
+    private function listingChanges(Bid $bid, array $row): array
+    {
+        $changes = [];
+
+        $status = PortalStatus::toApp($row['portal_status'] ?? null);
+        if ($status && $status !== $bid->status) {
+            $changes[] = "Estado: {$bid->status} → {$status}";
+            $bid->status = $status;
+            $bid->last_known_status = $status;
+        }
+
+        $deadline = $row['tender_deadline'] ?? null;
+        if ($deadline && $bid->tender_deadline?->format('Y-m-d H:i') !== substr($deadline, 0, 16)) {
+            $old = $bid->tender_deadline?->format('d/m/Y H:i') ?? '—';
+            $bid->tender_deadline = $deadline;
+            $changes[] = "Plazo: {$old} → {$bid->tender_deadline->format('d/m/Y H:i')}";
+        }
+
+        $amount = $row['amount_estimated'] ?? null;
+        if ($amount && (! $bid->amount_estimated || abs($amount - $bid->amount_estimated) > 0.01)) {
+            if ($bid->amount_estimated) {
+                $changes[] = 'Monto: '.number_format($bid->amount_estimated, 2).' → '.number_format($amount, 2);
+            }
+            $bid->amount_estimated = $amount;
+        }
+
+        return $changes;
+    }
+
+    /**
+     * A watched bid's documents, re-read from its detail page every run.
+     *
+     * @return list<string>
+     */
+    private function documentChanges(Bid $bid, ?array $row, PortalScraperService $scraper): array
+    {
+        $noticeUid = $bid->raw_data['notice_uid']
+            ?? $row['notice_uid']
+            ?? (preg_match('/noticeUID=([\w.]+)/', (string) ($bid->raw_data['url'] ?? $bid->secp_url), $m) ? $m[1] : null);
+
+        if (! $noticeUid) {
+            return [];
+        }
+
+        $detail = $this->fetchDetail($scraper, $noticeUid);
+
+        // An all-empty page is a failed fetch, not a notice that lost its documents.
+        if (! $detail['documents'] && ! $detail['articles'] && ! $detail['unspsc']) {
+            return [];
+        }
+
+        $known = $bid->last_known_doc_count ?? count($bid->cached_documents ?? []);
+        $now = count($detail['documents']);
+
+        $bid->cached_documents = $detail['documents'] ?: $bid->cached_documents;
+        $bid->cached_articles = $detail['articles'] ?: $bid->cached_articles;
+        $bid->cache_refreshed_at = now();
+        $bid->last_known_doc_count = $now;
+
+        return $now > $known ? [($now - $known).' documento(s) nuevo(s)'] : [];
+    }
+
+    /** @return array{unspsc: array, documents: array, articles: array} */
+    private function fetchDetail(PortalScraperService $scraper, string $noticeUid): array
+    {
+        // Spaced out: a first run, or a busy hour, can mean hundreds of
+        // pages, and the portal is the one source still answering.
+        if ($this->fetched > 0 && ! app()->runningUnitTests()) {
+            usleep(300_000);
+        }
+
+        $this->fetched++;
+
+        return $scraper->fetchDetail($noticeUid);
+    }
+
+    /** @param  array<string, array<string, string>>  $rubrosByLevel */
+    private function matchRubros(array $unspscCodes, array $rubrosByLevel): Collection
+    {
+        $matched = collect();
+
+        foreach ($unspscCodes as $code) {
+            if (isset($rubrosByLevel['subclase'][$code])) {
+                $matched->push(['code' => $code, 'name' => $rubrosByLevel['subclase'][$code]]);
 
                 continue;
             }
 
-            usleep(300_000);
+            if (isset($rubrosByLevel['clase'][$code])) {
+                $matched->push(['code' => $code, 'name' => $rubrosByLevel['clase'][$code]]);
+
+                continue;
+            }
+
+            $clasePrefix = substr($code, 0, 6);
+            foreach ($rubrosByLevel['clase'] as $rubroCode => $rubroName) {
+                if (substr($rubroCode, 0, 6) === $clasePrefix) {
+                    $matched->push(['code' => $rubroCode, 'name' => $rubroName]);
+                    break;
+                }
+            }
+
+            $familiaPrefix = substr($code, 0, 4);
+            foreach ($rubrosByLevel['familia'] as $rubroCode => $rubroName) {
+                if (substr($rubroCode, 0, 4) === $familiaPrefix) {
+                    $matched->push(['code' => $rubroCode, 'name' => $rubroName]);
+                    break;
+                }
+            }
         }
 
-        Setting::set('last_scraped_at', now()->toDateTimeString());
-
-        if (! $this->option('dry-run')) {
-            DB::table('portal_notice_checks')
-                ->where('checked_at', '<', now()->subDays(self::CHECK_RETENTION_DAYS))
-                ->delete();
-        }
-
-        $summary = "Portal scrape complete. Checked: {$newNotices->count()} | Detail pages fetched: {$fetched} | Saved: {$saved} | Notified: {$notified}";
-        $this->info($summary);
-        Log::info("[SECP] {$summary}");
-
-        return self::SUCCESS;
+        return $matched->unique('code')->values();
     }
 }

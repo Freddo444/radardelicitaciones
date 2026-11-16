@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use GuzzleHttp\Cookie\CookieJar;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Collection;
@@ -17,6 +18,20 @@ class PortalScraperService
      * only source for the last four; from 2026-11-13 that API answered
      * production with a Cloudflare challenge, and these went dark with it.
      */
+    private const SWEEP_HORIZON_DAYS = 365;
+
+    /** A cold sweep took 64; this leaves room for a busy week without letting a fault run away. */
+    private const SWEEP_MAX_REQUESTS = 150;
+
+    /** The portal is fragile — on 2026-11-16 it dropped connections under a few hundred requests in ten minutes. */
+    private const SWEEP_DELAY_MS = 1000;
+
+    /** Consecutive failed searches after which the sweep stops for this run. */
+    private const SWEEP_MAX_CONSECUTIVE_FAILURES = 2;
+
+    /** Adjacent windows holding fewer rows than this together are merged next run. */
+    private const SWEEP_MERGE_BELOW = 60;
+
     private const PROCEDURE_TYPES = [
         'DGCP-03-ComparacionDePrecios',       // ~97 open
         'DGCP-05-LicitacionPublicaNacional',   // ~100 open
@@ -181,70 +196,260 @@ class PortalScraperService
     }
 
     /**
-     * Execute an AdvancedSearchAjax for a specific procedure type.
-     * Requires two HTTP calls: initial page (to get session cookie + mkey), then AJAX search.
+     * The newest 100 notices of one procedure type.
      */
     private function advancedSearch(string $procedure): ?string
     {
+        return $this->searchListing(['procedure' => $procedure], "search {$procedure}");
+    }
+
+    /** @var array{mkey: string, jar: CookieJar}|null */
+    private ?array $session = null;
+
+    /** Listing requests made by this instance, for the run summary. */
+    private int $listingRequests = 0;
+
+    public function listingRequests(): int
+    {
+        return $this->listingRequests;
+    }
+
+    /**
+     * One AdvancedSearchAjax request. The portal hands out a session cookie and
+     * an mkey on its index page; both are kept for the instance rather than
+     * fetched again before every search, which halves the requests of a sweep.
+     * A failed search drops the session and tries once more with a fresh one.
+     *
+     * @param  array<string, string|int>  $filters
+     */
+    private function searchListing(array $filters, string $context): ?string
+    {
         try {
-            return $this->withTrustFallback("search {$procedure}", function () use ($procedure) {
-                // Step 1: Get session cookie and mkey from initial page load
-                $initResponse = $this->client(30)
-                    ->withHeaders(['Accept' => 'text/html'])
-                    ->get(self::PORTAL_BASE.'/Index');
+            return $this->withTrustFallback($context, function () use ($filters, $context) {
+                for ($attempt = 1; $attempt <= 2; $attempt++) {
+                    $session = $this->session ??= $this->openSession();
 
-                if ($initResponse->failed()) {
-                    return null;
+                    if ($session === null) {
+                        return null;
+                    }
+
+                    $this->listingRequests++;
+
+                    $response = $this->client(60)
+                        ->withHeaders(['Accept' => 'text/html'])
+                        ->withOptions(['cookies' => $session['jar']])
+                        ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
+                            'mkey' => $session['mkey'],
+                            'perspective' => 'All',
+                            'initAction' => 'Index',
+                            'pageNumber' => 0,
+                            'startIndex' => 1,
+                            'endIndex' => 100,
+                            'currentPagingStyle' => 0,
+                            'displayAdvancedParams' => 'true',
+                            'orderParam' => 'RequestOnlinePublishingDateDESC',
+                            'searchExecuted' => 'True',
+                        ] + $filters);
+
+                    if ($response->successful()) {
+                        return $response->body();
+                    }
+
+                    $this->session = null;
                 }
 
-                $cookies = $initResponse->cookies();
-                $initHtml = $initResponse->body();
+                Log::warning("[PortalScraper] AdvancedSearchAjax failed ({$context})");
 
-                // Extract mkey from AdvancedSearchAjax JS
-                if (! preg_match('/AdvancedSearchAjax[^;]*mkey=([a-f0-9_]+)/', $initHtml, $m)) {
-                    Log::warning('[PortalScraper] Could not extract mkey from initial page');
-
-                    return null;
-                }
-                $mkey = $m[1];
-
-                // Build cookie jar for the session
-                $cookieJar = CookieJar::fromArray(
-                    ['PublicSessionCookie' => $cookies->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
-                    'comunidad.comprasdominicana.gob.do'
-                );
-
-                // Step 2: Execute AdvancedSearchAjax
-                $searchResponse = $this->client(30)
-                    ->withHeaders(['Accept' => 'text/html'])
-                    ->withOptions(['cookies' => $cookieJar])
-                    ->get(self::PORTAL_BASE.'/AdvancedSearchAjax', [
-                        'mkey' => $mkey,
-                        'perspective' => 'All',
-                        'initAction' => 'Index',
-                        'pageNumber' => 0,
-                        'startIndex' => 1,
-                        'endIndex' => 100,
-                        'currentPagingStyle' => 0,
-                        'displayAdvancedParams' => 'true',
-                        'orderParam' => 'RequestOnlinePublishingDateDESC',
-                        'searchExecuted' => 'True',
-                        'procedure' => $procedure,
-                    ]);
-
-                if ($searchResponse->failed()) {
-                    Log::warning("[PortalScraper] AdvancedSearchAjax failed for {$procedure}");
-
-                    return null;
-                }
-
-                return $searchResponse->body();
+                return null;
             });
         } catch (\Throwable $e) {
-            Log::error("[PortalScraper] Search failed for {$procedure}: {$e->getMessage()}");
+            $this->session = null;
+            Log::error("[PortalScraper] Search failed ({$context}): {$e->getMessage()}");
 
             return null;
         }
+    }
+
+    /** @return array{mkey: string, jar: CookieJar}|null */
+    private function openSession(): ?array
+    {
+        $this->listingRequests++;
+
+        $response = $this->client(30)
+            ->withHeaders(['Accept' => 'text/html'])
+            ->get(self::PORTAL_BASE.'/Index');
+
+        if ($response->failed()) {
+            return null;
+        }
+
+        if (! preg_match('/AdvancedSearchAjax[^;]*mkey=([a-f0-9_]+)/', $response->body(), $m)) {
+            Log::warning('[PortalScraper] Could not extract mkey from initial page');
+
+            return null;
+        }
+
+        return [
+            'mkey' => $m[1],
+            'jar' => CookieJar::fromArray(
+                ['PublicSessionCookie' => $response->cookies()->getCookieByName('PublicSessionCookie')?->getValue() ?? ''],
+                'comunidad.comprasdominicana.gob.do'
+            ),
+        ];
+    }
+
+    /**
+     * Every open notice on the portal — any status, any procedure type —
+     * read from its listing, keyed by process code.
+     *
+     * The listing shows the newest 100 per search and will not page, so the
+     * sweep searches by deadline window, per procedure type (the portal
+     * ignores the deadline filter without one), and halves any window that
+     * comes back full. Windows that worked are returned as hints so the next
+     * run starts from them instead of splitting from scratch. On 2026-11-16 a
+     * cold sweep saw 884 open notices in 64 requests.
+     *
+     * @param  array<string, list<string>>  $hints  procedure => window boundaries (Y-m-d H:i)
+     * @return array{notices: Collection, hints: array<string, list<string>>, failed: list<string>, capped: int}
+     */
+    public function sweepOpenNotices(array $hints = [], int $maxRequests = self::SWEEP_MAX_REQUESTS): array
+    {
+        $now = now()->startOfMinute();
+        $end = $now->copy()->addDays(self::SWEEP_HORIZON_DAYS);
+        $notices = collect();
+        $newHints = [];
+        $failed = [];
+        $capped = 0;
+        $budgetLeft = $maxRequests;
+        $consecutiveFailures = 0;
+
+        foreach (self::PROCEDURE_TYPES as $procedure) {
+            $boundaries = collect($hints[$procedure] ?? [])
+                ->map(fn ($b) => Carbon::parse($b))
+                ->filter(fn ($b) => $b->gt($now) && $b->lt($end))
+                ->sort()
+                ->values();
+
+            $edges = collect([$now])->concat($boundaries)->push($end)->values();
+            $stack = [];
+            for ($i = $edges->count() - 2; $i >= 0; $i--) {
+                $stack[] = [$edges[$i], $edges[$i + 1]];
+            }
+
+            $done = [];
+
+            while ($stack !== []) {
+                if ($budgetLeft-- <= 0) {
+                    Log::error('[PortalScraper] Open-notice sweep hit its request cap', ['cap' => $maxRequests]);
+                    $failed[] = $procedure;
+                    $newHints[$procedure] = $hints[$procedure] ?? [];
+
+                    break 2;
+                }
+
+                [$from, $to] = array_pop($stack);
+
+                $html = $this->searchListing([
+                    'procedure' => $procedure,
+                    'tendersDeadlineFrom' => $from->format('d/m/Y H:i'),
+                    'tendersDeadlineTo' => $to->format('d/m/Y H:i'),
+                ], "sweep {$procedure}");
+
+                if ($html === null) {
+                    $failed[] = $procedure;
+                    $newHints[$procedure] = $hints[$procedure] ?? [];
+
+                    // Failing twice in a row is the portal struggling, not one
+                    // bad window: stop rather than add to it, and leave the
+                    // remaining types to the next run.
+                    if (++$consecutiveFailures >= self::SWEEP_MAX_CONSECUTIVE_FAILURES) {
+                        Log::error('[PortalScraper] Open-notice sweep stopped: the portal is failing', [
+                            'procedure' => $procedure,
+                        ]);
+                        $remaining = array_slice(self::PROCEDURE_TYPES, array_search($procedure, self::PROCEDURE_TYPES, true) + 1);
+                        foreach ($remaining as $skipped) {
+                            $failed[] = $skipped;
+                            $newHints[$skipped] = $hints[$skipped] ?? [];
+                        }
+
+                        break 2;
+                    }
+
+                    continue 2;
+                }
+
+                $consecutiveFailures = 0;
+
+                $rows = $this->parsePage($html);
+
+                // The filter silently stops applying if the portal changes
+                // its parameters; a full listing would then split forever.
+                $outside = $rows->first(fn ($r) => $r['tender_deadline']
+                    && ($r['tender_deadline'] < $from->format('Y-m-d H:i:00') || $r['tender_deadline'] > $to->format('Y-m-d H:i:59')));
+                if ($outside) {
+                    Log::error('[PortalScraper] The portal ignored the deadline filter; sweep abandoned for this type', [
+                        'procedure' => $procedure, 'window' => [$from->toDateTimeString(), $to->toDateTimeString()],
+                    ]);
+                    $failed[] = $procedure;
+                    $newHints[$procedure] = $hints[$procedure] ?? [];
+
+                    continue 2;
+                }
+
+                $minutes = (int) $from->diffInMinutes($to);
+                if ($rows->count() >= 100 && $minutes > 1) {
+                    $mid = $from->copy()->addMinutes(intdiv($minutes, 2));
+                    $stack[] = [$mid, $to];
+                    $stack[] = [$from, $mid];
+
+                    continue;
+                }
+
+                if ($rows->count() >= 100) {
+                    $capped++;
+                }
+
+                foreach ($rows as $row) {
+                    $notices->put($row['process_code'], $row + ['procedure' => $procedure]);
+                }
+
+                $done[] = [$from, $to, $rows->count()];
+
+                if (! app()->runningUnitTests()) {
+                    usleep(self::SWEEP_DELAY_MS * 1000);
+                }
+            }
+
+            // Keep each boundary unless both windows around it are small
+            // enough to merge, so windows follow the volume both ways.
+            $kept = [];
+            for ($i = 0; $i < count($done) - 1; $i++) {
+                if ($done[$i][2] + $done[$i + 1][2] >= self::SWEEP_MERGE_BELOW) {
+                    $kept[] = $done[$i][1]->format('Y-m-d H:i');
+                } else {
+                    $done[$i + 1][0] = $done[$i][0];
+                    $done[$i + 1][2] += $done[$i][2];
+                }
+            }
+            $newHints[$procedure] = $kept;
+        }
+
+        return [
+            'notices' => $notices,
+            'hints' => $newHints,
+            'failed' => array_values(array_unique($failed)),
+            'capped' => $capped,
+        ];
+    }
+
+    /**
+     * The listing row for one process code, or null if the portal has none.
+     */
+    public function findByReference(string $processCode): ?array
+    {
+        $html = $this->searchListing(['reference' => $processCode], "reference {$processCode}");
+
+        return $html === null ? null : $this->parsePage($html)->firstWhere('process_code', $processCode);
     }
 
     /**
@@ -502,6 +707,7 @@ class PortalScraperService
         $deadlines = $this->extractDateValues($html, 'dtmbDueDateForReceivingReplies');
         $amounts = $this->extractAmountValues($html);
         $noticeUids = $this->extractNoticeUids($html);
+        $states = $this->extractSpanValues($html, 'spnMatchingResultContractNoticeState');
 
         $maxIndex = max(
             $references->keys()->max() ?? -1,
@@ -524,6 +730,7 @@ class PortalScraperService
                 'amount_estimated' => $amounts->get($i),
                 'currency' => 'DOP',
                 'notice_uid' => $noticeUids->get($i),
+                'portal_status' => trim($states->get($i, '')) ?: null,
                 'portal_url' => $noticeUids->has($i)
                     ? 'https://comunidad.comprasdominicana.gob.do/Public/Tendering/OpportunityDetail/Index?noticeUID='.$noticeUids->get($i)
                     : null,

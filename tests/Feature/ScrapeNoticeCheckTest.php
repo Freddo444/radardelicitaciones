@@ -121,7 +121,11 @@ class ScrapeNoticeCheckTest extends TestCase
                 'published_at' => now()->subDay()->toDateTimeString(),
                 'tender_deadline' => now()->addWeek()->toDateTimeString(),
                 'portal_url' => "https://portal.test/{$uid}",
+                'portal_status' => 'Published',
             ]));
+        $scraper->shouldReceive('sweepOpenNotices')->andReturn(['notices' => collect(), 'hints' => [], 'failed' => [], 'capped' => 0]);
+        $scraper->shouldReceive('listingRequests')->andReturn(0);
+        $scraper->shouldReceive('findByReference')->andReturn(null);
         $scraper->shouldReceive('fetchDetail')->andReturnUsing(function ($uid) {
             $this->fetches[$uid] = ($this->fetches[$uid] ?? 0) + 1;
 
