@@ -59,6 +59,7 @@ class ScrapeCommand extends Command
 
     public function handle(PortalScraperService $scraper, BidMatchingService $matcher, WatchedBidNotifier $notifier): int
     {
+        $startedAt = microtime(true);
         $this->info('Scraping portal for open notices...');
 
         $newest = $scraper->scrapeAll();
@@ -118,7 +119,8 @@ class ScrapeCommand extends Command
         $summary = "Portal scrape complete. Open on portal: {$open->count()} | New checked: {$checked} | ".
             "Detail pages fetched: {$this->fetched} | Saved: {$saved} | Notified: {$notified} | ".
             "Refreshed: {$refreshed} | Changed: {$changed} | Watch alerts: {$alerts} | ".
-            'Listing requests: '.$scraper->listingRequests();
+            'Listing requests: '.$scraper->listingRequests().' | '.
+            'Took: '.round(microtime(true) - $startedAt).'s';
         $this->info($summary);
         Log::info("[SECP] {$summary}");
 
@@ -352,6 +354,12 @@ class ScrapeCommand extends Command
                 $refreshed++;
             }
 
+            // Saved even without a change: a re-read of documents moves
+            // cache_refreshed_at, which is what spaces out closed bids.
+            if (! $this->option('dry-run') && $bid->isDirty()) {
+                $bid->save();
+            }
+
             if ($changes === []) {
                 continue;
             }
@@ -362,8 +370,6 @@ class ScrapeCommand extends Command
             if ($this->option('dry-run')) {
                 continue;
             }
-
-            $bid->save();
 
             if ($watched) {
                 $notifier->notify($bid, $changes);

@@ -118,9 +118,18 @@ class ScrapeRefreshTest extends TestCase
         $this->runScrape();
         $this->assertSame([], $this->referenceLookups);
 
+        // Once it has been looked at, the clock restarts from that look.
         $this->travel(7)->hours();
         $this->runScrape();
         $this->assertSame(['HDMTD-DAF-CM-2026-0071'], $this->referenceLookups);
+
+        $this->runScrape();
+        $this->assertSame(['HDMTD-DAF-CM-2026-0071'], $this->referenceLookups,
+            'A look that found nothing new must still count as a look.');
+
+        $this->travel(7)->hours();
+        $this->runScrape();
+        $this->assertSame(['HDMTD-DAF-CM-2026-0071', 'HDMTD-DAF-CM-2026-0071'], $this->referenceLookups);
     }
 
     public function test_a_tracked_bid_missing_from_the_sweep_is_looked_up_by_reference(): void
